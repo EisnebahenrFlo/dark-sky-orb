@@ -17,6 +17,7 @@ import { HeroCard } from "@/components/synoptik/HeroCard";
 import { SectionCard } from "@/components/synoptik/SectionCard";
 import { ConvectionBadge } from "@/components/synoptik/ConvectionBadge";
 import { useWeather } from "@/contexts/WeatherContext";
+import { UnsupportedLocationNotice } from "@/components/PageState";
 
 function relMin(ts: number) {
   const m = Math.max(0, Math.round((Date.now() - ts) / 60000));
@@ -45,8 +46,12 @@ function SkeletonCard() {
 }
 
 export function AnalysePage() {
-  const { data: weather, location } = useWeather();
+  const { data: weather, location, errorCode } = useWeather();
   const { data, loading, error, refresh, lastUpdated } = useSynoptikAnalysis();
+
+  if (errorCode === "unsupported_location") {
+    return <UnsupportedLocationNotice />;
+  }
 
   if (!weather) {
     return (

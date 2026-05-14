@@ -1,12 +1,28 @@
-import { CloudOff, Loader2 } from "lucide-react";
+import { CloudOff, MapPinOff, Loader2 } from "lucide-react";
 import { useWeather } from "@/contexts/WeatherContext";
 import { WeatherSkeleton } from "@/components/WeatherSkeleton";
 import type { ReactNode } from "react";
 
+export function UnsupportedLocationNotice() {
+  return (
+    <div className="glass flex flex-col items-center gap-4 rounded-3xl p-12 text-center">
+      <MapPinOff className="h-10 w-10 text-muted-foreground" />
+      <p className="max-w-md text-muted-foreground">
+        Für diesen Standort sind aktuell keine detaillierten Vorhersagedaten verfügbar.
+        Bitte versuche einen anderen Ort in der Nähe.
+      </p>
+    </div>
+  );
+}
+
 export function PageState({ children }: { children: (data: NonNullable<ReturnType<typeof useWeather>["data"]>) => ReactNode }) {
-  const { data, isLoading, isError, refresh } = useWeather();
+  const { data, isLoading, isError, errorCode, refresh } = useWeather();
 
   if (isLoading && !data) return <WeatherSkeleton />;
+
+  if (errorCode === "unsupported_location") {
+    return <UnsupportedLocationNotice />;
+  }
 
   if (isError && !data) {
     return (
