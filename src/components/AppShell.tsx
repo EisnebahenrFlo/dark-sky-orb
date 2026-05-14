@@ -1,8 +1,19 @@
 import { Link, Outlet, useLocation } from "@tanstack/react-router";
-import { Sun, CloudRain, Clock, CalendarDays, Map, Brain, Loader2, RefreshCw } from "lucide-react";
+import {
+  Sun,
+  CloudRain,
+  Clock,
+  CalendarDays,
+  Map,
+  Brain,
+  Loader2,
+  RefreshCw,
+  AlertTriangle,
+} from "lucide-react";
 import { SearchBar } from "@/components/SearchBar";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { useWeather } from "@/contexts/WeatherContext";
+import { useRiskWarningsCtx } from "@/contexts/RiskWarningsContext";
 
 const TABS = [
   { to: "/", icon: Sun, label: "Aktuell" },
@@ -10,11 +21,14 @@ const TABS = [
   { to: "/hourly", icon: Clock, label: "Stündlich" },
   { to: "/daily", icon: CalendarDays, label: "7 Tage" },
   { to: "/analyse", icon: Brain, label: "Analyse" },
+  { to: "/warnungen", icon: AlertTriangle, label: "Warnungen" },
   { to: "/map", icon: Map, label: "Karte" },
 ] as const;
 
 export function AppShell() {
   const { selectLocation, recent, clearRecent, isFetching, refresh } = useWeather();
+  const { data: riskData } = useRiskWarningsCtx();
+  const warnCount = riskData?.warnungen_12h?.length ?? 0;
   const { pathname } = useLocation();
 
   return (

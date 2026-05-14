@@ -9,6 +9,7 @@ import {
 import { Toaster } from "@/components/ui/sonner";
 import { ThemeProvider, useTheme } from "@/hooks/useTheme";
 import { WeatherProvider } from "@/contexts/WeatherContext";
+import { RiskWarningsProvider } from "@/contexts/RiskWarningsContext";
 import { AppShell } from "@/components/AppShell";
 
 import appCss from "../styles.css?url";
@@ -127,9 +128,11 @@ function RootComponent() {
     <ThemeProvider>
       <QueryClientProvider client={queryClient}>
         <WeatherProvider>
-          {/* AppShell renders the persistent header/search/tabs and <Outlet /> */}
-          <AppShell />
-          <ThemedToaster />
+          <RiskWarningsProvider>
+            {/* AppShell renders the persistent header/search/tabs and <Outlet /> */}
+            <AppShell />
+            <ThemedToaster />
+          </RiskWarningsProvider>
         </WeatherProvider>
       </QueryClientProvider>
     </ThemeProvider>
