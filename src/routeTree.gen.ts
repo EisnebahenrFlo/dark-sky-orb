@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as WarnungenRouteImport } from './routes/warnungen'
 import { Route as NowcastRouteImport } from './routes/nowcast'
 import { Route as MapRouteImport } from './routes/map'
 import { Route as HourlyRouteImport } from './routes/hourly'
@@ -16,6 +17,11 @@ import { Route as DailyRouteImport } from './routes/daily'
 import { Route as AnalyseRouteImport } from './routes/analyse'
 import { Route as IndexRouteImport } from './routes/index'
 
+const WarnungenRoute = WarnungenRouteImport.update({
+  id: '/warnungen',
+  path: '/warnungen',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const NowcastRoute = NowcastRouteImport.update({
   id: '/nowcast',
   path: '/nowcast',
@@ -54,6 +60,7 @@ export interface FileRoutesByFullPath {
   '/hourly': typeof HourlyRoute
   '/map': typeof MapRoute
   '/nowcast': typeof NowcastRoute
+  '/warnungen': typeof WarnungenRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -62,6 +69,7 @@ export interface FileRoutesByTo {
   '/hourly': typeof HourlyRoute
   '/map': typeof MapRoute
   '/nowcast': typeof NowcastRoute
+  '/warnungen': typeof WarnungenRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -71,13 +79,36 @@ export interface FileRoutesById {
   '/hourly': typeof HourlyRoute
   '/map': typeof MapRoute
   '/nowcast': typeof NowcastRoute
+  '/warnungen': typeof WarnungenRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/analyse' | '/daily' | '/hourly' | '/map' | '/nowcast'
+  fullPaths:
+    | '/'
+    | '/analyse'
+    | '/daily'
+    | '/hourly'
+    | '/map'
+    | '/nowcast'
+    | '/warnungen'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/analyse' | '/daily' | '/hourly' | '/map' | '/nowcast'
-  id: '__root__' | '/' | '/analyse' | '/daily' | '/hourly' | '/map' | '/nowcast'
+  to:
+    | '/'
+    | '/analyse'
+    | '/daily'
+    | '/hourly'
+    | '/map'
+    | '/nowcast'
+    | '/warnungen'
+  id:
+    | '__root__'
+    | '/'
+    | '/analyse'
+    | '/daily'
+    | '/hourly'
+    | '/map'
+    | '/nowcast'
+    | '/warnungen'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -87,10 +118,18 @@ export interface RootRouteChildren {
   HourlyRoute: typeof HourlyRoute
   MapRoute: typeof MapRoute
   NowcastRoute: typeof NowcastRoute
+  WarnungenRoute: typeof WarnungenRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/warnungen': {
+      id: '/warnungen'
+      path: '/warnungen'
+      fullPath: '/warnungen'
+      preLoaderRoute: typeof WarnungenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/nowcast': {
       id: '/nowcast'
       path: '/nowcast'
@@ -143,6 +182,7 @@ const rootRouteChildren: RootRouteChildren = {
   HourlyRoute: HourlyRoute,
   MapRoute: MapRoute,
   NowcastRoute: NowcastRoute,
+  WarnungenRoute: WarnungenRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

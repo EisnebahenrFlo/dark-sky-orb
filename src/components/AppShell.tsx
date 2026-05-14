@@ -1,8 +1,19 @@
 import { Link, Outlet, useLocation } from "@tanstack/react-router";
-import { Sun, CloudRain, Clock, CalendarDays, Map, Brain, Loader2, RefreshCw } from "lucide-react";
+import {
+  Sun,
+  CloudRain,
+  Clock,
+  CalendarDays,
+  Map,
+  Brain,
+  Loader2,
+  RefreshCw,
+  AlertTriangle,
+} from "lucide-react";
 import { SearchBar } from "@/components/SearchBar";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { useWeather } from "@/contexts/WeatherContext";
+import { useRiskWarningsCtx } from "@/contexts/RiskWarningsContext";
 
 const TABS = [
   { to: "/", icon: Sun, label: "Aktuell" },
@@ -10,11 +21,14 @@ const TABS = [
   { to: "/hourly", icon: Clock, label: "Stündlich" },
   { to: "/daily", icon: CalendarDays, label: "7 Tage" },
   { to: "/analyse", icon: Brain, label: "Analyse" },
+  { to: "/warnungen", icon: AlertTriangle, label: "Warnungen" },
   { to: "/map", icon: Map, label: "Karte" },
 ] as const;
 
 export function AppShell() {
   const { selectLocation, recent, clearRecent, isFetching, refresh } = useWeather();
+  const { data: riskData } = useRiskWarningsCtx();
+  const warnCount = riskData?.warnungen_12h?.length ?? 0;
   const { pathname } = useLocation();
 
   return (
@@ -60,7 +74,14 @@ export function AppShell() {
                 {active && (
                   <span className="absolute inset-0 -z-0 rounded-full bg-primary" aria-hidden />
                 )}
-                <Icon className="relative z-10 h-4 w-4" strokeWidth={1.75} />
+                <span className="relative z-10 inline-flex">
+                  <Icon className="h-4 w-4" strokeWidth={1.75} />
+                  {to === "/warnungen" && warnCount > 0 && (
+                    <span className="absolute -right-1.5 -top-1.5 grid h-4 min-w-4 place-items-center rounded-full bg-red-500 px-1 text-[9px] font-bold text-white shadow ring-2 ring-background">
+                      {warnCount}
+                    </span>
+                  )}
+                </span>
                 <span className="relative z-10 font-medium">{label}</span>
               </Link>
             );
@@ -88,7 +109,14 @@ export function AppShell() {
                       : "text-muted-foreground hover:text-foreground"
                   }`}
                 >
-                  <Icon className="h-4 w-4" strokeWidth={1.75} />
+                  <span className="relative inline-flex">
+                    <Icon className="h-4 w-4" strokeWidth={1.75} />
+                    {to === "/warnungen" && warnCount > 0 && (
+                      <span className="absolute -right-1.5 -top-1.5 grid h-3.5 min-w-3.5 place-items-center rounded-full bg-red-500 px-1 text-[9px] font-bold text-white shadow ring-2 ring-background">
+                        {warnCount}
+                      </span>
+                    )}
+                  </span>
                   <span className="text-[10px] font-medium">{label}</span>
                 </Link>
               );
