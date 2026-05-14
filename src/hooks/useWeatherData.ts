@@ -1,12 +1,12 @@
 import { useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { fetchWeather, type CurrentWeather } from "@/lib/weather";
+import { fetchWeather, type WeatherData } from "@/lib/weather";
 
 const REFRESH_MS = 5 * 60 * 1000;
 
 export interface UseWeatherDataResult {
-  data: CurrentWeather | undefined;
+  data: WeatherData | undefined;
   isLoading: boolean;
   isFetching: boolean;
   isError: boolean;
