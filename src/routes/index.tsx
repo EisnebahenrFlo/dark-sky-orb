@@ -110,7 +110,7 @@ function Index() {
       )}
 
       <footer className="mt-12 text-center text-xs text-muted-foreground">
-        Daten von <a href="https://open-meteo.com" className="underline hover:text-foreground">Open-Meteo</a> · ICON-D2
+        Daten von <a href="https://open-meteo.com" className="underline hover:text-foreground">Open-Meteo</a>
       </footer>
     </div>
   );
