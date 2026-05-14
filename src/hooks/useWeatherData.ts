@@ -5,12 +5,15 @@ import { fetchWeather, type WeatherData } from "@/lib/weather";
 
 const REFRESH_MS = 5 * 60 * 1000;
 
+export type WeatherErrorCode = "unsupported_location" | null;
+
 export interface UseWeatherDataResult {
   data: WeatherData | undefined;
   isLoading: boolean;
   isFetching: boolean;
   isError: boolean;
   error: unknown;
+  errorCode: WeatherErrorCode;
   dataUpdatedAt: number;
   refresh: () => Promise<unknown>;
 }
@@ -71,12 +74,17 @@ export function useWeatherData(lat: number, lon: number): UseWeatherDataResult {
     if (!isError) lastErrorRef.current = null;
   }, [isError, error, refetch]);
 
+  // Detect locations where Open-Meteo only returns `current` (no hourly/daily).
+  const unsupported = !!data && (!data.hourly || !data.daily || !data.minutely_15);
+  const errorCode: WeatherErrorCode = unsupported ? "unsupported_location" : null;
+
   return {
-    data,
+    data: unsupported ? undefined : data,
     isLoading: query.isLoading,
     isFetching: query.isFetching,
-    isError,
+    isError: isError || unsupported,
     error,
+    errorCode,
     dataUpdatedAt: query.dataUpdatedAt,
     refresh: refetch,
   };
