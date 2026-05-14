@@ -10,8 +10,16 @@ const KIND_COLOR: Record<string, string> = {
   none: "oklch(0.4 0.02 260)",
 };
 
-export function Nowcast({ minutely }: { minutely: MinutelyData }) {
-  const points = minutely.time.slice(0, 8).map((t, i) => ({
+export function Nowcast({
+  minutely,
+  count = 8,
+  showHeader = true,
+}: {
+  minutely: MinutelyData;
+  count?: number;
+  showHeader?: boolean;
+}) {
+  const points = minutely.time.slice(0, count).map((t, i) => ({
     time: formatTime(t),
     iso: t,
     precip: minutely.precipitation[i] ?? 0,
@@ -20,10 +28,13 @@ export function Nowcast({ minutely }: { minutely: MinutelyData }) {
   }));
 
   const totalPrecip = points.reduce((s, p) => s + p.precip, 0);
+  const hours = Math.round((count * 15) / 60);
 
   return (
     <section>
-      <SectionHeader title="Nowcast" subtitle="Nächste 2 Stunden · 15-Min-Schritte" />
+      {showHeader && (
+        <SectionHeader title="Nowcast" subtitle={`Nächste ${hours} Stunden · 15-Min-Schritte`} />
+      )}
       <div className="glass rounded-3xl p-5 sm:p-6">
         {totalPrecip === 0 ? (
           <div className="grid h-44 place-items-center text-center">
