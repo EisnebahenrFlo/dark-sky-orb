@@ -48,7 +48,7 @@ export function WeatherHero({ location, data, updatedAt }: Props) {
           </div>
 
           <div className="mt-6 text-xs text-muted-foreground">
-            <RelativeTime timestamp={updatedAt} /> · ICON-D2 Modell
+            <RelativeTime timestamp={updatedAt} />
           </div>
         </div>
       </div>
