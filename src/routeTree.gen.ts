@@ -9,8 +9,26 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as NowcastRouteImport } from './routes/nowcast'
+import { Route as HourlyRouteImport } from './routes/hourly'
+import { Route as DailyRouteImport } from './routes/daily'
 import { Route as IndexRouteImport } from './routes/index'
 
+const NowcastRoute = NowcastRouteImport.update({
+  id: '/nowcast',
+  path: '/nowcast',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HourlyRoute = HourlyRouteImport.update({
+  id: '/hourly',
+  path: '/hourly',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DailyRoute = DailyRouteImport.update({
+  id: '/daily',
+  path: '/daily',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -19,28 +37,61 @@ const IndexRoute = IndexRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/daily': typeof DailyRoute
+  '/hourly': typeof HourlyRoute
+  '/nowcast': typeof NowcastRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/daily': typeof DailyRoute
+  '/hourly': typeof HourlyRoute
+  '/nowcast': typeof NowcastRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/daily': typeof DailyRoute
+  '/hourly': typeof HourlyRoute
+  '/nowcast': typeof NowcastRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths: '/' | '/daily' | '/hourly' | '/nowcast'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to: '/' | '/daily' | '/hourly' | '/nowcast'
+  id: '__root__' | '/' | '/daily' | '/hourly' | '/nowcast'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  DailyRoute: typeof DailyRoute
+  HourlyRoute: typeof HourlyRoute
+  NowcastRoute: typeof NowcastRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/nowcast': {
+      id: '/nowcast'
+      path: '/nowcast'
+      fullPath: '/nowcast'
+      preLoaderRoute: typeof NowcastRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/hourly': {
+      id: '/hourly'
+      path: '/hourly'
+      fullPath: '/hourly'
+      preLoaderRoute: typeof HourlyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/daily': {
+      id: '/daily'
+      path: '/daily'
+      fullPath: '/daily'
+      preLoaderRoute: typeof DailyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -53,6 +104,9 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  DailyRoute: DailyRoute,
+  HourlyRoute: HourlyRoute,
+  NowcastRoute: NowcastRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
