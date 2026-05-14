@@ -4,6 +4,9 @@ import { Loader2, CloudOff, RefreshCw } from "lucide-react";
 import { SearchBar } from "@/components/SearchBar";
 import { WeatherHero } from "@/components/WeatherHero";
 import { WeatherSkeleton } from "@/components/WeatherSkeleton";
+import { Nowcast } from "@/components/Nowcast";
+import { HourlyForecast } from "@/components/HourlyForecast";
+import { DailyForecast } from "@/components/DailyForecast";
 import { useWeatherData } from "@/hooks/useWeatherData";
 import type { GeoResult } from "@/lib/weather";
 
@@ -97,7 +100,14 @@ function Index() {
         </div>
       )}
 
-      {data && <WeatherHero location={location} data={data} updatedAt={dataUpdatedAt} />}
+      {data && (
+        <div className="space-y-10">
+          <WeatherHero location={location} data={data.current} updatedAt={dataUpdatedAt} />
+          <Nowcast minutely={data.minutely_15} />
+          <HourlyForecast hourly={data.hourly} />
+          <DailyForecast daily={data.daily} />
+        </div>
+      )}
 
       <footer className="mt-12 text-center text-xs text-muted-foreground">
         Daten von <a href="https://open-meteo.com" className="underline hover:text-foreground">Open-Meteo</a> · ICON-D2
