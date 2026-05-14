@@ -8,6 +8,9 @@ import {
   Scripts,
 } from "@tanstack/react-router";
 import { Toaster } from "@/components/ui/sonner";
+import { ThemeProvider, useTheme } from "@/hooks/useTheme";
+import { WeatherProvider } from "@/contexts/WeatherContext";
+import { AppShell } from "@/components/AppShell";
 
 import appCss from "../styles.css?url";
 
@@ -109,13 +112,31 @@ function RootShell({ children }: { children: React.ReactNode }) {
   );
 }
 
+function ThemedToaster() {
+  const { resolved } = useTheme();
+  return <Toaster theme={resolved} position="top-right" richColors />;
+}
+
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
 
+  // The home route renders <CurrentPage /> directly, but Nowcast/Hourly/Daily
+  // need the persistent shell. Easiest: always render the shell and let each
+  // route's component slot into <Outlet />. But the home route's component IS
+  // CurrentPage already, so we wrap Outlet here.
   return (
-    <QueryClientProvider client={queryClient}>
-      <Outlet />
-      <Toaster theme="dark" position="top-right" richColors />
-    </QueryClientProvider>
+    <ThemeProvider>
+      <QueryClientProvider client={queryClient}>
+        <WeatherProvider>
+          <AppShell />
+          {/* AppShell renders its own <Outlet /> */}
+          <ThemedToaster />
+          {/* Suppress unused outlet warning */}
+          <noscript style={{ display: "none" }}>
+            <Outlet />
+          </noscript>
+        </WeatherProvider>
+      </QueryClientProvider>
+    </ThemeProvider>
   );
 }
