@@ -1,3 +1,4 @@
+import { safeFixed } from "@/lib/safeFormat";
 import { Wind, Droplets, Gauge, CloudRain, Eye, Thermometer, Cloud, Navigation } from "lucide-react";
 import type { CurrentWeather, GeoResult } from "@/lib/weather";
 import { wmoDescription, windDirectionLabel } from "@/lib/weather";

@@ -1,3 +1,4 @@
+import { safeFixed } from "@/lib/safeFormat";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
 import { precipKind, formatTime, type MinutelyData } from "@/lib/weather";
 import { WeatherIcon } from "./WeatherIcon";

@@ -1,3 +1,4 @@
+import { safeFixed } from "@/lib/safeFormat";
 import { useState } from "react";
 import { ChevronDown, Sunrise, Sunset, Wind, Navigation, Droplets, CloudRain, Snowflake, Sun } from "lucide-react";
 import type { DailyData } from "@/lib/weather";

@@ -1,3 +1,4 @@
+import { safeFixed } from "@/lib/safeFormat";
 import { Zap } from "lucide-react";
 import type { HourlyData } from "@/lib/weather";
 
