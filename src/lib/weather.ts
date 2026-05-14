@@ -49,6 +49,7 @@ export interface HourlyData {
   relative_humidity_2m: number[];
   uv_index: number[];
   is_day: number[];
+  lightning_potential?: number[];
 }
 
 export interface DailyData {
@@ -100,7 +101,7 @@ export async function fetchWeather(lat: number, lon: number): Promise<WeatherDat
     minutely_15: "precipitation,weather_code,temperature_2m,wind_speed_10m",
     forecast_minutely_15: "24",
     hourly:
-      "temperature_2m,apparent_temperature,precipitation,precipitation_probability,weather_code,wind_speed_10m,wind_gusts_10m,wind_direction_10m,cloud_cover,cloud_cover_low,cloud_cover_mid,cloud_cover_high,relative_humidity_2m,uv_index,is_day",
+      "temperature_2m,apparent_temperature,precipitation,precipitation_probability,weather_code,wind_speed_10m,wind_gusts_10m,wind_direction_10m,cloud_cover,cloud_cover_low,cloud_cover_mid,cloud_cover_high,relative_humidity_2m,uv_index,is_day,lightning_potential",
     forecast_hours: "48",
     daily:
       "weather_code,temperature_2m_max,temperature_2m_min,apparent_temperature_max,apparent_temperature_min,sunrise,sunset,uv_index_max,precipitation_sum,rain_sum,snowfall_sum,precipitation_hours,precipitation_probability_max,wind_speed_10m_max,wind_gusts_10m_max,wind_direction_10m_dominant",

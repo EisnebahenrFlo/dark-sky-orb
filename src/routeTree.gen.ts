@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as NowcastRouteImport } from './routes/nowcast'
+import { Route as MapRouteImport } from './routes/map'
 import { Route as HourlyRouteImport } from './routes/hourly'
 import { Route as DailyRouteImport } from './routes/daily'
 import { Route as IndexRouteImport } from './routes/index'
@@ -17,6 +18,11 @@ import { Route as IndexRouteImport } from './routes/index'
 const NowcastRoute = NowcastRouteImport.update({
   id: '/nowcast',
   path: '/nowcast',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MapRoute = MapRouteImport.update({
+  id: '/map',
+  path: '/map',
   getParentRoute: () => rootRouteImport,
 } as any)
 const HourlyRoute = HourlyRouteImport.update({
@@ -39,12 +45,14 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/daily': typeof DailyRoute
   '/hourly': typeof HourlyRoute
+  '/map': typeof MapRoute
   '/nowcast': typeof NowcastRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/daily': typeof DailyRoute
   '/hourly': typeof HourlyRoute
+  '/map': typeof MapRoute
   '/nowcast': typeof NowcastRoute
 }
 export interface FileRoutesById {
@@ -52,20 +60,22 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/daily': typeof DailyRoute
   '/hourly': typeof HourlyRoute
+  '/map': typeof MapRoute
   '/nowcast': typeof NowcastRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/daily' | '/hourly' | '/nowcast'
+  fullPaths: '/' | '/daily' | '/hourly' | '/map' | '/nowcast'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/daily' | '/hourly' | '/nowcast'
-  id: '__root__' | '/' | '/daily' | '/hourly' | '/nowcast'
+  to: '/' | '/daily' | '/hourly' | '/map' | '/nowcast'
+  id: '__root__' | '/' | '/daily' | '/hourly' | '/map' | '/nowcast'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   DailyRoute: typeof DailyRoute
   HourlyRoute: typeof HourlyRoute
+  MapRoute: typeof MapRoute
   NowcastRoute: typeof NowcastRoute
 }
 
@@ -76,6 +86,13 @@ declare module '@tanstack/react-router' {
       path: '/nowcast'
       fullPath: '/nowcast'
       preLoaderRoute: typeof NowcastRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/map': {
+      id: '/map'
+      path: '/map'
+      fullPath: '/map'
+      preLoaderRoute: typeof MapRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/hourly': {
@@ -106,6 +123,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   DailyRoute: DailyRoute,
   HourlyRoute: HourlyRoute,
+  MapRoute: MapRoute,
   NowcastRoute: NowcastRoute,
 }
 export const routeTree = rootRouteImport
