@@ -13,12 +13,12 @@ const THRESHOLDS = {
   glaze_temp: 2,
 };
 
-function getIndices(hourly: any, hours: number) {
+function getIndices(hourly: any, hours: number): number[] {
   const now = Date.now();
   return hourly.time
     .map((t: string, i: number) => ({ t: new Date(t).getTime(), i }))
-    .filter(({ t }: any) => t >= now && t <= now + hours * 3600 * 1000)
-    .map(({ i }: any) => i);
+    .filter((item: { t: number; i: number }) => item.t >= now && item.t <= now + hours * 3600 * 1000)
+    .map((item: { t: number; i: number }) => item.i);
 }
 
 function detectWarnings(weatherData: any) {
@@ -29,7 +29,7 @@ function detectWarnings(weatherData: any) {
   if (idx.length === 0) return warnings;
 
   const getMax = (arr: number[], key: 'max' | 'min' = 'max') =>
-    idx.reduce((acc, i) => {
+    idx.reduce((acc: number, i: number) => {
       const v = arr?.[i] ?? (key === 'max' ? -Infinity : Infinity);
       return key === 'max' ? Math.max(acc, v) : Math.min(acc, v);
     }, key === 'max' ? -Infinity : Infinity);
@@ -44,7 +44,7 @@ function detectWarnings(weatherData: any) {
 
   // Regen
   const max1h = getMax(hourly.precipitation);
-  const sum12h = idx.reduce((s, i) => s + (hourly.precipitation?.[i] ?? 0), 0);
+  const sum12h = idx.reduce((s: number, i: number) => s + (hourly.precipitation?.[i] ?? 0), 0);
   if (max1h >= THRESHOLDS.precip_1h_markant || sum12h >= THRESHOLDS.precip_12h_markant) {
     const stufe = (max1h >= THRESHOLDS.precip_1h_extreme || sum12h >= THRESHOLDS.precip_12h_extreme) ? 'extrem'
                 : (max1h >= THRESHOLDS.precip_1h_severe || sum12h >= THRESHOLDS.precip_12h_severe) ? 'unwetter' : 'markant';
@@ -61,7 +61,7 @@ function detectWarnings(weatherData: any) {
   }
 
   // Schnee
-  const snow12h = idx.reduce((s, i) => s + (hourly.snowfall?.[i] ?? 0), 0);
+  const snow12h = idx.reduce((s: number, i: number) => s + (hourly.snowfall?.[i] ?? 0), 0);
   if (snow12h >= THRESHOLDS.snow_12h_markant) {
     const stufe = snow12h >= THRESHOLDS.snow_12h_severe ? 'unwetter' : 'markant';
     warnings.push({ typ: 'schnee', stufe, sum_12h: Math.round(snow12h * 10) / 10, unit: 'cm' });
@@ -75,7 +75,7 @@ function detectWarnings(weatherData: any) {
   }
 
   // Glätte
-  const glazeRisk = idx.some(i => 
+  const glazeRisk = idx.some((i: number) => 
     (hourly.temperature_2m?.[i] ?? 999) <= THRESHOLDS.glaze_temp && 
     (hourly.precipitation?.[i] ?? 0) > 0.1
   );
