@@ -120,21 +120,13 @@ function ThemedToaster() {
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
 
-  // The home route renders <CurrentPage /> directly, but Nowcast/Hourly/Daily
-  // need the persistent shell. Easiest: always render the shell and let each
-  // route's component slot into <Outlet />. But the home route's component IS
-  // CurrentPage already, so we wrap Outlet here.
   return (
     <ThemeProvider>
       <QueryClientProvider client={queryClient}>
         <WeatherProvider>
+          {/* AppShell renders the persistent header/search/tabs and <Outlet /> */}
           <AppShell />
-          {/* AppShell renders its own <Outlet /> */}
           <ThemedToaster />
-          {/* Suppress unused outlet warning */}
-          <noscript style={{ display: "none" }}>
-            <Outlet />
-          </noscript>
         </WeatherProvider>
       </QueryClientProvider>
     </ThemeProvider>
