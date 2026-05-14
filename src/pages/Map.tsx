@@ -1,4 +1,4 @@
-import { lazy, Suspense, useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { SectionHeader } from "@/components/SectionHeader";
 import { LightningEmbed } from "@/components/LightningEmbed";
@@ -17,6 +17,8 @@ function MapFallback() {
 
 export function MapPage() {
   const [tab, setTab] = useState<SubTab>("radar");
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
 
   return (
     <section>
@@ -40,9 +42,13 @@ export function MapPage() {
       </div>
 
       {tab === "radar" ? (
-        <Suspense fallback={<MapFallback />}>
-          <RadarMap />
-        </Suspense>
+        mounted ? (
+          <Suspense fallback={<MapFallback />}>
+            <RadarMap />
+          </Suspense>
+        ) : (
+          <MapFallback />
+        )
       ) : (
         <LightningEmbed />
       )}

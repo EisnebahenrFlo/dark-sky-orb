@@ -32,7 +32,7 @@ function Recenter({ lat, lon }: { lat: number; lon: number }) {
   return null;
 }
 
-const FRAME_MS = 200;
+const FRAME_MS = 500;
 
 export default function RadarMap() {
   const { location } = useWeather();
@@ -74,6 +74,8 @@ export default function RadarMap() {
   const baseAttr =
     '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/">CARTO</a>';
 
+  const currentFrame = frames[index];
+
   return (
     <div>
       <div className="glass overflow-hidden rounded-3xl">
@@ -81,18 +83,20 @@ export default function RadarMap() {
           <MapContainer
             center={[location.latitude, location.longitude]}
             zoom={8}
+            maxZoom={10}
             scrollWheelZoom
             style={{ height: "100%", width: "100%", background: "var(--muted)" }}
           >
-            <TileLayer url={baseTile} attribution={baseAttr} />
-            {frames.map((f, i) => (
+            <TileLayer url={baseTile} attribution={baseAttr} maxZoom={10} />
+            {currentFrame && data && (
               <TileLayer
-                key={f.path}
-                url={frameTileUrl(data!.host, f)}
-                opacity={i === index ? 0.7 : 0}
+                key={currentFrame.path}
+                url={frameTileUrl(data.host, currentFrame)}
+                opacity={0.7}
+                maxZoom={10}
                 zIndex={10}
               />
-            ))}
+            )}
             <Marker position={[location.latitude, location.longitude]} />
             <Recenter lat={location.latitude} lon={location.longitude} />
           </MapContainer>
@@ -105,7 +109,12 @@ export default function RadarMap() {
           pastCount={pastCount}
           index={index}
           isPlaying={isPlaying}
-          onToggle={() => setIsPlaying((p) => !p)}
+          onToggle={() => {
+            setIsPlaying((p) => {
+              if (!p && index === frames.length - 1) setIndex(0);
+              return !p;
+            });
+          }}
           onSeek={(i) => {
             setIsPlaying(false);
             setIndex(i);
