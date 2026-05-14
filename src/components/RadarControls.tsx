@@ -33,14 +33,23 @@ export function RadarControls({ frames, pastCount, index, isPlaying, onToggle, o
         )}
       </button>
 
-      <input
-        type="range"
-        min={0}
-        max={frames.length - 1}
-        value={index}
-        onChange={(e) => onSeek(Number(e.target.value))}
-        className="h-1.5 flex-1 cursor-pointer appearance-none rounded-full bg-muted accent-primary"
-      />
+      <div className="relative flex-1">
+        <input
+          type="range"
+          min={0}
+          max={frames.length - 1}
+          value={index}
+          onChange={(e) => onSeek(Number(e.target.value))}
+          className="h-1.5 w-full cursor-pointer appearance-none rounded-full bg-muted accent-primary"
+        />
+        {pastCount > 0 && pastCount < frames.length && (
+          <div
+            aria-hidden
+            className="pointer-events-none absolute top-1/2 h-3 w-px -translate-y-1/2 bg-accent"
+            style={{ left: `${(pastCount / (frames.length - 1)) * 100}%` }}
+          />
+        )}
+      </div>
 
       <div className="w-24 shrink-0 text-right">
         <div className="font-display text-lg leading-none tabular-nums">{time}</div>
