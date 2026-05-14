@@ -13,7 +13,9 @@ import { Route as NowcastRouteImport } from './routes/nowcast'
 import { Route as MapRouteImport } from './routes/map'
 import { Route as HourlyRouteImport } from './routes/hourly'
 import { Route as DailyRouteImport } from './routes/daily'
+import { Route as AnalyseRouteImport } from './routes/analyse'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ApiSynoptikRouteImport } from './routes/api/synoptik'
 
 const NowcastRoute = NowcastRouteImport.update({
   id: '/nowcast',
@@ -35,48 +37,88 @@ const DailyRoute = DailyRouteImport.update({
   path: '/daily',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AnalyseRoute = AnalyseRouteImport.update({
+  id: '/analyse',
+  path: '/analyse',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiSynoptikRoute = ApiSynoptikRouteImport.update({
+  id: '/api/synoptik',
+  path: '/api/synoptik',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/analyse': typeof AnalyseRoute
   '/daily': typeof DailyRoute
   '/hourly': typeof HourlyRoute
   '/map': typeof MapRoute
   '/nowcast': typeof NowcastRoute
+  '/api/synoptik': typeof ApiSynoptikRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/analyse': typeof AnalyseRoute
   '/daily': typeof DailyRoute
   '/hourly': typeof HourlyRoute
   '/map': typeof MapRoute
   '/nowcast': typeof NowcastRoute
+  '/api/synoptik': typeof ApiSynoptikRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/analyse': typeof AnalyseRoute
   '/daily': typeof DailyRoute
   '/hourly': typeof HourlyRoute
   '/map': typeof MapRoute
   '/nowcast': typeof NowcastRoute
+  '/api/synoptik': typeof ApiSynoptikRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/daily' | '/hourly' | '/map' | '/nowcast'
+  fullPaths:
+    | '/'
+    | '/analyse'
+    | '/daily'
+    | '/hourly'
+    | '/map'
+    | '/nowcast'
+    | '/api/synoptik'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/daily' | '/hourly' | '/map' | '/nowcast'
-  id: '__root__' | '/' | '/daily' | '/hourly' | '/map' | '/nowcast'
+  to:
+    | '/'
+    | '/analyse'
+    | '/daily'
+    | '/hourly'
+    | '/map'
+    | '/nowcast'
+    | '/api/synoptik'
+  id:
+    | '__root__'
+    | '/'
+    | '/analyse'
+    | '/daily'
+    | '/hourly'
+    | '/map'
+    | '/nowcast'
+    | '/api/synoptik'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AnalyseRoute: typeof AnalyseRoute
   DailyRoute: typeof DailyRoute
   HourlyRoute: typeof HourlyRoute
   MapRoute: typeof MapRoute
   NowcastRoute: typeof NowcastRoute
+  ApiSynoptikRoute: typeof ApiSynoptikRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -109,6 +151,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DailyRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/analyse': {
+      id: '/analyse'
+      path: '/analyse'
+      fullPath: '/analyse'
+      preLoaderRoute: typeof AnalyseRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -116,16 +165,35 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/synoptik': {
+      id: '/api/synoptik'
+      path: '/api/synoptik'
+      fullPath: '/api/synoptik'
+      preLoaderRoute: typeof ApiSynoptikRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AnalyseRoute: AnalyseRoute,
   DailyRoute: DailyRoute,
   HourlyRoute: HourlyRoute,
   MapRoute: MapRoute,
   NowcastRoute: NowcastRoute,
+  ApiSynoptikRoute: ApiSynoptikRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
