@@ -69,7 +69,7 @@ export function Nowcast({
                       borderRadius: 12,
                       fontSize: 12,
                     }}
-                    formatter={(v: number) => [`${v.toFixed(2)} mm`, "Niederschlag"]}
+                    formatter={(v: number) => [`${safeFixed(v, 2)} mm`, "Niederschlag"]}
                   />
                   <Bar dataKey="precip" radius={[6, 6, 2, 2]}>
                     {points.map((p, i) => (

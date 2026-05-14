@@ -3,7 +3,7 @@ import { useWeather } from "@/contexts/WeatherContext";
 
 export function LightningEmbed() {
   const { location } = useWeather();
-  const url = `https://map.blitzortung.org/#5/${location.latitude.toFixed(2)}/${location.longitude.toFixed(2)}`;
+  const url = `https://map.blitzortung.org/#5/${safeFixed(location.latitude, 2)}/${safeFixed(location.longitude, 2)}`;
 
   return (
     <div className="space-y-3">

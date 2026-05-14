@@ -79,7 +79,7 @@ export function WeatherHero({ location, data, updatedAt }: Props) {
         </div>
         <Stat icon={Droplets} label="Luftfeuchte" value={`${data.relative_humidity_2m}%`} />
         <Stat icon={Gauge} label="Luftdruck" value={`${Math.round(data.pressure_msl)} hPa`} />
-        <Stat icon={CloudRain} label="Niederschlag" value={`${data.precipitation.toFixed(1)} mm`} sub="aktuelle Stunde" />
+        <Stat icon={CloudRain} label="Niederschlag" value={`${safeFixed(data.precipitation, 1)} mm`} sub="aktuelle Stunde" />
         <Stat icon={Cloud} label="Bewölkung" value={`${data.cloud_cover}%`} />
         <Stat icon={Thermometer} label="Gefühlt" value={`${Math.round(data.apparent_temperature)}°`} />
         <Stat icon={Eye} label="Tageszeit" value={data.is_day ? "Tag" : "Nacht"} />

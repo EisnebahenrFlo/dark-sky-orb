@@ -38,7 +38,7 @@ function DayRow({ daily, i }: { daily: DailyData; i: number }) {
           <div className="hidden items-center gap-1 text-muted-foreground sm:flex">
             <Droplets className="h-3.5 w-3.5" strokeWidth={1.5} />
             <span className="tabular-nums">{pop}%</span>
-            {precip > 0 && <span className="tabular-nums">· {precip.toFixed(1)} mm</span>}
+            {precip > 0 && <span className="tabular-nums">· {safeFixed(precip, 1)} mm</span>}
           </div>
           <div className="hidden items-center gap-1 text-muted-foreground md:flex">
             <Wind className="h-3.5 w-3.5" strokeWidth={1.5} />
@@ -74,13 +74,13 @@ function DayRow({ daily, i }: { daily: DailyData; i: number }) {
           <Detail
             icon={CloudRain}
             label="Regen"
-            value={`${(daily.rain_sum[i] ?? 0).toFixed(1)} mm`}
+            value={`${safeFixed(daily.rain_sum[i], 1)} mm`}
             sub={`${daily.precipitation_hours[i] ?? 0} h Niederschlag`}
           />
           <Detail
             icon={Snowflake}
             label="Schnee"
-            value={`${(daily.snowfall_sum[i] ?? 0).toFixed(1)} cm`}
+            value={`${safeFixed(daily.snowfall_sum[i], 1)} cm`}
           />
           <Detail
             icon={Droplets}

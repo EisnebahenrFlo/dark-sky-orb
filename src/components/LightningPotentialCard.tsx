@@ -55,7 +55,7 @@ export function LightningPotentialCard({ hourly }: { hourly: HourlyData }) {
                   v >= 100 ? "var(--destructive)" : v >= 50 ? "var(--accent)" : "var(--primary)",
                 opacity: v < 10 ? 0.25 : 0.85,
               }}
-              title={`${new Date(hourly.time[i]).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" })} · ${v.toFixed(0)}`}
+              title={`${new Date(hourly.time[i]).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" })} · ${safeFixed(v, 0)}`}
             />
           ))}
         </div>
