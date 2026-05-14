@@ -74,7 +74,8 @@ export function useSynoptikAnalysis() {
       setError(null);
       try {
         const subset = buildSubset(weatherData);
-        const res = await fetch("/api/synoptik", {
+        const baseUrl = import.meta.env.VITE_API_BASE_URL || "";
+        const res = await fetch(`${baseUrl}/api/synoptik`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ weatherData: subset, location }),
