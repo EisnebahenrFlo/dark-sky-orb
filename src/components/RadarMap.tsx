@@ -32,7 +32,7 @@ function Recenter({ lat, lon }: { lat: number; lon: number }) {
   return null;
 }
 
-const FRAME_MS = 200;
+const FRAME_MS = 500;
 
 export default function RadarMap() {
   const { location } = useWeather();
