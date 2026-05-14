@@ -2,8 +2,9 @@ import { Wind, Droplets, Gauge, CloudRain, Eye, Thermometer, Cloud, Navigation }
 import type { CurrentWeather, GeoResult } from "@/lib/weather";
 import { wmoDescription, windDirectionLabel } from "@/lib/weather";
 import { WeatherIcon } from "./WeatherIcon";
+import { RelativeTime } from "./RelativeTime";
 
-interface Props { location: GeoResult; data: CurrentWeather }
+interface Props { location: GeoResult; data: CurrentWeather; updatedAt: number }
 
 function Stat({ icon: Icon, label, value, sub }: { icon: typeof Wind; label: string; value: string; sub?: string }) {
   return (
@@ -18,11 +19,7 @@ function Stat({ icon: Icon, label, value, sub }: { icon: typeof Wind; label: str
   );
 }
 
-export function WeatherHero({ location, data }: Props) {
-  const updated = new Date(data.time).toLocaleString("de-DE", {
-    weekday: "short", hour: "2-digit", minute: "2-digit",
-  });
-
+export function WeatherHero({ location, data, updatedAt }: Props) {
   return (
     <div className="space-y-6">
       <div className="glass relative overflow-hidden rounded-3xl p-8 sm:p-12">
@@ -51,7 +48,7 @@ export function WeatherHero({ location, data }: Props) {
           </div>
 
           <div className="mt-6 text-xs text-muted-foreground">
-            Aktualisiert {updated} · ICON-D2 Modell
+            <RelativeTime timestamp={updatedAt} /> · ICON-D2 Modell
           </div>
         </div>
       </div>
