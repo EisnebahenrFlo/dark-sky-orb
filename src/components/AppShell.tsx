@@ -1,5 +1,5 @@
 import { Link, Outlet, useLocation } from "@tanstack/react-router";
-import { Sun, CloudRain, Clock, CalendarDays, Map, Loader2, RefreshCw } from "lucide-react";
+import { Sun, CloudRain, Clock, CalendarDays, Map, Brain, Loader2, RefreshCw } from "lucide-react";
 import { SearchBar } from "@/components/SearchBar";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { useWeather } from "@/contexts/WeatherContext";
@@ -9,6 +9,7 @@ const TABS = [
   { to: "/nowcast", icon: CloudRain, label: "Nowcast" },
   { to: "/hourly", icon: Clock, label: "Stündlich" },
   { to: "/daily", icon: CalendarDays, label: "7 Tage" },
+  { to: "/analyse", icon: Brain, label: "Analyse" },
   { to: "/map", icon: Map, label: "Karte" },
 ] as const;
 

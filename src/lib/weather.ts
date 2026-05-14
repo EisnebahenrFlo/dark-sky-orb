@@ -50,6 +50,26 @@ export interface HourlyData {
   uv_index: number[];
   is_day: number[];
   lightning_potential?: number[];
+  // Synoptic / pressure-level fields
+  dewpoint_2m?: number[];
+  cape?: number[];
+  lifted_index?: number[];
+  convective_inhibition?: number[];
+  temperature_850hPa?: number[];
+  temperature_700hPa?: number[];
+  temperature_500hPa?: number[];
+  temperature_300hPa?: number[];
+  geopotential_height_500hPa?: number[];
+  geopotential_height_850hPa?: number[];
+  wind_speed_850hPa?: number[];
+  wind_direction_850hPa?: number[];
+  wind_speed_500hPa?: number[];
+  wind_direction_500hPa?: number[];
+  wind_speed_300hPa?: number[];
+  wind_direction_300hPa?: number[];
+  relative_humidity_850hPa?: number[];
+  relative_humidity_700hPa?: number[];
+  vertical_velocity_700hPa?: number[];
 }
 
 export interface DailyData {
@@ -101,7 +121,7 @@ export async function fetchWeather(lat: number, lon: number): Promise<WeatherDat
     minutely_15: "precipitation,weather_code,temperature_2m,wind_speed_10m",
     forecast_minutely_15: "24",
     hourly:
-      "temperature_2m,apparent_temperature,precipitation,precipitation_probability,weather_code,wind_speed_10m,wind_gusts_10m,wind_direction_10m,cloud_cover,cloud_cover_low,cloud_cover_mid,cloud_cover_high,relative_humidity_2m,uv_index,is_day,lightning_potential",
+      "temperature_2m,apparent_temperature,precipitation,precipitation_probability,weather_code,wind_speed_10m,wind_gusts_10m,wind_direction_10m,cloud_cover,cloud_cover_low,cloud_cover_mid,cloud_cover_high,relative_humidity_2m,uv_index,is_day,lightning_potential,dewpoint_2m,cape,lifted_index,convective_inhibition,temperature_850hPa,temperature_700hPa,temperature_500hPa,temperature_300hPa,geopotential_height_500hPa,geopotential_height_850hPa,wind_speed_850hPa,wind_direction_850hPa,wind_speed_500hPa,wind_direction_500hPa,wind_speed_300hPa,wind_direction_300hPa,relative_humidity_850hPa,relative_humidity_700hPa,vertical_velocity_700hPa",
     forecast_hours: "48",
     daily:
       "weather_code,temperature_2m_max,temperature_2m_min,apparent_temperature_max,apparent_temperature_min,sunrise,sunset,uv_index_max,precipitation_sum,rain_sum,snowfall_sum,precipitation_hours,precipitation_probability_max,wind_speed_10m_max,wind_gusts_10m_max,wind_direction_10m_dominant",
