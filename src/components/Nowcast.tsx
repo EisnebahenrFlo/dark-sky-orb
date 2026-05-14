@@ -79,7 +79,10 @@ export function Nowcast({
                 </BarChart>
               </ResponsiveContainer>
             </div>
-            <div className="mt-2 grid grid-cols-8 gap-1">
+            <div
+              className="mt-2 grid gap-1"
+              style={{ gridTemplateColumns: `repeat(${count}, minmax(0, 1fr))` }}
+            >
               {points.map((p, i) => (
                 <div key={i} className="flex justify-center text-muted-foreground">
                   <WeatherIcon code={p.code} isDay={1} className="h-4 w-4" />
