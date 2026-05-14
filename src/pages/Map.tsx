@@ -42,9 +42,13 @@ export function MapPage() {
       </div>
 
       {tab === "radar" ? (
-        <Suspense fallback={<MapFallback />}>
-          <RadarMap />
-        </Suspense>
+        mounted ? (
+          <Suspense fallback={<MapFallback />}>
+            <RadarMap />
+          </Suspense>
+        ) : (
+          <MapFallback />
+        )
       ) : (
         <LightningEmbed />
       )}
