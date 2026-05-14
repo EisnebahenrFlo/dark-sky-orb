@@ -74,7 +74,14 @@ export function AppShell() {
                 {active && (
                   <span className="absolute inset-0 -z-0 rounded-full bg-primary" aria-hidden />
                 )}
-                <Icon className="relative z-10 h-4 w-4" strokeWidth={1.75} />
+                <span className="relative z-10 inline-flex">
+                  <Icon className="h-4 w-4" strokeWidth={1.75} />
+                  {to === "/warnungen" && warnCount > 0 && (
+                    <span className="absolute -right-1.5 -top-1.5 grid h-4 min-w-4 place-items-center rounded-full bg-red-500 px-1 text-[9px] font-bold text-white shadow ring-2 ring-background">
+                      {warnCount}
+                    </span>
+                  )}
+                </span>
                 <span className="relative z-10 font-medium">{label}</span>
               </Link>
             );
@@ -102,7 +109,14 @@ export function AppShell() {
                       : "text-muted-foreground hover:text-foreground"
                   }`}
                 >
-                  <Icon className="h-4 w-4" strokeWidth={1.75} />
+                  <span className="relative inline-flex">
+                    <Icon className="h-4 w-4" strokeWidth={1.75} />
+                    {to === "/warnungen" && warnCount > 0 && (
+                      <span className="absolute -right-1.5 -top-1.5 grid h-3.5 min-w-3.5 place-items-center rounded-full bg-red-500 px-1 text-[9px] font-bold text-white shadow ring-2 ring-background">
+                        {warnCount}
+                      </span>
+                    )}
+                  </span>
                   <span className="text-[10px] font-medium">{label}</span>
                 </Link>
               );
