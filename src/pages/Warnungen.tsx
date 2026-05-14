@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { AlertTriangle, CheckCircle2, RefreshCw, ShieldAlert } from "lucide-react";
 import { useRiskWarningsCtx } from "@/contexts/RiskWarningsContext";
 import { useWeather } from "@/contexts/WeatherContext";
+import { UnsupportedLocationNotice } from "@/components/PageState";
 import { RiskHero } from "@/components/warnings/RiskHero";
 import { WarningCard } from "@/components/warnings/WarningCard";
 import { DisclaimerBanner } from "@/components/warnings/DisclaimerBanner";
@@ -30,7 +31,7 @@ function SkeletonCard() {
 }
 
 export function WarnungenPage() {
-  const { data: weather, location } = useWeather();
+  const { data: weather, location, errorCode } = useWeather();
   const { data, loading, error, refresh, lastUpdated } = useRiskWarningsCtx();
   const [scrolled, setScrolled] = useState(false);
 
@@ -39,6 +40,10 @@ export function WarnungenPage() {
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
+
+  if (errorCode === "unsupported_location") {
+    return <UnsupportedLocationNotice />;
+  }
 
   if (!weather) {
     return (
