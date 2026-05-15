@@ -181,7 +181,7 @@ export function WarnungenPage() {
               onClick={() => refresh()}
               disabled={loading}
               className="inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-foreground transition-colors hover:bg-foreground/5 disabled:opacity-50"
-            >
+        </div>
               <RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} />
               Neu prüfen
             </button>
