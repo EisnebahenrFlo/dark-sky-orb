@@ -159,7 +159,7 @@ async function fetchDWDWarnings(lat: number, lon: number): Promise<OfficialWarni
   }
 }
 
-async function fetchMeteoAlarm(country: string): Promise<OfficialWarning[]> {
+async function fetchMeteoAlarm(country: string, lat: number, lon: number): Promise<OfficialWarning[]> {
   const countryMap: Record<string, string> = {
     AT: 'austria',
     CH: 'switzerland',
@@ -177,22 +177,44 @@ async function fetchMeteoAlarm(country: string): Promise<OfficialWarning[]> {
     const data = await r.json();
 
     const warnings: OfficialWarning[] = [];
+    let loggedStructure = false;
     for (const warn of data.warnings || []) {
       const props = warn.properties || {};
-      const level = Math.min(4, Math.max(1, Number(props.awareness_level?.[0]) || 2)) as 1|2|3|4;
+      const alert = warn.alert || {};
+      const info = alert.info?.[0] || {};
+      const params = Object.fromEntries((info.parameter || []).map((p: any) => [p.valueName, p.value]));
+      const area = info.area?.[0] || {};
+      const center = centerFromGeometry(warn.geometry);
+      if (!loggedStructure) {
+        console.log('[MeteoAlarm] Structure', {
+          country,
+          hasGeometry: Boolean(warn.geometry),
+          geometryType: warn.geometry?.type,
+          propertyKeys: Object.keys(props),
+          alertKeys: Object.keys(alert),
+          infoKeys: Object.keys(info),
+          areaKeys: Object.keys(area),
+          geocode: area.geocode,
+        });
+        loggedStructure = true;
+      }
+      if (center && (Math.abs(center.lat - lat) > 2 || Math.abs(center.lon - lon) > 2)) continue;
+
+      const level = Math.min(4, Math.max(1, Number(String(props.awareness_level?.[0] || params.awareness_level || '').split(';')[0]) || 2)) as 1|2|3|4;
       warnings.push({
-        id: `meteoalarm_${slug}_${warn.id}`,
+        id: `meteoalarm_${slug}_${warn.id || warn.uuid || alert.identifier}`,
         source: `MeteoAlarm-${country}`,
-        type: mapMeteoAlarmType(props.awareness_type?.[0]),
+        type: mapMeteoAlarmType(props.awareness_type?.[0] || String(params.awareness_type || '').split(';')[0]),
         level,
-        title: props.event || 'Wetterwarnung',
-        description: props.description || props.instruction || '',
-        area: props.areaDesc || 'Region',
-        start: props.onset || new Date().toISOString(),
-        end: props.expires || new Date(Date.now() + 12*3600*1000).toISOString(),
-        url: 'https://www.meteoalarm.org',
+        title: props.event || info.event || info.headline || 'Wetterwarnung',
+        description: props.description || props.instruction || info.description || info.instruction || '',
+        area: props.areaDesc || area.areaDesc || 'Region',
+        start: props.onset || info.onset || new Date().toISOString(),
+        end: props.expires || info.expires || new Date(Date.now() + 12*3600*1000).toISOString(),
+        url: props.web || info.web || 'https://www.meteoalarm.org',
       });
     }
+    console.log(`[MeteoAlarm-${country}] Total warnings: ${(data.warnings || []).length}, after geo-filter: ${warnings.length}`);
     return warnings;
   } catch (e) {
     console.error('[MeteoAlarm]', e);
@@ -247,7 +269,7 @@ export default async function handler(req: any, res: any) {
       warnings = warnings.concat(dwd);
       if (dwd.length > 0) sources.push('DWD');
     } else if (['AT', 'CH', 'IT'].includes(country)) {
-      const ma = await fetchMeteoAlarm(country);
+      const ma = await fetchMeteoAlarm(country, lat, lon);
       warnings = warnings.concat(ma);
       if (ma.length > 0) sources.push(`MeteoAlarm (${country})`);
     }
