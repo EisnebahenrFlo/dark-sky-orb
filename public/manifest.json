@@ -1,0 +1,16 @@
+{
+  "name": "MeteoFlo – Wetter mit KI-Analyse",
+  "short_name": "MeteoFlo",
+  "description": "Detailliertes Wetter, KI-Synoptik und Warnungen für DACH und Italien",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0a0a1a",
+  "theme_color": "#4f46e5",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}
