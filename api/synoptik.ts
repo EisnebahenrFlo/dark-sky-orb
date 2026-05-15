@@ -115,8 +115,27 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(400).json({ error: 'Missing weatherData or location' });
   }
 
-  // Cache-Key: grobe Region + halbstündliches Zeitfenster
-  const cacheKey = `${Math.round(location.lat * 10)}_${Math.round(location.lon * 10)}_${Math.floor(Date.now() / CACHE_TTL_MS)}`;
+  // Normalize location coords (frontend sends latitude/longitude)
+  const locLat = typeof location.latitude === 'number' ? location.latitude : location.lat;
+  const locLon = typeof location.longitude === 'number' ? location.longitude : location.lon;
+  const dataLat = weatherData?.latitude;
+  const dataLon = weatherData?.longitude;
+
+  if (typeof locLat !== 'number' || typeof locLon !== 'number') {
+    return res.status(400).json({ error: 'location missing latitude/longitude' });
+  }
+  if (typeof dataLat !== 'number' || typeof dataLon !== 'number') {
+    return res.status(400).json({ error: 'weatherData missing latitude/longitude' });
+  }
+  if (Math.abs(dataLat - locLat) > 0.5 || Math.abs(dataLon - locLon) > 0.5) {
+    return res.status(400).json({
+      error: 'location and weatherData mismatch',
+      details: `location ${locLat},${locLon} vs data ${dataLat},${dataLon}`,
+    });
+  }
+
+  // Cache-Key: location + weatherData coords + half-hour window
+  const cacheKey = `${Math.round(locLat * 10)}_${Math.round(locLon * 10)}_${Math.round(dataLat * 10)}_${Math.round(dataLon * 10)}_${Math.floor(Date.now() / CACHE_TTL_MS)}`;
 
   const cached = CACHE.get(cacheKey);
   if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {

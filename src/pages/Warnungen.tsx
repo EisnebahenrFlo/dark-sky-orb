@@ -119,7 +119,15 @@ export function WarnungenPage() {
       )}
 
       {data && (
-        <>
+        <div className={`relative space-y-5 transition-opacity ${loading ? "opacity-50" : ""}`}>
+          {loading && (
+            <div className="pointer-events-none sticky top-2 z-30 -mx-1 flex justify-end">
+              <div className="glass inline-flex items-center gap-2 rounded-full border border-border bg-background/80 px-3 py-1.5 text-xs font-medium text-foreground shadow-lg backdrop-blur">
+                <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                Wird neu geprüft…
+              </div>
+            </div>
+          )}
           <RiskHero risk={data.gewitter_risiko_6h} />
 
           <section className="space-y-3">
@@ -178,7 +186,7 @@ export function WarnungenPage() {
               Neu prüfen
             </button>
           </div>
-        </>
+        </div>
       )}
     </div>
   );
