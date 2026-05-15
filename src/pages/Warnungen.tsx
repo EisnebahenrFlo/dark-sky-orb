@@ -87,17 +87,7 @@ export function WarnungenPage() {
       )}
 
       {/* Initial loading */}
-      {loading && !data && (
-        <>
-          <div className="rounded-2xl border border-border bg-card p-6 sm:p-8">
-            <div className="h-3 w-1/4 animate-pulse rounded bg-muted" />
-            <div className="mt-3 h-12 w-24 animate-pulse rounded bg-muted" />
-            <div className="mt-4 h-3 w-3/4 animate-pulse rounded bg-muted" />
-          </div>
-          <SkeletonCard />
-          <SkeletonCard />
-        </>
-      )}
+      {loading && !data && <WarningsLoader />}
 
       {/* Error */}
       {error && !data && (
