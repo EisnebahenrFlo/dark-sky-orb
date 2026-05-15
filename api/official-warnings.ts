@@ -33,6 +33,70 @@ type OfficialWarning = {
   url?: string;
 };
 
+type WarningCenter = { lat: number; lon: number };
+
+function extractPolygonCoords(polygon: any, format: 'latlon' | 'lonlat' = 'latlon'): number[][] {
+  if (typeof polygon === 'string') {
+    return polygon
+      .split(' ')
+      .map((pair) => {
+        const [latStr, lonStr] = pair.split(',');
+        return [parseFloat(latStr), parseFloat(lonStr)];
+      })
+      .filter((c) => !isNaN(c[0]) && !isNaN(c[1]));
+  }
+
+  if (!Array.isArray(polygon)) return [];
+
+  const coords: number[][] = [];
+  const walk = (value: any) => {
+    if (Array.isArray(value) && value.length >= 2 && typeof value[0] === 'number' && typeof value[1] === 'number') {
+      coords.push(format === 'lonlat' ? [value[1], value[0]] : [value[0], value[1]]);
+      return;
+    }
+    if (Array.isArray(value)) value.forEach(walk);
+  };
+  walk(polygon);
+  return coords.filter((c) => !isNaN(c[0]) && !isNaN(c[1]));
+}
+
+function centerFromCoords(coords: number[][]): WarningCenter | null {
+  if (coords.length === 0) return null;
+  return {
+    lat: coords.reduce((s, c) => s + c[0], 0) / coords.length,
+    lon: coords.reduce((s, c) => s + c[1], 0) / coords.length,
+  };
+}
+
+function centerFromGeometry(geom: any): WarningCenter | null {
+  if (!geom) return null;
+  if (Array.isArray(geom.bbox) && geom.bbox.length >= 4) {
+    return { lat: (Number(geom.bbox[1]) + Number(geom.bbox[3])) / 2, lon: (Number(geom.bbox[0]) + Number(geom.bbox[2])) / 2 };
+  }
+  if (geom.polygon) return centerFromCoords(extractPolygonCoords(geom.polygon));
+  if (geom.coordinates) return centerFromCoords(extractPolygonCoords(geom.coordinates, 'lonlat'));
+  return null;
+}
+
+async function fetchDWDWarnCellCenters(cellIds: string[]): Promise<Record<string, WarningCenter>> {
+  const numericIds = cellIds.map((id) => Number(id)).filter((id) => Number.isFinite(id));
+  if (numericIds.length === 0) return {};
+
+  const cql = encodeURIComponent(`WARNCELLID IN (${numericIds.join(',')})`);
+  const url = `https://maps.dwd.de/geoserver/dwd/ows?service=WFS&version=1.0.0&request=GetFeature&typeName=dwd:Warngebiete_Kreise&outputFormat=json&CQL_FILTER=${cql}`;
+  const r = await fetch(url, { headers: { 'User-Agent': 'MeteoFlo/1.0 (non-commercial weather app)' } });
+  if (!r.ok) throw new Error(`DWD geometries ${r.status}`);
+
+  const geo = await r.json();
+  const centers: Record<string, WarningCenter> = {};
+  for (const feature of geo.features || []) {
+    const id = String(feature.properties?.WARNCELLID || '');
+    const center = centerFromGeometry({ ...feature.geometry, bbox: feature.bbox });
+    if (id && center) centers[id] = center;
+  }
+  return centers;
+}
+
 async function fetchDWDWarnings(lat: number, lon: number): Promise<OfficialWarning[]> {
   try {
     const r = await fetch('https://www.dwd.de/DWD/warnungen/warnapp/json/warnings.json', {
@@ -48,17 +112,34 @@ async function fetchDWDWarnings(lat: number, lon: number): Promise<OfficialWarni
 
     const data = JSON.parse(text.substring(jsonStart + 1, jsonEnd + 1));
     const warnings: OfficialWarning[] = [];
+    const BBOX_LAT = 1.0;
+    const BBOX_LON = 1.5;
+    const warningCells = data.warnings || {};
+    const geometries = data.geometries || {};
+    const cellIds = Object.keys(warningCells);
+    const totalCount = cellIds.reduce((sum, cellId) => sum + (Array.isArray(warningCells[cellId]) ? warningCells[cellId].length : 0), 0);
+    let warnCellCenters: Record<string, WarningCenter> = {};
+
+    if (Object.keys(geometries).length > 0) {
+      for (const cellId of cellIds) {
+        const center = centerFromGeometry(geometries[cellId]);
+        if (center) warnCellCenters[cellId] = center;
+      }
+    } else {
+      warnCellCenters = await fetchDWDWarnCellCenters(cellIds);
+    }
 
     // data.warnings ist ein Object mit warnCellId als key, Array als value
-    for (const cellId of Object.keys(data.warnings || {})) {
-      for (const w of data.warnings[cellId]) {
-        // Distanzfilter: Wir können ohne genaue Warnzellen-Geo nur grob filtern
-        // Für saubere Implementation: vorgenerierte WarnCellID→Bounding-Box Tabelle
-        // Pragmatisch: Wir akzeptieren alle Warnungen und filtern später im Frontend nach Distanz/Region-Name
+    for (const cellId of cellIds) {
+      const center = warnCellCenters[cellId];
+      if (!center) continue;
+      if (Math.abs(center.lat - lat) > BBOX_LAT || Math.abs(center.lon - lon) > BBOX_LON) continue;
+
+      for (const w of warningCells[cellId]) {
         warnings.push({
-          id: `dwd_${w.regionName}_${w.start}_${w.event}`,
+          id: `dwd_${cellId}_${w.start}_${w.event}`,
           source: 'DWD',
-          type: DWD_TYPE_MAP[String(w.eventCode)] || 'other',
+          type: DWD_TYPE_MAP[String(w.eventCode ?? w.type)] || 'other',
           level: Math.min(4, Math.max(1, Number(w.level))) as 1|2|3|4,
           title: w.headline || w.event,
           description: w.description || '',
@@ -69,6 +150,8 @@ async function fetchDWDWarnings(lat: number, lon: number): Promise<OfficialWarni
         });
       }
     }
+
+    console.log(`[DWD] Total warnings: ${totalCount}, after geo-filter: ${warnings.length}`);
     return warnings;
   } catch (e) {
     console.error('[DWD]', e);
@@ -76,7 +159,7 @@ async function fetchDWDWarnings(lat: number, lon: number): Promise<OfficialWarni
   }
 }
 
-async function fetchMeteoAlarm(country: string): Promise<OfficialWarning[]> {
+async function fetchMeteoAlarm(country: string, lat: number, lon: number): Promise<OfficialWarning[]> {
   const countryMap: Record<string, string> = {
     AT: 'austria',
     CH: 'switzerland',
@@ -94,22 +177,44 @@ async function fetchMeteoAlarm(country: string): Promise<OfficialWarning[]> {
     const data = await r.json();
 
     const warnings: OfficialWarning[] = [];
+    let loggedStructure = false;
     for (const warn of data.warnings || []) {
       const props = warn.properties || {};
-      const level = Math.min(4, Math.max(1, Number(props.awareness_level?.[0]) || 2)) as 1|2|3|4;
+      const alert = warn.alert || {};
+      const info = alert.info?.[0] || {};
+      const params = Object.fromEntries((info.parameter || []).map((p: any) => [p.valueName, p.value]));
+      const area = info.area?.[0] || {};
+      const center = centerFromGeometry(warn.geometry);
+      if (!loggedStructure) {
+        console.log('[MeteoAlarm] Structure', {
+          country,
+          hasGeometry: Boolean(warn.geometry),
+          geometryType: warn.geometry?.type,
+          propertyKeys: Object.keys(props),
+          alertKeys: Object.keys(alert),
+          infoKeys: Object.keys(info),
+          areaKeys: Object.keys(area),
+          geocode: area.geocode,
+        });
+        loggedStructure = true;
+      }
+      if (center && (Math.abs(center.lat - lat) > 2 || Math.abs(center.lon - lon) > 2)) continue;
+
+      const level = Math.min(4, Math.max(1, Number(String(props.awareness_level?.[0] || params.awareness_level || '').split(';')[0]) || 2)) as 1|2|3|4;
       warnings.push({
-        id: `meteoalarm_${slug}_${warn.id}`,
+        id: `meteoalarm_${slug}_${warn.id || warn.uuid || alert.identifier}`,
         source: `MeteoAlarm-${country}`,
-        type: mapMeteoAlarmType(props.awareness_type?.[0]),
+        type: mapMeteoAlarmType(props.awareness_type?.[0] || String(params.awareness_type || '').split(';')[0]),
         level,
-        title: props.event || 'Wetterwarnung',
-        description: props.description || props.instruction || '',
-        area: props.areaDesc || 'Region',
-        start: props.onset || new Date().toISOString(),
-        end: props.expires || new Date(Date.now() + 12*3600*1000).toISOString(),
-        url: 'https://www.meteoalarm.org',
+        title: props.event || info.event || info.headline || 'Wetterwarnung',
+        description: props.description || props.instruction || info.description || info.instruction || '',
+        area: props.areaDesc || area.areaDesc || 'Region',
+        start: props.onset || info.onset || new Date().toISOString(),
+        end: props.expires || info.expires || new Date(Date.now() + 12*3600*1000).toISOString(),
+        url: props.web || info.web || 'https://www.meteoalarm.org',
       });
     }
+    console.log(`[MeteoAlarm-${country}] Total warnings: ${(data.warnings || []).length}, after geo-filter: ${warnings.length}`);
     return warnings;
   } catch (e) {
     console.error('[MeteoAlarm]', e);
@@ -164,7 +269,7 @@ export default async function handler(req: any, res: any) {
       warnings = warnings.concat(dwd);
       if (dwd.length > 0) sources.push('DWD');
     } else if (['AT', 'CH', 'IT'].includes(country)) {
-      const ma = await fetchMeteoAlarm(country);
+      const ma = await fetchMeteoAlarm(country, lat, lon);
       warnings = warnings.concat(ma);
       if (ma.length > 0) sources.push(`MeteoAlarm (${country})`);
     }
