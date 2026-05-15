@@ -9,6 +9,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { ThemeProvider, useTheme } from "@/hooks/useTheme";
 import { WeatherProvider } from "@/contexts/WeatherContext";
 import { RiskWarningsProvider } from "@/contexts/RiskWarningsContext";
+import { OfficialWarningsProvider } from "@/contexts/OfficialWarningsContext";
 import { AppShell } from "@/components/AppShell";
 import { SplashScreen } from "@/components/SplashScreen";
 import { AppErrorBoundary } from "@/components/errors/AppErrorBoundary";
