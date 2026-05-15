@@ -52,7 +52,7 @@ export default function RadarMap() {
   const pastCount = data?.past.length ?? 0;
 
   const [index, setIndex] = useState(0);
-  const [isPlaying, setIsPlaying] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(true);
 
   // Default to last past frame ("now")
   useEffect(() => {
@@ -72,7 +72,7 @@ export default function RadarMap() {
       : "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png";
 
   const baseAttr =
-    '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/">CARTO</a>';
+    '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>';
 
   const currentFrame = frames[index];
 
@@ -82,12 +82,12 @@ export default function RadarMap() {
         <div className="h-[420px] w-full sm:h-[520px]">
           <MapContainer
             center={[location.latitude, location.longitude]}
-            zoom={8}
+            zoom={7}
             maxZoom={10}
             scrollWheelZoom
             style={{ height: "100%", width: "100%", background: "var(--muted)" }}
           >
-            <TileLayer url={baseTile} attribution={baseAttr} maxZoom={10} />
+            <TileLayer key={resolved} url={baseTile} attribution={baseAttr} maxZoom={10} />
             {currentFrame && data && (
               <TileLayer
                 key={currentFrame.path}
