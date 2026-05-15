@@ -169,3 +169,15 @@
     transition: background 200ms ease, border-color 200ms ease;
   }
 }
+
+/* Lightning strike pulse */
+.lightning-strike-pulse {
+  animation: strike-pulse 1.2s ease-out;
+}
+@keyframes strike-pulse {
+  0%   { stroke-opacity: 1;   stroke-width: 2; }
+  100% { stroke-opacity: 0.2; stroke-width: 10; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .lightning-strike-pulse { animation: none; }
+}
