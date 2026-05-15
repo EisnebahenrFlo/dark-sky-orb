@@ -1,6 +1,6 @@
-import { CloudOff, MapPinOff, Loader2 } from "lucide-react";
+import { CloudOff, MapPinOff } from "lucide-react";
 import { useWeather } from "@/contexts/WeatherContext";
-import { WeatherSkeleton } from "@/components/WeatherSkeleton";
+import { WeatherLoader } from "@/components/loaders/WeatherLoader";
 import type { ReactNode } from "react";
 
 export function UnsupportedLocationNotice() {
@@ -16,9 +16,9 @@ export function UnsupportedLocationNotice() {
 }
 
 export function PageState({ children }: { children: (data: NonNullable<ReturnType<typeof useWeather>["data"]>) => ReactNode }) {
-  const { data, isLoading, isError, errorCode, refresh } = useWeather();
+  const { data, isLoading, isError, errorCode, refresh, location } = useWeather();
 
-  if (isLoading && !data) return <WeatherSkeleton />;
+  if (isLoading && !data) return <WeatherLoader city={location?.name} />;
 
   if (errorCode === "unsupported_location") {
     return <UnsupportedLocationNotice />;
