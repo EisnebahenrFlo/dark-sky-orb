@@ -16,6 +16,7 @@ import { FavoritesButton } from "@/components/favorites/FavoritesButton";
 import { useWeather } from "@/contexts/WeatherContext";
 import { useRiskWarningsCtx } from "@/contexts/RiskWarningsContext";
 import { useOfficialWarningsCtx } from "@/contexts/OfficialWarningsContext";
+import { APP_VERSION } from "@/lib/constants";
 
 const TABS = [
   { to: "/", icon: Sun, label: "Aktuell" },
