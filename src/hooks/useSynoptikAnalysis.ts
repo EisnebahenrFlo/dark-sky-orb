@@ -52,6 +52,8 @@ function buildSubset(weatherData: any) {
   if (weatherData.hourly?.pressure_msl) hourly.pressure_msl = weatherData.hourly.pressure_msl.slice(0, hours);
 
   return {
+    latitude: weatherData.latitude,
+    longitude: weatherData.longitude,
     timezone: weatherData.timezone,
     current: weatherData.current,
     hourly,
