@@ -27,11 +27,53 @@ type OfficialWarning = {
   level: 1 | 2 | 3 | 4;
   title: string;
   description: string;
-  area: string;
+  areas: string[];
   start: string;
   end: string;
   url?: string;
 };
+
+type WarningCenter = { lat: number; lon: number };
+
+function isPointInPolygon(lat: number, lon: number, polygon: number[][]): boolean {
+  let inside = false;
+  for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+    const [latI, lonI] = polygon[i];
+    const [latJ, lonJ] = polygon[j];
+    const intersect = ((latI > lat) !== (latJ > lat)) &&
+                      (lon < (lonJ - lonI) * (lat - latI) / (latJ - latI) + lonI);
+    if (intersect) inside = !inside;
+  }
+  return inside;
+}
+
+function distanceToPolygonCenter(lat: number, lon: number, polygon: number[][]): number {
+  const centerLat = polygon.reduce((s, c) => s + c[0], 0) / polygon.length;
+  const centerLon = polygon.reduce((s, c) => s + c[1], 0) / polygon.length;
+  const dLat = (centerLat - lat) * 111;
+  const dLon = (centerLon - lon) * 111 * Math.cos(lat * Math.PI / 180);
+  return Math.sqrt(dLat * dLat + dLon * dLon);
+}
+
+function deduplicateWarnings(warnings: OfficialWarning[]): OfficialWarning[] {
+  const groups = new Map<string, OfficialWarning[]>();
+  for (const w of warnings) {
+    const startHour = Math.floor(new Date(w.start).getTime() / (60 * 60 * 1000));
+    const endHour = Math.floor(new Date(w.end).getTime() / (60 * 60 * 1000));
+    const key = `${w.source}_${w.type}_${w.level}_${startHour}_${endHour}`;
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key)!.push(w);
+  }
+  return Array.from(groups.values()).map((group) => {
+    const first = group[0];
+    const areas = Array.from(new Set(group.flatMap((w) => w.areas))).filter(Boolean);
+    return {
+      ...first,
+      id: `${first.source}_${first.type}_${first.level}_${first.start}`,
+      areas: areas.length > 0 ? areas : ['Region'],
+    };
+  });
+}
 
 type WarningCenter = { lat: number; lon: number };
 
