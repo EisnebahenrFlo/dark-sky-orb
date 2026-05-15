@@ -15,6 +15,7 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { FavoritesButton } from "@/components/favorites/FavoritesButton";
 import { useWeather } from "@/contexts/WeatherContext";
 import { useRiskWarningsCtx } from "@/contexts/RiskWarningsContext";
+import { useOfficialWarningsCtx } from "@/contexts/OfficialWarningsContext";
 
 const TABS = [
   { to: "/", icon: Sun, label: "Aktuell" },
