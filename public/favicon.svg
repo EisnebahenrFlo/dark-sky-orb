@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <defs>
+    <linearGradient id="sunGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f0d78c"/>
+      <stop offset="100%" stop-color="#e85d3a"/>
+    </linearGradient>
+  </defs>
+  <!-- Cloud -->
+  <path d="M70 55c0-11.6-9.4-21-21-21-9.2 0-17.1 5.9-19.9 14.2C27.4 48.9 26 49 24.5 49c-8 0-14.5 6.5-14.5 14.5S16.5 78 24.5 78H70c11 0 20-9 20-20s-9-20-20-20z" fill="#94a3b8"/>
+  <!-- Sun peeking -->
+  <circle cx="65" cy="28" r="12" fill="url(#sunGrad)"/>
+  <!-- Lightning bolt -->
+  <path d="M52 58l-8 14h6l-4 12 14-16h-6l6-10z" fill="#f0d78c"/>
+</svg>
