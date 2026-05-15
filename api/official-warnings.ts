@@ -230,6 +230,122 @@ async function fetchDWDWarnings(lat: number, lon: number): Promise<OfficialWarni
   }
 }
 
+const IT_REGIONS: Record<string, [number, number, number, number]> = {
+  "Valle d'Aosta": [45.46, 45.99, 6.79, 7.94],
+  "Piemonte": [44.05, 46.46, 6.62, 9.21],
+  "Lombardia": [44.67, 46.64, 8.50, 11.43],
+  "Liguria": [43.78, 44.68, 7.49, 10.07],
+  "Trentino-Alto Adige": [45.67, 47.09, 10.38, 12.48],
+  "Trentino": [45.67, 46.53, 10.45, 11.96],
+  "Alto Adige": [46.21, 47.09, 10.38, 12.48],
+  "Veneto": [44.79, 46.68, 10.62, 13.10],
+  "Friuli-Venezia Giulia": [45.58, 46.65, 12.32, 13.92],
+  "Emilia-Romagna": [43.74, 45.14, 9.20, 12.75],
+  "Toscana": [42.24, 44.47, 9.69, 12.37],
+  "Umbria": [42.36, 43.62, 11.89, 13.27],
+  "Marche": [42.69, 43.97, 12.18, 13.92],
+  "Lazio": [40.78, 42.85, 11.45, 14.03],
+  "Abruzzo": [41.68, 42.90, 13.01, 14.79],
+  "Molise": [41.36, 42.06, 14.16, 15.16],
+  "Campania": [39.99, 41.51, 13.76, 15.81],
+  "Puglia": [39.78, 42.22, 14.92, 18.52],
+  "Basilicata": [39.89, 41.14, 15.34, 16.87],
+  "Calabria": [37.91, 40.15, 15.63, 17.21],
+  "Sicilia": [35.49, 38.81, 11.93, 15.65],
+  "Sardegna": [38.85, 41.31, 8.13, 9.84],
+};
+
+const AT_REGIONS: Record<string, [number, number, number, number]> = {
+  "Burgenland": [46.84, 48.12, 16.07, 17.16],
+  "Kärnten": [46.37, 47.13, 12.66, 15.06],
+  "Niederösterreich": [47.42, 49.02, 14.43, 17.07],
+  "Oberösterreich": [47.45, 48.77, 12.74, 15.00],
+  "Salzburg": [46.96, 48.05, 12.07, 14.04],
+  "Steiermark": [46.65, 47.83, 13.55, 16.17],
+  "Tirol": [46.65, 47.74, 10.10, 12.96],
+  "Vorarlberg": [46.84, 47.61, 9.53, 10.24],
+  "Wien": [48.12, 48.32, 16.18, 16.58],
+};
+
+const CH_REGIONS: Record<string, [number, number, number, number]> = {
+  "Zürich": [47.16, 47.69, 8.36, 8.98],
+  "Bern": [46.32, 47.34, 6.86, 8.46],
+  "Genève": [46.13, 46.38, 5.96, 6.31],
+  "Ticino": [45.82, 46.62, 8.39, 9.30],
+  "Graubünden": [46.17, 47.06, 8.69, 10.49],
+};
+
+function getUserRegion(lat: number, lon: number, country: string): string | null {
+  const map = country === 'IT' ? IT_REGIONS
+            : country === 'AT' ? AT_REGIONS
+            : country === 'CH' ? CH_REGIONS
+            : null;
+  if (!map) return null;
+  for (const [name, [minLat, maxLat, minLon, maxLon]] of Object.entries(map)) {
+    if (lat >= minLat && lat <= maxLat && lon >= minLon && lon <= maxLon) return name;
+  }
+  return null;
+}
+
+function regionMatches(warningArea: string, userRegion: string): boolean {
+  if (!warningArea || !userRegion) return false;
+  const a = warningArea.toLowerCase();
+  const u = userRegion.toLowerCase();
+  return a.includes(u) || u.includes(a);
+}
+
+const TITLE_MAP: Record<string, string> = {
+  'Yellow': 'Markante',
+  'Orange': 'Unwetter-',
+  'Red': 'Extreme',
+  'Thunderstorm Warning': 'Gewitterwarnung',
+  'Wind Warning': 'Windwarnung',
+  'Rain Warning': 'Regenwarnung',
+  'Snow/Ice Warning': 'Schnee-/Glättewarnung',
+  'Snow Warning': 'Schneewarnung',
+  'Ice Warning': 'Glättewarnung',
+  'Extreme high temperature Warning': 'Hitzewarnung',
+  'Extreme low temperature Warning': 'Kältewarnung',
+  'Fog Warning': 'Nebelwarnung',
+  'Coastal Event Warning': 'Küstenwarnung',
+  'Forest fire Warning': 'Waldbrandwarnung',
+  'Avalanches Warning': 'Lawinenwarnung',
+  'Flood Warning': 'Hochwasserwarnung',
+  'Rain-Flood Warning': 'Regen- und Hochwasserwarnung',
+};
+
+const DESC_MAP: Record<string, string> = {
+  'Moderate intensity weather phenomena expected': 'Mäßige Wettererscheinungen erwartet',
+  'Severe weather expected': 'Schwerwiegende Wettererscheinungen erwartet',
+  'Extreme weather expected': 'Extreme Wettererscheinungen erwartet',
+  'Significant weather phenomena expected': 'Markante Wettererscheinungen erwartet',
+};
+
+function translateTitle(title: string): string {
+  let result = title;
+  for (const [en, de] of Object.entries(TITLE_MAP)) {
+    result = result.replace(new RegExp(en, 'gi'), de);
+  }
+  return result.replace(/\s+/g, ' ').trim();
+}
+
+function translateDescription(desc: string): string {
+  let result = desc;
+  for (const [en, de] of Object.entries(DESC_MAP)) {
+    result = result.replace(new RegExp(en, 'gi'), de);
+  }
+  return result;
+}
+
+function cleanDescription(desc: string): string {
+  if (!desc) return '';
+  return desc
+    .replace(/\(DISCLAIMER:[\s\S]*?\)/g, '')
+    .replace(/DISCLAIMER:.*$/gs, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 async function fetchMeteoAlarm(country: string, lat: number, lon: number): Promise<OfficialWarning[]> {
   const countryMap: Record<string, string> = {
     AT: 'austria',
@@ -247,8 +363,12 @@ async function fetchMeteoAlarm(country: string, lat: number, lon: number): Promi
     if (!r.ok) throw new Error(`MeteoAlarm ${r.status}`);
     const data = await r.json();
 
+    const userRegion = getUserRegion(lat, lon, country);
+    console.log(`[MeteoAlarm-${country}] User region detected: ${userRegion || 'none (fallback: all)'}`);
+
     const warnings: OfficialWarning[] = [];
     let loggedStructure = false;
+    let filteredOutByRegion = 0;
     for (const warn of data.warnings || []) {
       const props = warn.properties || {};
       const alert = warn.alert || {};
@@ -266,26 +386,35 @@ async function fetchMeteoAlarm(country: string, lat: number, lon: number): Promi
           infoKeys: Object.keys(info),
           areaKeys: Object.keys(area),
           geocode: area.geocode,
+          areaDescSample: props.areaDesc || area.areaDesc,
         });
         loggedStructure = true;
       }
       if (center && (Math.abs(center.lat - lat) > 2 || Math.abs(center.lon - lon) > 2)) continue;
 
+      const areaDesc = props.areaDesc || area.areaDesc || '';
+      if (userRegion && !regionMatches(areaDesc, userRegion)) {
+        filteredOutByRegion++;
+        continue;
+      }
+
       const level = Math.min(4, Math.max(1, Number(String(props.awareness_level?.[0] || params.awareness_level || '').split(';')[0]) || 2)) as 1|2|3|4;
+      const rawTitle = props.event || info.event || info.headline || 'Wetterwarnung';
+      const rawDesc = props.description || props.instruction || info.description || info.instruction || '';
       warnings.push({
         id: `meteoalarm_${slug}_${warn.id || warn.uuid || alert.identifier}`,
         source: `MeteoAlarm-${country}`,
         type: mapMeteoAlarmType(props.awareness_type?.[0] || String(params.awareness_type || '').split(';')[0]),
         level,
-        title: props.event || info.event || info.headline || 'Wetterwarnung',
-        description: props.description || props.instruction || info.description || info.instruction || '',
-        areas: [props.areaDesc || area.areaDesc || 'Region'],
+        title: translateTitle(rawTitle),
+        description: translateDescription(cleanDescription(rawDesc)),
+        areas: [areaDesc || 'Region'],
         start: props.onset || info.onset || new Date().toISOString(),
         end: props.expires || info.expires || new Date(Date.now() + 12*3600*1000).toISOString(),
         url: props.web || info.web || 'https://www.meteoalarm.org',
       });
     }
-    console.log(`[MeteoAlarm-${country}] Total warnings: ${(data.warnings || []).length}, after geo-filter: ${warnings.length}`);
+    console.log(`[MeteoAlarm-${country}] Total: ${(data.warnings || []).length}, region-filtered out: ${filteredOutByRegion}, kept: ${warnings.length}`);
     return warnings;
   } catch (e) {
     console.error('[MeteoAlarm]', e);
