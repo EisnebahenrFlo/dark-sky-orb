@@ -4,6 +4,29 @@ import {
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
+function isPrecipCode(code: number): boolean {
+  return (
+    (code >= 51 && code <= 67) ||
+    (code >= 80 && code <= 82) ||
+    (code >= 95 && code <= 99)
+  );
+}
+
+/** Override the WMO code when "rain" is reported but no precipitation falls. */
+export function getEffectiveCode(
+  code: number,
+  precipitation: number,
+  cloudCover: number,
+): number {
+  if (isPrecipCode(code) && (precipitation ?? 0) < 0.05) {
+    if (cloudCover >= 88) return 3;
+    if (cloudCover >= 50) return 2;
+    if (cloudCover >= 20) return 1;
+    return 0;
+  }
+  return code;
+}
+
 export function EffectiveWeatherIcon({
   code,
   precipitation,
@@ -17,10 +40,8 @@ export function EffectiveWeatherIcon({
   isDay?: number;
   className?: string;
 }) {
-  // Lazy import to avoid circular dep with weatherDescription
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const { getEffectiveWeather } = require("@/lib/weatherDescription") as typeof import("@/lib/weatherDescription");
-  const { icon: Icon } = getEffectiveWeather(code, precipitation, cloudCover, isDay);
+  const effective = getEffectiveCode(code, precipitation, cloudCover);
+  const Icon = getWeatherIcon(effective, isDay);
   return <Icon className={className} strokeWidth={1.25} />;
 }
 
