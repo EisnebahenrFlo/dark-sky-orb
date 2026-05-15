@@ -30,7 +30,9 @@ const TABS = [
 export function AppShell() {
   const { selectLocation, recent, clearRecent, isFetching, refresh } = useWeather();
   const { data: riskData } = useRiskWarningsCtx();
-  const warnCount = riskData?.warnungen_12h?.length ?? 0;
+  const { data: officialData } = useOfficialWarningsCtx();
+  const warnCount =
+    (riskData?.warnungen_12h?.length ?? 0) + (officialData?.warnings?.length ?? 0);
   const { pathname } = useLocation();
 
   return (
