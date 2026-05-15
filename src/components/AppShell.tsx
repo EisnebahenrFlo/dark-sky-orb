@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { SearchBar } from "@/components/SearchBar";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { FavoritesButton } from "@/components/favorites/FavoritesButton";
 import { useWeather } from "@/contexts/WeatherContext";
 import { useRiskWarningsCtx } from "@/contexts/RiskWarningsContext";
 
@@ -42,6 +43,7 @@ export function AppShell() {
         </Link>
         <div className="flex items-center gap-3">
           {isFetching && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
+          <FavoritesButton />
           <ThemeToggle />
           <button
             onClick={() => refresh()}
