@@ -16,6 +16,7 @@ import { FavoritesButton } from "@/components/favorites/FavoritesButton";
 import { useWeather } from "@/contexts/WeatherContext";
 import { useRiskWarningsCtx } from "@/contexts/RiskWarningsContext";
 import { useOfficialWarningsCtx } from "@/contexts/OfficialWarningsContext";
+import { APP_VERSION } from "@/lib/constants";
 
 const TABS = [
   { to: "/", icon: Sun, label: "Aktuell" },
@@ -130,11 +131,14 @@ export function AppShell() {
         </div>
       </nav>
 
-      <footer className="mt-12 text-center text-xs text-muted-foreground">
-        Daten von{" "}
-        <a href="https://open-meteo.com" className="underline hover:text-foreground">
-          Open-Meteo
-        </a>
+      <footer className="mt-12 space-y-1 text-center text-xs text-muted-foreground">
+        <div>
+          Daten von{" "}
+          <a href="https://open-meteo.com" className="underline hover:text-foreground">
+            Open-Meteo
+          </a>
+        </div>
+        <div>MeteoFlo v{APP_VERSION}</div>
       </footer>
     </div>
   );
