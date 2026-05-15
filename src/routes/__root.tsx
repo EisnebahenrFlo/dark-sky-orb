@@ -11,6 +11,7 @@ import { ThemeProvider, useTheme } from "@/hooks/useTheme";
 import { WeatherProvider } from "@/contexts/WeatherContext";
 import { RiskWarningsProvider } from "@/contexts/RiskWarningsContext";
 import { AppShell } from "@/components/AppShell";
+import { SplashScreen } from "@/components/SplashScreen";
 
 import appCss from "../styles.css?url";
 
