@@ -130,6 +130,7 @@ function RootComponent() {
       <QueryClientProvider client={queryClient}>
         <WeatherProvider>
           <RiskWarningsProvider>
+            <SplashScreen />
             {/* AppShell renders the persistent header/search/tabs and <Outlet /> */}
             <AppShell />
             <ThemedToaster />
