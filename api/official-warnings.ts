@@ -75,7 +75,6 @@ function deduplicateWarnings(warnings: OfficialWarning[]): OfficialWarning[] {
   });
 }
 
-type WarningCenter = { lat: number; lon: number };
 
 function extractPolygonCoords(polygon: any, format: 'latlon' | 'lonlat' = 'latlon'): number[][] {
   if (typeof polygon === 'string') {
