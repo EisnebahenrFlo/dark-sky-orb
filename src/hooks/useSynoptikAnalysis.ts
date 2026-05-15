@@ -95,12 +95,17 @@ export function useSynoptikAnalysis() {
     [weatherData, location],
   );
 
-  // Auto-load once when weather data is first available (or location changes)
+  // Auto-load when weather data is first available OR when location changes
   useEffect(() => {
     if (!weatherData || !location) return;
     const key = `${location.latitude}_${location.longitude}`;
     if (loadedKeyRef.current === key) return;
     loadedKeyRef.current = key;
+    // Clear stale data immediately so UI shows skeleton, not previous location
+    setData(null);
+    setError(null);
+    setLastUpdated(null);
+    setLoading(true);
     const ctrl = new AbortController();
     fetchAnalysis(ctrl.signal);
     return () => ctrl.abort();
