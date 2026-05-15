@@ -28,7 +28,7 @@ export interface OfficialWarning {
   level: OfficialWarningLevel;
   title: string;
   description: string;
-  area: string;
+  areas: string[];
   start: string;
   end: string;
   url?: string;
