@@ -48,11 +48,7 @@ export function WarnungenPage() {
   }
 
   if (!weather) {
-    return (
-      <div className="grid h-64 place-items-center text-muted-foreground">
-        Lade Wetterdaten…
-      </div>
-    );
+    return <WeatherLoader city={location.name} />;
   }
 
   const stickyColor = data
