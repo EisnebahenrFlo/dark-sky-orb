@@ -48,6 +48,10 @@ export function useRiskWarnings() {
       setLoading(true);
       setError(null);
       try {
+        console.log("[risk-warnings] sending:", {
+          location,
+          hasLatLon: typeof weatherData.latitude === "number" && typeof weatherData.longitude === "number",
+        });
         const baseUrl = import.meta.env.VITE_API_BASE_URL || "";
         const res = await fetch(`${baseUrl}/api/risk-warnings`, {
           method: "POST",
