@@ -76,6 +76,11 @@ export function useSynoptikAnalysis() {
       setError(null);
       try {
         const subset = buildSubset(weatherData);
+        console.log("[synoptik] sending:", {
+          location,
+          hasLatLon: typeof subset.latitude === "number" && typeof subset.longitude === "number",
+          subsetKeys: Object.keys(subset),
+        });
         const baseUrl = import.meta.env.VITE_API_BASE_URL || "";
         const res = await fetch(`${baseUrl}/api/synoptik`, {
           method: "POST",
