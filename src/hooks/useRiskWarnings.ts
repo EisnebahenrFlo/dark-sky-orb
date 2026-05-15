@@ -34,7 +34,7 @@ export interface RiskWarnings {
 const REFRESH_MS = 15 * 60 * 1000;
 
 export function useRiskWarnings() {
-  const { data: weatherData, location } = useWeather();
+  const { data: weatherData, location, isFetching: weatherFetching } = useWeather();
   const [data, setData] = useState<RiskWarnings | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -69,23 +69,42 @@ export function useRiskWarnings() {
     [weatherData, location],
   );
 
-  // Initial load when weather/location available or location changes
+  // Clear stale warnings immediately when location changes
   useEffect(() => {
-    if (!weatherData || !location) return;
-    const key = `${location.latitude}_${location.longitude}`;
-    if (loadedKeyRef.current === key) return;
-    loadedKeyRef.current = key;
     ctrlRef.current?.abort();
-    // Clear stale warnings immediately on location change → show skeleton
     setData(null);
     setError(null);
     setLastUpdated(null);
     setLoading(true);
+    loadedKeyRef.current = null;
+  }, [location.latitude, location.longitude]);
+
+  // Fetch only when fresh weather data for the current location is available
+  useEffect(() => {
+    if (!weatherData || !location) return;
+    if (weatherFetching) return;
+    if (
+      Math.abs(weatherData.latitude - location.latitude) > 0.5 ||
+      Math.abs(weatherData.longitude - location.longitude) > 0.5
+    ) {
+      return;
+    }
+    const key = `${location.latitude}_${location.longitude}`;
+    if (loadedKeyRef.current === key) return;
+    loadedKeyRef.current = key;
+    ctrlRef.current?.abort();
     const ctrl = new AbortController();
     ctrlRef.current = ctrl;
     fetchWarnings(ctrl.signal);
     return () => ctrl.abort();
-  }, [weatherData, location, fetchWarnings]);
+  }, [
+    location.latitude,
+    location.longitude,
+    weatherData?.latitude,
+    weatherData?.longitude,
+    weatherFetching,
+    fetchWarnings,
+  ]);
 
   // Auto-refresh every 15 min, pause when tab is hidden
   useEffect(() => {
