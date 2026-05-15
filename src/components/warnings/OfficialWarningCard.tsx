@@ -99,6 +99,7 @@ const TRUNCATE_AT = 150;
 
 export function OfficialWarningCard({ warning }: { warning: OfficialWarning }) {
   const [expanded, setExpanded] = useState(false);
+  const [areasExpanded, setAreasExpanded] = useState(false);
   const Icon = ICON_MAP[warning.type] ?? AlertTriangle;
   const level = (LEVEL_STYLE[warning.level] ?? LEVEL_STYLE[2]);
   const longDesc = warning.description && warning.description.length > TRUNCATE_AT;
