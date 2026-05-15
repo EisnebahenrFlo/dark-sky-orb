@@ -27,13 +27,54 @@ type OfficialWarning = {
   level: 1 | 2 | 3 | 4;
   title: string;
   description: string;
-  area: string;
+  areas: string[];
   start: string;
   end: string;
   url?: string;
 };
 
 type WarningCenter = { lat: number; lon: number };
+
+function isPointInPolygon(lat: number, lon: number, polygon: number[][]): boolean {
+  let inside = false;
+  for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+    const [latI, lonI] = polygon[i];
+    const [latJ, lonJ] = polygon[j];
+    const intersect = ((latI > lat) !== (latJ > lat)) &&
+                      (lon < (lonJ - lonI) * (lat - latI) / (latJ - latI) + lonI);
+    if (intersect) inside = !inside;
+  }
+  return inside;
+}
+
+function distanceToPolygonCenter(lat: number, lon: number, polygon: number[][]): number {
+  const centerLat = polygon.reduce((s, c) => s + c[0], 0) / polygon.length;
+  const centerLon = polygon.reduce((s, c) => s + c[1], 0) / polygon.length;
+  const dLat = (centerLat - lat) * 111;
+  const dLon = (centerLon - lon) * 111 * Math.cos(lat * Math.PI / 180);
+  return Math.sqrt(dLat * dLat + dLon * dLon);
+}
+
+function deduplicateWarnings(warnings: OfficialWarning[]): OfficialWarning[] {
+  const groups = new Map<string, OfficialWarning[]>();
+  for (const w of warnings) {
+    const startHour = Math.floor(new Date(w.start).getTime() / (60 * 60 * 1000));
+    const endHour = Math.floor(new Date(w.end).getTime() / (60 * 60 * 1000));
+    const key = `${w.source}_${w.type}_${w.level}_${startHour}_${endHour}`;
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key)!.push(w);
+  }
+  return Array.from(groups.values()).map((group) => {
+    const first = group[0];
+    const areas = Array.from(new Set(group.flatMap((w) => w.areas))).filter(Boolean);
+    return {
+      ...first,
+      id: `${first.source}_${first.type}_${first.level}_${first.start}`,
+      areas: areas.length > 0 ? areas : ['Region'],
+    };
+  });
+}
+
 
 function extractPolygonCoords(polygon: any, format: 'latlon' | 'lonlat' = 'latlon'): number[][] {
   if (typeof polygon === 'string') {
@@ -78,7 +119,26 @@ function centerFromGeometry(geom: any): WarningCenter | null {
   return null;
 }
 
-async function fetchDWDWarnCellCenters(cellIds: string[]): Promise<Record<string, WarningCenter>> {
+function polygonsFromGeometry(geom: any): number[][][] {
+  if (!geom) return [];
+  if (geom.type === 'Polygon' && Array.isArray(geom.coordinates)) {
+    return geom.coordinates.map((ring: any[]) => ring.map((c: any) => [Number(c[1]), Number(c[0])]));
+  }
+  if (geom.type === 'MultiPolygon' && Array.isArray(geom.coordinates)) {
+    const rings: number[][][] = [];
+    for (const poly of geom.coordinates) {
+      for (const ring of poly) rings.push(ring.map((c: any) => [Number(c[1]), Number(c[0])]));
+    }
+    return rings;
+  }
+  if (geom.polygon) {
+    const polys = Array.isArray(geom.polygon) && typeof geom.polygon[0] === 'string' ? geom.polygon : [geom.polygon];
+    return polys.map((p: any) => extractPolygonCoords(p)).filter((c: number[][]) => c.length > 0);
+  }
+  return [];
+}
+
+async function fetchDWDWarnCellPolygons(cellIds: string[]): Promise<Record<string, number[][][]>> {
   const numericIds = cellIds.map((id) => Number(id)).filter((id) => Number.isFinite(id));
   if (numericIds.length === 0) return {};
 
@@ -88,13 +148,13 @@ async function fetchDWDWarnCellCenters(cellIds: string[]): Promise<Record<string
   if (!r.ok) throw new Error(`DWD geometries ${r.status}`);
 
   const geo = await r.json();
-  const centers: Record<string, WarningCenter> = {};
+  const out: Record<string, number[][][]> = {};
   for (const feature of geo.features || []) {
     const id = String(feature.properties?.WARNCELLID || '');
-    const center = centerFromGeometry({ ...feature.geometry, bbox: feature.bbox });
-    if (id && center) centers[id] = center;
+    const polys = polygonsFromGeometry(feature.geometry);
+    if (id && polys.length > 0) out[id] = polys;
   }
-  return centers;
+  return out;
 }
 
 async function fetchDWDWarnings(lat: number, lon: number): Promise<OfficialWarning[]> {
@@ -104,7 +164,6 @@ async function fetchDWDWarnings(lat: number, lon: number): Promise<OfficialWarni
     });
     if (!r.ok) throw new Error(`DWD ${r.status}`);
 
-    // Response ist JSONP-style: "warnWetter.loadWarnings({...});"
     const text = await r.text();
     const jsonStart = text.indexOf('({');
     const jsonEnd = text.lastIndexOf('})');
@@ -112,28 +171,40 @@ async function fetchDWDWarnings(lat: number, lon: number): Promise<OfficialWarni
 
     const data = JSON.parse(text.substring(jsonStart + 1, jsonEnd + 1));
     const warnings: OfficialWarning[] = [];
-    const BBOX_LAT = 1.0;
-    const BBOX_LON = 1.5;
+    const BUFFER_KM = 20;
     const warningCells = data.warnings || {};
     const geometries = data.geometries || {};
     const cellIds = Object.keys(warningCells);
     const totalCount = cellIds.reduce((sum, cellId) => sum + (Array.isArray(warningCells[cellId]) ? warningCells[cellId].length : 0), 0);
-    let warnCellCenters: Record<string, WarningCenter> = {};
 
+    let cellPolygons: Record<string, number[][][]> = {};
     if (Object.keys(geometries).length > 0) {
       for (const cellId of cellIds) {
-        const center = centerFromGeometry(geometries[cellId]);
-        if (center) warnCellCenters[cellId] = center;
+        const polys = polygonsFromGeometry(geometries[cellId]);
+        if (polys.length > 0) cellPolygons[cellId] = polys;
       }
-    } else {
-      warnCellCenters = await fetchDWDWarnCellCenters(cellIds);
+    }
+    const missing = cellIds.filter((id) => !cellPolygons[id]);
+    if (missing.length > 0) {
+      try {
+        const fetched = await fetchDWDWarnCellPolygons(missing);
+        cellPolygons = { ...cellPolygons, ...fetched };
+      } catch (e) {
+        console.error('[DWD WFS]', e);
+      }
     }
 
-    // data.warnings ist ein Object mit warnCellId als key, Array als value
     for (const cellId of cellIds) {
-      const center = warnCellCenters[cellId];
-      if (!center) continue;
-      if (Math.abs(center.lat - lat) > BBOX_LAT || Math.abs(center.lon - lon) > BBOX_LON) continue;
+      const polys = cellPolygons[cellId];
+      if (!polys || polys.length === 0) continue;
+
+      const inside = polys.some((p) => isPointInPolygon(lat, lon, p));
+      let nearby = false;
+      if (!inside) {
+        const minDist = Math.min(...polys.map((p) => distanceToPolygonCenter(lat, lon, p)));
+        nearby = minDist <= BUFFER_KM;
+      }
+      if (!inside && !nearby) continue;
 
       for (const w of warningCells[cellId]) {
         warnings.push({
@@ -143,7 +214,7 @@ async function fetchDWDWarnings(lat: number, lon: number): Promise<OfficialWarni
           level: Math.min(4, Math.max(1, Number(w.level))) as 1|2|3|4,
           title: w.headline || w.event,
           description: w.description || '',
-          area: w.regionName || 'Unbekannte Region',
+          areas: [w.regionName || 'Unbekannte Region'],
           start: new Date(w.start).toISOString(),
           end: new Date(w.end).toISOString(),
           url: 'https://www.dwd.de/DE/wetter/warnungen/warnungen_node.html',
@@ -208,7 +279,7 @@ async function fetchMeteoAlarm(country: string, lat: number, lon: number): Promi
         level,
         title: props.event || info.event || info.headline || 'Wetterwarnung',
         description: props.description || props.instruction || info.description || info.instruction || '',
-        area: props.areaDesc || area.areaDesc || 'Region',
+        areas: [props.areaDesc || area.areaDesc || 'Region'],
         start: props.onset || info.onset || new Date().toISOString(),
         end: props.expires || info.expires || new Date(Date.now() + 12*3600*1000).toISOString(),
         url: props.web || info.web || 'https://www.meteoalarm.org',
@@ -277,6 +348,9 @@ export default async function handler(req: any, res: any) {
     // Nur aktive/zukünftige Warnungen
     const now = Date.now();
     warnings = warnings.filter(w => new Date(w.end).getTime() > now);
+
+    // Deduplizierung: gleiche Warnungen (type/level/Zeitraum) → eine Karte mit mehreren Regionen
+    warnings = deduplicateWarnings(warnings);
 
     // Sortierung: Höchste Stufe zuerst, dann nach Start
     warnings.sort((a, b) => b.level - a.level || new Date(a.start).getTime() - new Date(b.start).getTime());

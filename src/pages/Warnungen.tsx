@@ -119,8 +119,8 @@ export function WarnungenPage() {
           )}
           <RiskHero risk={data.gewitter_risiko_6h} />
 
-          <OfficialWarningsSection />
-
+          {/* Reihenfolge (User-Wunsch): Hero → KI-Auswertung → Amtliche Warnungen → Disclaimer.
+              KI-Einschätzung steht im Fokus, amtliche Warnungen dienen als zusätzliche Referenz. */}
           <section className="space-y-3">
             <div className="flex items-baseline justify-between gap-3 px-1">
               <div>
@@ -155,6 +155,8 @@ export function WarnungenPage() {
               data.warnungen_12h.map((w, i) => <WarningCard key={`${w.id}_${i}`} warning={w} />)
             )}
           </section>
+
+          <OfficialWarningsSection />
 
           {data.summary && (
             <div className="rounded-2xl border border-border bg-card p-6 text-center sm:p-8">

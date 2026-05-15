@@ -99,6 +99,7 @@ const TRUNCATE_AT = 150;
 
 export function OfficialWarningCard({ warning }: { warning: OfficialWarning }) {
   const [expanded, setExpanded] = useState(false);
+  const [areasExpanded, setAreasExpanded] = useState(false);
   const Icon = ICON_MAP[warning.type] ?? AlertTriangle;
   const level = (LEVEL_STYLE[warning.level] ?? LEVEL_STYLE[2]);
   const longDesc = warning.description && warning.description.length > TRUNCATE_AT;
@@ -142,11 +143,27 @@ export function OfficialWarningCard({ warning }: { warning: OfficialWarning }) {
             </>
           )}
 
-          <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs text-muted-foreground">
-            {warning.area && (
-              <span className="inline-flex items-center gap-1.5">
-                <MapPin className="h-3.5 w-3.5" strokeWidth={1.75} />
-                <span className="truncate">{warning.area}</span>
+          <div className="mt-3 flex flex-wrap items-start gap-x-4 gap-y-1.5 text-xs text-muted-foreground">
+            {warning.areas && warning.areas.length > 0 && (
+              <span className="inline-flex max-w-full items-start gap-1.5">
+                <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0" strokeWidth={1.75} />
+                <span className="min-w-0">
+                  <span className="truncate">{warning.areas[0]}</span>
+                  {warning.areas.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => setAreasExpanded((v) => !v)}
+                      className="ml-1.5 text-[11px] font-medium text-accent hover:underline"
+                    >
+                      {areasExpanded ? "weniger ↑" : `+ ${warning.areas.length - 1} weitere ${warning.areas.length - 1 === 1 ? "Region" : "Regionen"} ↓`}
+                    </button>
+                  )}
+                  {areasExpanded && warning.areas.length > 1 && (
+                    <span className="mt-1 block text-[11px] leading-relaxed text-muted-foreground/90">
+                      {warning.areas.slice(1).join(" · ")}
+                    </span>
+                  )}
+                </span>
               </span>
             )}
             {warning.start && warning.end && (
