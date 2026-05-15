@@ -9,6 +9,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { ThemeProvider, useTheme } from "@/hooks/useTheme";
 import { WeatherProvider } from "@/contexts/WeatherContext";
 import { RiskWarningsProvider } from "@/contexts/RiskWarningsContext";
+import { OfficialWarningsProvider } from "@/contexts/OfficialWarningsContext";
 import { AppShell } from "@/components/AppShell";
 import { SplashScreen } from "@/components/SplashScreen";
 import { AppErrorBoundary } from "@/components/errors/AppErrorBoundary";
@@ -96,10 +97,12 @@ function RootComponent() {
         <AppErrorBoundary>
           <WeatherProvider>
             <RiskWarningsProvider>
-              <SplashScreen />
-              {/* AppShell renders the persistent header/search/tabs and <Outlet /> */}
-              <AppShell />
-              <ThemedToaster />
+              <OfficialWarningsProvider>
+                <SplashScreen />
+                {/* AppShell renders the persistent header/search/tabs and <Outlet /> */}
+                <AppShell />
+                <ThemedToaster />
+              </OfficialWarningsProvider>
             </RiskWarningsProvider>
           </WeatherProvider>
         </AppErrorBoundary>

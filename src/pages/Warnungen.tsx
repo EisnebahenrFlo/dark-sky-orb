@@ -9,6 +9,7 @@ import { DisclaimerBanner } from "@/components/warnings/DisclaimerBanner";
 import { colorClasses, type RiskColorKey } from "@/components/warnings/colors";
 import { WarningsLoader } from "@/components/loaders/WarningsLoader";
 import { WeatherLoader } from "@/components/loaders/WeatherLoader";
+import { OfficialWarningsSection } from "@/components/warnings/OfficialWarningsSection";
 
 function relMin(ts: number) {
   const m = Math.max(0, Math.round((Date.now() - ts) / 60000));
@@ -118,11 +119,18 @@ export function WarnungenPage() {
           )}
           <RiskHero risk={data.gewitter_risiko_6h} />
 
+          <OfficialWarningsSection />
+
           <section className="space-y-3">
             <div className="flex items-baseline justify-between gap-3 px-1">
-              <h2 className="font-display text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-                Aktive Warnungen · 12 h
-              </h2>
+              <div>
+                <h2 className="font-display text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+                  KI-Auswertung · 12 h
+                </h2>
+                <p className="mt-0.5 text-[11px] text-muted-foreground/80">
+                  Algorithmus-basierte Risikoeinschätzung – nicht amtlich
+                </p>
+              </div>
               {data.warnungen_12h.length > 0 && (
                 <span className="text-xs text-muted-foreground">
                   {data.warnungen_12h.length}{" "}
@@ -156,7 +164,9 @@ export function WarnungenPage() {
             </div>
           )}
 
-          <DisclaimerBanner text={data.disclaimer} />
+          <DisclaimerBanner
+            text={`${data.disclaimer}\n\nAmtliche Warnungen stammen direkt von DWD (Deutschland) und MeteoAlarm (AT/CH/IT). Bei abweichender Beurteilung haben offizielle Quellen Vorrang. Die KI-Auswertung ist experimentell und ergänzend.`}
+          />
 
           <div className="flex flex-wrap items-center justify-between gap-3 pt-2 text-xs text-muted-foreground">
             <div className="italic">

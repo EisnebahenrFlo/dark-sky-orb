@@ -13,7 +13,7 @@ export function DisclaimerBanner({ text }: { text: string }) {
       <div className="flex items-start gap-3">
         <Info className="mt-0.5 h-4 w-4 shrink-0 text-accent" strokeWidth={1.75} />
         <div className="space-y-2">
-          <p>{text}</p>
+          <p className="whitespace-pre-line">{text}</p>
           <p className="flex flex-wrap gap-x-3 gap-y-1">
             <span className="font-medium text-foreground">Offizielle Quellen:</span>
             {SOURCES.map((s, i) => (
