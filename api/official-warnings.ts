@@ -119,7 +119,26 @@ function centerFromGeometry(geom: any): WarningCenter | null {
   return null;
 }
 
-async function fetchDWDWarnCellCenters(cellIds: string[]): Promise<Record<string, WarningCenter>> {
+function polygonsFromGeometry(geom: any): number[][][] {
+  if (!geom) return [];
+  if (geom.type === 'Polygon' && Array.isArray(geom.coordinates)) {
+    return geom.coordinates.map((ring: any[]) => ring.map((c: any) => [Number(c[1]), Number(c[0])]));
+  }
+  if (geom.type === 'MultiPolygon' && Array.isArray(geom.coordinates)) {
+    const rings: number[][][] = [];
+    for (const poly of geom.coordinates) {
+      for (const ring of poly) rings.push(ring.map((c: any) => [Number(c[1]), Number(c[0])]));
+    }
+    return rings;
+  }
+  if (geom.polygon) {
+    const polys = Array.isArray(geom.polygon) && typeof geom.polygon[0] === 'string' ? geom.polygon : [geom.polygon];
+    return polys.map((p: any) => extractPolygonCoords(p)).filter((c: number[][]) => c.length > 0);
+  }
+  return [];
+}
+
+async function fetchDWDWarnCellPolygons(cellIds: string[]): Promise<Record<string, number[][][]>> {
   const numericIds = cellIds.map((id) => Number(id)).filter((id) => Number.isFinite(id));
   if (numericIds.length === 0) return {};
 
@@ -129,13 +148,13 @@ async function fetchDWDWarnCellCenters(cellIds: string[]): Promise<Record<string
   if (!r.ok) throw new Error(`DWD geometries ${r.status}`);
 
   const geo = await r.json();
-  const centers: Record<string, WarningCenter> = {};
+  const out: Record<string, number[][][]> = {};
   for (const feature of geo.features || []) {
     const id = String(feature.properties?.WARNCELLID || '');
-    const center = centerFromGeometry({ ...feature.geometry, bbox: feature.bbox });
-    if (id && center) centers[id] = center;
+    const polys = polygonsFromGeometry(feature.geometry);
+    if (id && polys.length > 0) out[id] = polys;
   }
-  return centers;
+  return out;
 }
 
 async function fetchDWDWarnings(lat: number, lon: number): Promise<OfficialWarning[]> {
@@ -145,7 +164,6 @@ async function fetchDWDWarnings(lat: number, lon: number): Promise<OfficialWarni
     });
     if (!r.ok) throw new Error(`DWD ${r.status}`);
 
-    // Response ist JSONP-style: "warnWetter.loadWarnings({...});"
     const text = await r.text();
     const jsonStart = text.indexOf('({');
     const jsonEnd = text.lastIndexOf('})');
@@ -153,28 +171,40 @@ async function fetchDWDWarnings(lat: number, lon: number): Promise<OfficialWarni
 
     const data = JSON.parse(text.substring(jsonStart + 1, jsonEnd + 1));
     const warnings: OfficialWarning[] = [];
-    const BBOX_LAT = 1.0;
-    const BBOX_LON = 1.5;
+    const BUFFER_KM = 20;
     const warningCells = data.warnings || {};
     const geometries = data.geometries || {};
     const cellIds = Object.keys(warningCells);
     const totalCount = cellIds.reduce((sum, cellId) => sum + (Array.isArray(warningCells[cellId]) ? warningCells[cellId].length : 0), 0);
-    let warnCellCenters: Record<string, WarningCenter> = {};
 
+    let cellPolygons: Record<string, number[][][]> = {};
     if (Object.keys(geometries).length > 0) {
       for (const cellId of cellIds) {
-        const center = centerFromGeometry(geometries[cellId]);
-        if (center) warnCellCenters[cellId] = center;
+        const polys = polygonsFromGeometry(geometries[cellId]);
+        if (polys.length > 0) cellPolygons[cellId] = polys;
       }
-    } else {
-      warnCellCenters = await fetchDWDWarnCellCenters(cellIds);
+    }
+    const missing = cellIds.filter((id) => !cellPolygons[id]);
+    if (missing.length > 0) {
+      try {
+        const fetched = await fetchDWDWarnCellPolygons(missing);
+        cellPolygons = { ...cellPolygons, ...fetched };
+      } catch (e) {
+        console.error('[DWD WFS]', e);
+      }
     }
 
-    // data.warnings ist ein Object mit warnCellId als key, Array als value
     for (const cellId of cellIds) {
-      const center = warnCellCenters[cellId];
-      if (!center) continue;
-      if (Math.abs(center.lat - lat) > BBOX_LAT || Math.abs(center.lon - lon) > BBOX_LON) continue;
+      const polys = cellPolygons[cellId];
+      if (!polys || polys.length === 0) continue;
+
+      const inside = polys.some((p) => isPointInPolygon(lat, lon, p));
+      let nearby = false;
+      if (!inside) {
+        const minDist = Math.min(...polys.map((p) => distanceToPolygonCenter(lat, lon, p)));
+        nearby = minDist <= BUFFER_KM;
+      }
+      if (!inside && !nearby) continue;
 
       for (const w of warningCells[cellId]) {
         warnings.push({
@@ -184,7 +214,7 @@ async function fetchDWDWarnings(lat: number, lon: number): Promise<OfficialWarni
           level: Math.min(4, Math.max(1, Number(w.level))) as 1|2|3|4,
           title: w.headline || w.event,
           description: w.description || '',
-          area: w.regionName || 'Unbekannte Region',
+          areas: [w.regionName || 'Unbekannte Region'],
           start: new Date(w.start).toISOString(),
           end: new Date(w.end).toISOString(),
           url: 'https://www.dwd.de/DE/wetter/warnungen/warnungen_node.html',
