@@ -119,11 +119,18 @@ export function WarnungenPage() {
           )}
           <RiskHero risk={data.gewitter_risiko_6h} />
 
+          <OfficialWarningsSection />
+
           <section className="space-y-3">
             <div className="flex items-baseline justify-between gap-3 px-1">
-              <h2 className="font-display text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-                Aktive Warnungen · 12 h
-              </h2>
+              <div>
+                <h2 className="font-display text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+                  KI-Auswertung · 12 h
+                </h2>
+                <p className="mt-0.5 text-[11px] text-muted-foreground/80">
+                  Algorithmus-basierte Risikoeinschätzung – nicht amtlich
+                </p>
+              </div>
               {data.warnungen_12h.length > 0 && (
                 <span className="text-xs text-muted-foreground">
                   {data.warnungen_12h.length}{" "}
