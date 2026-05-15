@@ -124,18 +124,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (typeof locLat !== 'number' || typeof locLon !== 'number') {
     return res.status(400).json({ error: 'location missing latitude/longitude' });
   }
-  if (typeof dataLat !== 'number' || typeof dataLon !== 'number') {
-    return res.status(400).json({ error: 'weatherData missing latitude/longitude' });
-  }
-  if (Math.abs(dataLat - locLat) > 0.5 || Math.abs(dataLon - locLon) > 0.5) {
-    return res.status(400).json({
-      error: 'location and weatherData mismatch',
-      details: `location ${locLat},${locLon} vs data ${dataLat},${dataLon}`,
-    });
+  // Lenient: only validate mismatch when both lat/lon are present
+  if (typeof dataLat === 'number' && typeof dataLon === 'number') {
+    if (Math.abs(dataLat - locLat) > 1.0 || Math.abs(dataLon - locLon) > 1.0) {
+      return res.status(400).json({
+        error: 'location and weatherData mismatch',
+        details: `location ${locLat},${locLon} vs data ${dataLat},${dataLon}`,
+      });
+    }
   }
 
-  // Cache-Key: location + weatherData coords + half-hour window
-  const cacheKey = `${Math.round(locLat * 10)}_${Math.round(locLon * 10)}_${Math.round(dataLat * 10)}_${Math.round(dataLon * 10)}_${Math.floor(Date.now() / CACHE_TTL_MS)}`;
+  // Cache-Key: location + (optional) weatherData coords + half-hour window
+  const dLat = typeof dataLat === 'number' ? Math.round(dataLat * 10) : 'x';
+  const dLon = typeof dataLon === 'number' ? Math.round(dataLon * 10) : 'x';
+  const cacheKey = `${Math.round(locLat * 10)}_${Math.round(locLon * 10)}_${dLat}_${dLon}_${Math.floor(Date.now() / CACHE_TTL_MS)}`;
 
   const cached = CACHE.get(cacheKey);
   if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
