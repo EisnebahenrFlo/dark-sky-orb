@@ -349,6 +349,9 @@ export default async function handler(req: any, res: any) {
     const now = Date.now();
     warnings = warnings.filter(w => new Date(w.end).getTime() > now);
 
+    // Deduplizierung: gleiche Warnungen (type/level/Zeitraum) → eine Karte mit mehreren Regionen
+    warnings = deduplicateWarnings(warnings);
+
     // Sortierung: Höchste Stufe zuerst, dann nach Start
     warnings.sort((a, b) => b.level - a.level || new Date(a.start).getTime() - new Date(b.start).getTime());
 
