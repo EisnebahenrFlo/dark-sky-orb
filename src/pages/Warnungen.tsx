@@ -164,7 +164,9 @@ export function WarnungenPage() {
             </div>
           )}
 
-          <DisclaimerBanner text={data.disclaimer} />
+          <DisclaimerBanner
+            text={`${data.disclaimer}\n\nAmtliche Warnungen stammen direkt von DWD (Deutschland) und MeteoAlarm (AT/CH/IT). Bei abweichender Beurteilung haben offizielle Quellen Vorrang. Die KI-Auswertung ist experimentell und ergänzend.`}
+          />
 
           <div className="flex flex-wrap items-center justify-between gap-3 pt-2 text-xs text-muted-foreground">
             <div className="italic">
