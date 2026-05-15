@@ -70,18 +70,7 @@ export function AnalysePage() {
       </div>
 
       {/* Initial loading */}
-      {loading && !data && (
-        <>
-          <div className="rounded-2xl border border-border bg-card p-6 sm:p-8">
-            <div className="h-6 w-3/4 animate-pulse rounded bg-muted" />
-            <div className="mt-3 h-4 w-1/2 animate-pulse rounded bg-muted" />
-            <p className="mt-4 text-sm text-muted-foreground">KI analysiert die Wetterlage…</p>
-          </div>
-          <SkeletonCard />
-          <SkeletonCard />
-          <SkeletonCard />
-        </>
-      )}
+      {loading && !data && <AnalysisLoader />}
 
       {/* Error */}
       {error && !data && (
