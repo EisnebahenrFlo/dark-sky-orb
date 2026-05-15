@@ -93,6 +93,8 @@ export interface DailyData {
 }
 
 export interface WeatherData {
+  latitude: number;
+  longitude: number;
   current: CurrentWeather;
   minutely_15: MinutelyData;
   hourly: HourlyData;
