@@ -2,7 +2,7 @@ import { safeFixed } from "@/lib/safeFormat";
 import { Wind, Droplets, Gauge, CloudRain, Eye, Thermometer, Cloud, Navigation } from "lucide-react";
 import type { CurrentWeather, GeoResult } from "@/lib/weather";
 import { wmoDescription, windDirectionLabel } from "@/lib/weather";
-import { WeatherIcon } from "./WeatherIcon";
+import { WeatherIcon, EffectiveWeatherIcon } from "./WeatherIcon";
 import { RelativeTime } from "./RelativeTime";
 
 interface Props { location: GeoResult; data: CurrentWeather; updatedAt: number }
@@ -25,7 +25,7 @@ export function WeatherHero({ location, data, updatedAt }: Props) {
     <div className="space-y-6">
       <div className="glass relative overflow-hidden rounded-3xl p-8 sm:p-12">
         <div className="absolute -right-16 -top-16 opacity-[0.07]">
-          <WeatherIcon code={data.weather_code} isDay={data.is_day} className="h-[28rem] w-[28rem]" />
+          <EffectiveWeatherIcon code={data.weather_code} precipitation={data.precipitation} cloudCover={data.cloud_cover} isDay={data.is_day} className="h-[28rem] w-[28rem]" />
         </div>
         <div className="relative">
           <div className="text-sm uppercase tracking-[0.2em] text-muted-foreground">
@@ -38,7 +38,7 @@ export function WeatherHero({ location, data, updatedAt }: Props) {
               {Math.round(data.temperature_2m)}°
             </div>
             <div className="flex items-center gap-3">
-              <WeatherIcon code={data.weather_code} isDay={data.is_day} className="h-14 w-14 text-primary" />
+              <EffectiveWeatherIcon code={data.weather_code} precipitation={data.precipitation} cloudCover={data.cloud_cover} isDay={data.is_day} className="h-14 w-14 text-primary" />
               <div>
                 <div className="text-lg font-medium">{wmoDescription(data.weather_code)}</div>
                 <div className="text-sm text-muted-foreground">

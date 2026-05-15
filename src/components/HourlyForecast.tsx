@@ -11,7 +11,7 @@ import {
 import { Droplets, Wind } from "lucide-react";
 import type { HourlyData } from "@/lib/weather";
 import { formatTime } from "@/lib/weather";
-import { WeatherIcon } from "./WeatherIcon";
+import { EffectiveWeatherIcon } from "./WeatherIcon";
 import { SectionHeader } from "./SectionHeader";
 
 export function HourlyForecast({ hourly }: { hourly: HourlyData }) {
@@ -23,6 +23,7 @@ export function HourlyForecast({ hourly }: { hourly: HourlyData }) {
     wind: Math.round(hourly.wind_speed_10m[i]),
     code: hourly.weather_code[i],
     isDay: hourly.is_day[i],
+    cloud: hourly.cloud_cover?.[i] ?? 0,
   }));
 
   return (
@@ -37,7 +38,7 @@ export function HourlyForecast({ hourly }: { hourly: HourlyData }) {
                 className="flex w-16 shrink-0 flex-col items-center rounded-2xl border border-border/50 bg-white/[0.02] px-2 py-3"
               >
                 <div className="text-[11px] tabular-nums text-muted-foreground">{r.time}</div>
-                <WeatherIcon code={r.code} isDay={r.isDay} className="my-2 h-6 w-6 text-primary" />
+                <EffectiveWeatherIcon code={r.code} precipitation={r.precip} cloudCover={r.cloud} isDay={r.isDay} className="my-2 h-6 w-6 text-primary" />
                 <div className="font-display text-base tabular-nums">{r.temp}°</div>
                 <div className="mt-1 flex items-center gap-0.5 text-[10px] text-muted-foreground">
                   <Droplets className="h-2.5 w-2.5" strokeWidth={1.5} />

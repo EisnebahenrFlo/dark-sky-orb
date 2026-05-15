@@ -1,7 +1,7 @@
 import { safeFixed } from "@/lib/safeFormat";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
 import { precipKind, formatTime, type MinutelyData } from "@/lib/weather";
-import { WeatherIcon } from "./WeatherIcon";
+import { EffectiveWeatherIcon } from "./WeatherIcon";
 import { SectionHeader } from "./SectionHeader";
 
 const KIND_COLOR: Record<string, string> = {
@@ -86,7 +86,7 @@ export function Nowcast({
             >
               {points.map((p, i) => (
                 <div key={i} className="flex justify-center text-muted-foreground">
-                  <WeatherIcon code={p.code} isDay={1} className="h-4 w-4" />
+                  <EffectiveWeatherIcon code={p.code} precipitation={p.precip} cloudCover={50} isDay={1} className="h-4 w-4" />
                 </div>
               ))}
             </div>

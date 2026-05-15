@@ -3,7 +3,7 @@ import { useState } from "react";
 import { ChevronDown, Sunrise, Sunset, Wind, Navigation, Droplets, CloudRain, Snowflake, Sun } from "lucide-react";
 import type { DailyData } from "@/lib/weather";
 import { weekdayLabel, windDirectionLabel } from "@/lib/weather";
-import { WeatherIcon } from "./WeatherIcon";
+import { EffectiveWeatherIcon } from "./WeatherIcon";
 import { SectionHeader } from "./SectionHeader";
 
 function timeOnly(iso: string) {
@@ -33,7 +33,7 @@ function DayRow({ daily, i }: { daily: DailyData; i: number }) {
           </div>
         </div>
 
-        <WeatherIcon code={code} isDay={1} className="h-8 w-8 shrink-0 text-primary" />
+        <EffectiveWeatherIcon code={code} precipitation={precip} cloudCover={precip > 0 ? 100 : 50} isDay={1} className="h-8 w-8 shrink-0 text-primary" />
 
         <div className="flex flex-1 items-center gap-3 text-sm">
           <div className="hidden items-center gap-1 text-muted-foreground sm:flex">
