@@ -42,11 +42,7 @@ export function PageState({ children }: { children: (data: NonNullable<ReturnTyp
   }
 
   if (!data) {
-    return (
-      <div className="grid h-64 place-items-center">
-        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-      </div>
-    );
+    return <WeatherLoader city={location?.name} compact />;
   }
 
   return <>{children(data)}</>;
