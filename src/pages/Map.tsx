@@ -1,9 +1,8 @@
 import { lazy, Suspense, useEffect, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { SectionHeader } from "@/components/SectionHeader";
-import { LightningEmbed } from "@/components/LightningEmbed";
-
 const RadarMap = lazy(() => import("@/components/RadarMap"));
+const LightningMap = lazy(() => import("@/components/lightning/LightningMap"));
 
 type SubTab = "radar" | "lightning";
 
@@ -49,8 +48,12 @@ export function MapPage() {
         ) : (
           <MapFallback />
         )
+      ) : mounted ? (
+        <Suspense fallback={<MapFallback />}>
+          <LightningMap />
+        </Suspense>
       ) : (
-        <LightningEmbed />
+        <MapFallback />
       )}
     </section>
   );
