@@ -97,10 +97,12 @@ function RootComponent() {
         <AppErrorBoundary>
           <WeatherProvider>
             <RiskWarningsProvider>
-              <SplashScreen />
-              {/* AppShell renders the persistent header/search/tabs and <Outlet /> */}
-              <AppShell />
-              <ThemedToaster />
+              <OfficialWarningsProvider>
+                <SplashScreen />
+                {/* AppShell renders the persistent header/search/tabs and <Outlet /> */}
+                <AppShell />
+                <ThemedToaster />
+              </OfficialWarningsProvider>
             </RiskWarningsProvider>
           </WeatherProvider>
         </AppErrorBoundary>
