@@ -4,7 +4,7 @@ import { WarnungenPage } from "@/pages/Warnungen";
 export const Route = createFileRoute("/warnungen")({
   head: () => ({
     meta: [
-      { title: "Warnungen · Meteo" },
+      { title: "Warnungen · MeteoFlo" },
       {
         name: "description",
         content:

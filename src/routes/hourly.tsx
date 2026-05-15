@@ -4,7 +4,7 @@ import { HourlyPage } from "@/pages/Hourly";
 export const Route = createFileRoute("/hourly")({
   head: () => ({
     meta: [
-      { title: "Stündlich · Meteo" },
+      { title: "Stündlich · MeteoFlo" },
       { name: "description", content: "Stündliche Vorhersage für die nächsten 48 Stunden." },
     ],
   }),

@@ -4,7 +4,7 @@ import { MapPage } from "@/pages/Map";
 export const Route = createFileRoute("/map")({
   head: () => ({
     meta: [
-      { title: "Karte · Meteo" },
+      { title: "Karte · MeteoFlo" },
       { name: "description", content: "Niederschlagsradar und Live-Blitzdetektion." },
     ],
   }),
