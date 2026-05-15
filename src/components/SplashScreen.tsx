@@ -57,8 +57,9 @@ export function SplashScreen() {
         </div>
 
         <div className="text-center">
-          <h1 className="font-display text-5xl font-bold tracking-tight text-foreground sm:text-6xl">
-            METEO
+          <h1 className="font-display text-5xl font-bold tracking-tight sm:text-6xl">
+            <span className="text-primary">Meteo</span>
+            <span className="text-accent">Flo</span>
           </h1>
           <p className="mt-2 text-sm font-medium text-muted-foreground">
             Wetter mit KI-Analyse

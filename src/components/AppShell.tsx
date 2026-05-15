@@ -37,7 +37,7 @@ export function AppShell() {
         <Link to="/" className="flex items-center gap-2">
           <div className="h-2 w-2 rounded-full bg-primary shadow-[0_0_12px_var(--primary)]" />
           <span className="font-display text-sm uppercase tracking-[0.3em] text-muted-foreground">
-            Meteo
+            MeteoFlo
           </span>
         </Link>
         <div className="flex items-center gap-3">
