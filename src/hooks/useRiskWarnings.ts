@@ -76,6 +76,11 @@ export function useRiskWarnings() {
     if (loadedKeyRef.current === key) return;
     loadedKeyRef.current = key;
     ctrlRef.current?.abort();
+    // Clear stale warnings immediately on location change → show skeleton
+    setData(null);
+    setError(null);
+    setLastUpdated(null);
+    setLoading(true);
     const ctrl = new AbortController();
     ctrlRef.current = ctrl;
     fetchWarnings(ctrl.signal);
