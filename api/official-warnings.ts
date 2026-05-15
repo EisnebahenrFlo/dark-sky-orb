@@ -279,7 +279,7 @@ async function fetchMeteoAlarm(country: string, lat: number, lon: number): Promi
         level,
         title: props.event || info.event || info.headline || 'Wetterwarnung',
         description: props.description || props.instruction || info.description || info.instruction || '',
-        area: props.areaDesc || area.areaDesc || 'Region',
+        areas: [props.areaDesc || area.areaDesc || 'Region'],
         start: props.onset || info.onset || new Date().toISOString(),
         end: props.expires || info.expires || new Date(Date.now() + 12*3600*1000).toISOString(),
         url: props.web || info.web || 'https://www.meteoalarm.org',
