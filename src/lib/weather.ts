@@ -128,9 +128,20 @@ export async function fetchWeather(lat: number, lon: number): Promise<WeatherDat
     forecast_days: "7",
     timezone: "auto",
   });
-  const res = await fetch(`https://api.open-meteo.com/v1/forecast?${params.toString()}`);
+  const url = `https://api.open-meteo.com/v1/forecast?${params.toString()}`;
+  const res = await fetch(url);
   if (!res.ok) throw new Error("Wetterdaten fehlgeschlagen");
-  return (await res.json()) as WeatherData;
+  const json = (await res.json()) as WeatherData;
+  // Debug: verify which model coverage delivered the data
+  // eslint-disable-next-line no-console
+  console.log("[weather] model=best_match (default)", {
+    lat,
+    lon,
+    hasHourly: !!json.hourly,
+    hasDaily: !!json.daily,
+    hasMinutely15: !!json.minutely_15,
+  });
+  return json;
 }
 
 export function wmoDescription(code: number): string {
