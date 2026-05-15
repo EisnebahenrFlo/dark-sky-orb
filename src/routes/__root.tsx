@@ -11,6 +11,7 @@ import { ThemeProvider, useTheme } from "@/hooks/useTheme";
 import { WeatherProvider } from "@/contexts/WeatherContext";
 import { RiskWarningsProvider } from "@/contexts/RiskWarningsContext";
 import { AppShell } from "@/components/AppShell";
+import { SplashScreen } from "@/components/SplashScreen";
 
 import appCss from "../styles.css?url";
 
@@ -129,6 +130,7 @@ function RootComponent() {
       <QueryClientProvider client={queryClient}>
         <WeatherProvider>
           <RiskWarningsProvider>
+            <SplashScreen />
             {/* AppShell renders the persistent header/search/tabs and <Outlet /> */}
             <AppShell />
             <ThemedToaster />

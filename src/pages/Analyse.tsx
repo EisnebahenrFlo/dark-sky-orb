@@ -18,6 +18,8 @@ import { SectionCard } from "@/components/synoptik/SectionCard";
 import { ConvectionBadge } from "@/components/synoptik/ConvectionBadge";
 import { useWeather } from "@/contexts/WeatherContext";
 import { UnsupportedLocationNotice } from "@/components/PageState";
+import { AnalysisLoader } from "@/components/loaders/AnalysisLoader";
+import { WeatherLoader } from "@/components/loaders/WeatherLoader";
 
 function relMin(ts: number) {
   const m = Math.max(0, Math.round((Date.now() - ts) / 60000));
@@ -54,11 +56,7 @@ export function AnalysePage() {
   }
 
   if (!weather) {
-    return (
-      <div className="grid h-64 place-items-center text-muted-foreground">
-        Lade Wetterdaten…
-      </div>
-    );
+    return <WeatherLoader city={location.name} />;
   }
 
   return (
@@ -72,18 +70,7 @@ export function AnalysePage() {
       </div>
 
       {/* Initial loading */}
-      {loading && !data && (
-        <>
-          <div className="rounded-2xl border border-border bg-card p-6 sm:p-8">
-            <div className="h-6 w-3/4 animate-pulse rounded bg-muted" />
-            <div className="mt-3 h-4 w-1/2 animate-pulse rounded bg-muted" />
-            <p className="mt-4 text-sm text-muted-foreground">KI analysiert die Wetterlage…</p>
-          </div>
-          <SkeletonCard />
-          <SkeletonCard />
-          <SkeletonCard />
-        </>
-      )}
+      {loading && !data && <AnalysisLoader />}
 
       {/* Error */}
       {error && !data && (
