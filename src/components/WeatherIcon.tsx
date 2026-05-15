@@ -4,31 +4,6 @@ import {
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
-const PRECIP_CODES = new Set([
-  51, 53, 55, 56, 57, 61, 63, 65, 66, 67,
-  80, 81, 82, 95, 96, 99,
-]);
-
-/**
- * Returns an icon that is consistent with the actual precipitation amount.
- * If the WMO code says "rain" but precipitation is 0, fall back to a
- * cloud icon based on cloud cover so icon and mm-display never disagree.
- */
-export function getEffectiveWeatherIcon(
-  code: number,
-  precipitation: number,
-  cloudCover: number,
-  isDay: number = 1,
-): LucideIcon {
-  const day = isDay === 1;
-  if ((precipitation ?? 0) <= 0 && PRECIP_CODES.has(code)) {
-    if (cloudCover >= 80) return Cloudy;
-    if (cloudCover >= 40) return day ? CloudSun : CloudMoon;
-    return day ? Sun : Moon;
-  }
-  return getWeatherIcon(code, isDay);
-}
-
 export function EffectiveWeatherIcon({
   code,
   precipitation,
@@ -42,7 +17,10 @@ export function EffectiveWeatherIcon({
   isDay?: number;
   className?: string;
 }) {
-  const Icon = getEffectiveWeatherIcon(code, precipitation, cloudCover, isDay);
+  // Lazy import to avoid circular dep with weatherDescription
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { getEffectiveWeather } = require("@/lib/weatherDescription") as typeof import("@/lib/weatherDescription");
+  const { icon: Icon } = getEffectiveWeather(code, precipitation, cloudCover, isDay);
   return <Icon className={className} strokeWidth={1.25} />;
 }
 
