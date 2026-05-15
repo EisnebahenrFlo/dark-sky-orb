@@ -1,8 +1,9 @@
 import { safeFixed } from "@/lib/safeFormat";
 import { Wind, Droplets, Gauge, CloudRain, Eye, Thermometer, Cloud, Navigation } from "lucide-react";
 import type { CurrentWeather, GeoResult } from "@/lib/weather";
-import { wmoDescription, windDirectionLabel } from "@/lib/weather";
-import { WeatherIcon, EffectiveWeatherIcon } from "./WeatherIcon";
+import { windDirectionLabel } from "@/lib/weather";
+import { getEffectiveWeather } from "@/lib/weatherDescription";
+import { EffectiveWeatherIcon } from "./WeatherIcon";
 import { RelativeTime } from "./RelativeTime";
 
 interface Props { location: GeoResult; data: CurrentWeather; updatedAt: number }
@@ -21,6 +22,7 @@ function Stat({ icon: Icon, label, value, sub }: { icon: typeof Wind; label: str
 }
 
 export function WeatherHero({ location, data, updatedAt }: Props) {
+  const effective = getEffectiveWeather(data.weather_code, data.precipitation, data.cloud_cover, data.is_day);
   return (
     <div className="space-y-6">
       <div className="glass relative overflow-hidden rounded-3xl p-8 sm:p-12">
@@ -40,7 +42,7 @@ export function WeatherHero({ location, data, updatedAt }: Props) {
             <div className="flex items-center gap-3">
               <EffectiveWeatherIcon code={data.weather_code} precipitation={data.precipitation} cloudCover={data.cloud_cover} isDay={data.is_day} className="h-14 w-14 text-primary" />
               <div>
-                <div className="text-lg font-medium">{wmoDescription(data.weather_code)}</div>
+                <div className="text-lg font-medium">{effective.description}</div>
                 <div className="text-sm text-muted-foreground">
                   Gefühlt {Math.round(data.apparent_temperature)}°
                 </div>

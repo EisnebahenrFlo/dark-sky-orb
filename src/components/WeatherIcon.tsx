@@ -4,29 +4,27 @@ import {
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
-const PRECIP_CODES = new Set([
-  51, 53, 55, 56, 57, 61, 63, 65, 66, 67,
-  80, 81, 82, 95, 96, 99,
-]);
+function isPrecipCode(code: number): boolean {
+  return (
+    (code >= 51 && code <= 67) ||
+    (code >= 80 && code <= 82) ||
+    (code >= 95 && code <= 99)
+  );
+}
 
-/**
- * Returns an icon that is consistent with the actual precipitation amount.
- * If the WMO code says "rain" but precipitation is 0, fall back to a
- * cloud icon based on cloud cover so icon and mm-display never disagree.
- */
-export function getEffectiveWeatherIcon(
+/** Override the WMO code when "rain" is reported but no precipitation falls. */
+export function getEffectiveCode(
   code: number,
   precipitation: number,
   cloudCover: number,
-  isDay: number = 1,
-): LucideIcon {
-  const day = isDay === 1;
-  if ((precipitation ?? 0) <= 0 && PRECIP_CODES.has(code)) {
-    if (cloudCover >= 80) return Cloudy;
-    if (cloudCover >= 40) return day ? CloudSun : CloudMoon;
-    return day ? Sun : Moon;
+): number {
+  if (isPrecipCode(code) && (precipitation ?? 0) < 0.05) {
+    if (cloudCover >= 88) return 3;
+    if (cloudCover >= 50) return 2;
+    if (cloudCover >= 20) return 1;
+    return 0;
   }
-  return getWeatherIcon(code, isDay);
+  return code;
 }
 
 export function EffectiveWeatherIcon({
@@ -42,7 +40,8 @@ export function EffectiveWeatherIcon({
   isDay?: number;
   className?: string;
 }) {
-  const Icon = getEffectiveWeatherIcon(code, precipitation, cloudCover, isDay);
+  const effective = getEffectiveCode(code, precipitation, cloudCover);
+  const Icon = getWeatherIcon(effective, isDay);
   return <Icon className={className} strokeWidth={1.25} />;
 }
 
