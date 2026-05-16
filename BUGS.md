@@ -35,11 +35,11 @@
 ---
 
 ## Bekannte offene Punkte (vor Alpha)
-- 🟡 MeteoAlarm Italien zeigt teils Warnungen anderer Regionen (Geo-Filter unvollständig)
-- 🟡 Wetterradar Dark Mode schlecht lesbar
-- 🟡 Blitzortung-Cookie-Banner bei jedem Öffnen
-- 🟢 Schnee im Nowcast kontrastarm
-- 🟢 KI-Loading-Animation könnte Ladebalken/Witze haben
+
+
+
+
+
 
 ## Fix in Phase 7 (nach Alpha-Test)
 - (aus Alpha-Feedback füllen)
