@@ -163,13 +163,28 @@ export function WarnungenPage() {
             </section>
           </div>
 
-          {data.summary && (
-            <div className="rounded-2xl border border-border bg-card p-6 text-center sm:p-8">
-              <p className="font-display text-base italic leading-relaxed text-foreground/90 sm:text-lg">
-                {data.summary}
-              </p>
-            </div>
-          )}
+          {(() => {
+            const official = officialData?.warnings ?? [];
+            const ki = data.warnungen_12h ?? [];
+            const officialMax = official.reduce((m, w) => Math.max(m, w.level ?? 1), 0);
+            const officialLabel =
+              officialMax >= 4 ? "Extrem" : officialMax === 3 ? "Unwetter" : officialMax === 2 ? "Markant" : "Hinweis";
+            let summaryText: string;
+            if (official.length > 0) {
+              summaryText = `${official.length} aktive amtliche ${official.length === 1 ? "Warnung" : "Warnungen"} – höchste Stufe: ${officialLabel}.${ki.length > 0 ? ` Zusätzlich ${ki.length} KI-Hinweis${ki.length === 1 ? "" : "e"}.` : ""}`;
+            } else if (ki.length > 0 && data.summary) {
+              summaryText = data.summary;
+            } else {
+              summaryText = "Keine aktiven Warnungen. Wetterlage ruhig.";
+            }
+            return (
+              <div className="rounded-2xl border border-border bg-card p-6 text-center sm:p-8">
+                <p className="font-display text-base italic leading-relaxed text-foreground/90 sm:text-lg">
+                  {summaryText}
+                </p>
+              </div>
+            );
+          })()}
 
           <DisclaimerBanner
             text={`${data.disclaimer}\n\nAmtliche Warnungen stammen direkt von DWD (Deutschland) und MeteoAlarm (AT/CH/IT). Bei abweichender Beurteilung haben offizielle Quellen Vorrang. Die KI-Auswertung ist experimentell und ergänzend.`}
