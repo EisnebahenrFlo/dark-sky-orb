@@ -192,6 +192,8 @@ export function AnalysePage() {
             </div>
           </SectionCard>
 
+          <AnalysisDisclaimer />
+
           <div className="flex flex-wrap items-center justify-between gap-3 pt-2 text-xs text-muted-foreground">
             <div className="italic">
               {lastUpdated ? `Letzte Analyse: ${relMin(lastUpdated)}` : "—"}
