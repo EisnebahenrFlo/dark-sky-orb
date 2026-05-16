@@ -53,9 +53,8 @@ export function WarnungenPage() {
     return <WeatherLoader city={location.name} />;
   }
 
-  const stickyColor = data
-    ? colorClasses[(data.gewitter_risiko_6h.color as RiskColorKey) ?? "green"] ?? colorClasses.green
-    : null;
+  const stickyMeta = data ? scoreMeta(data.gewitter_risiko_6h.score) : null;
+  const stickyColor = stickyMeta ? colorClasses[stickyMeta.color] : null;
 
   return (
     <div className="space-y-5">
