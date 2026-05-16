@@ -2,9 +2,9 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { lzwDecode, parseStrike, type BlitzStrike } from "@/lib/blitzortungDecoder";
 
 const ENDPOINTS = [
-  "wss://ws1.blitzortung.org:443/",
-  "wss://ws7.blitzortung.org:443/",
-  "wss://ws8.blitzortung.org:443/",
+  "wss://ws1.blitzortung.org",
+  "wss://ws7.blitzortung.org",
+  "wss://ws8.blitzortung.org",
 ];
 
 const MAX_AGE_MS = 30 * 60 * 1000;
