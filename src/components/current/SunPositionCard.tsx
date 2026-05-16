@@ -20,6 +20,26 @@ function formatDuration(ms: number) {
   return `${h} Std ${m} Min`;
 }
 
+function interpolateColor(c1: string, c2: string, t: number): string {
+  const r1 = parseInt(c1.slice(1, 3), 16),
+    g1 = parseInt(c1.slice(3, 5), 16),
+    b1 = parseInt(c1.slice(5, 7), 16);
+  const r2 = parseInt(c2.slice(1, 3), 16),
+    g2 = parseInt(c2.slice(3, 5), 16),
+    b2 = parseInt(c2.slice(5, 7), 16);
+  const r = Math.round(r1 + (r2 - r1) * t);
+  const g = Math.round(g1 + (g2 - g1) * t);
+  const b = Math.round(b1 + (b2 - b1) * t);
+  return `#${r.toString(16).padStart(2, "0")}${g.toString(16).padStart(2, "0")}${b.toString(16).padStart(2, "0")}`;
+}
+
+function getSunColor(p: number): string {
+  if (p < 0 || p > 100) return "#94a3b8";
+  const dist = Math.abs(p - 50) / 50;
+  if (p < 50) return interpolateColor("#f97316", "#fbbf24", 1 - dist);
+  return interpolateColor("#fbbf24", "#ef4444", dist);
+}
+
 export function SunPositionCard({ sunrise, sunset, nextSunrise }: Props) {
   const [now, setNow] = useState(() => new Date());
 
@@ -40,14 +60,12 @@ export function SunPositionCard({ sunrise, sunset, nextSunrise }: Props) {
   const progress = total > 0 ? Math.min(1, Math.max(0, elapsed / total)) : 0;
   const dayLength = formatDuration(total);
 
-  // Status text
   let status: string;
   if (beforeSunrise) {
     status = `Sonne geht auf in ${formatDuration(sr.getTime() - now.getTime())}`;
   } else if (afterSunset) {
-    const next = nextSunrise ? new Date(nextSunrise) : null;
-    status = next
-      ? `Nächster Sonnenaufgang um ${formatTime(nextSunrise!)}`
+    status = nextSunrise
+      ? `Nächster Sonnenaufgang um ${formatTime(nextSunrise)}`
       : "Sonne ist untergegangen";
   } else if (progress < 0.5) {
     status = "Steigt noch";
@@ -57,17 +75,28 @@ export function SunPositionCard({ sunrise, sunset, nextSunrise }: Props) {
     status = "Sinkt wieder";
   }
 
-  // Geometry: viewBox 200x110, arc from (20,100) to (180,100), radius 80, center (100,100)
   const cx = 100;
   const cy = 100;
   const r = 80;
-  const angle = Math.PI * (1 - progress); // π → left (sunrise), 0 → right (sunset)
+  const angle = Math.PI * (1 - progress);
   const sunX = cx + r * Math.cos(angle);
   const sunY = cy - r * Math.sin(angle);
 
-  // Active arc from sunrise (20,100) to current sun position
-  // Use elliptical arc command. sweep-flag = 1 (clockwise on this svg with y-down means upper arc).
   const activePath = `M 20 100 A ${r} ${r} 0 0 1 ${sunX.toFixed(2)} ${sunY.toFixed(2)}`;
+  const sunColor = getSunColor(progress * 100);
+
+  // 8 static rays at 45° increments
+  const rays = Array.from({ length: 8 }, (_, i) => {
+    const a = (i * Math.PI) / 4;
+    const r1 = 9;
+    const r2 = 18;
+    return {
+      x1: sunX + Math.cos(a) * r1,
+      y1: sunY + Math.sin(a) * r1,
+      x2: sunX + Math.cos(a) * r2,
+      y2: sunY + Math.sin(a) * r2,
+    };
+  });
 
   return (
     <div className="glass rounded-2xl p-6 sm:p-8">
@@ -80,9 +109,9 @@ export function SunPositionCard({ sunrise, sunset, nextSunrise }: Props) {
         <svg viewBox="0 0 200 110" className="w-full" aria-hidden>
           <defs>
             <linearGradient id="sunArcGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-              <stop offset="0%" stopColor="#fb923c" />
+              <stop offset="0%" stopColor="#f97316" />
               <stop offset="50%" stopColor="#fbbf24" />
-              <stop offset="100%" stopColor="#f59e0b" />
+              <stop offset="100%" stopColor={sunColor} />
             </linearGradient>
           </defs>
 
@@ -107,22 +136,31 @@ export function SunPositionCard({ sunrise, sunset, nextSunrise }: Props) {
             />
           )}
 
-          {/* Sun marker */}
+          {/* Sun marker — static */}
           {isDay && (
             <>
-              <circle
-                cx={sunX}
-                cy={sunY}
-                r={10}
-                fill="#fbbf24"
-                opacity={0.3}
-                className="animate-pulse-glow"
-              />
-              <circle cx={sunX} cy={sunY} r={6} fill="#fbbf24" />
+              {/* Static halo */}
+              <circle cx={sunX} cy={sunY} r={18} fill={sunColor} opacity={0.25} />
+              {/* Static rays */}
+              {rays.map((ray, i) => (
+                <line
+                  key={i}
+                  x1={ray.x1}
+                  y1={ray.y1}
+                  x2={ray.x2}
+                  y2={ray.y2}
+                  stroke={sunColor}
+                  strokeWidth={1.25}
+                  strokeLinecap="round"
+                  opacity={0.5}
+                />
+              ))}
+              {/* Sun core */}
+              <circle cx={sunX} cy={sunY} r={6} fill={sunColor} />
             </>
           )}
 
-          {/* Moon at the apex when night */}
+          {/* Moon — static when night */}
           {!isDay && (
             <g transform="translate(94 38)">
               <circle cx={6} cy={6} r={11} fill="currentColor" className="text-muted-foreground/15" />
@@ -138,7 +176,6 @@ export function SunPositionCard({ sunrise, sunset, nextSunrise }: Props) {
           )}
         </svg>
 
-        {/* Endpoint labels */}
         <div className="mt-1 flex items-center justify-between text-xs text-muted-foreground">
           <div className="flex flex-col items-start gap-0.5">
             <Sunrise className="h-4 w-4 text-accent" strokeWidth={1.75} />
