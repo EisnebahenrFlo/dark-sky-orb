@@ -132,7 +132,7 @@ export function AppShell() {
                   <span className="relative inline-flex">
                     <Icon className="h-4 w-4" strokeWidth={1.75} />
                     {to === "/warnungen" && warnCount > 0 && (
-                      <span className="absolute -right-1.5 -top-1.5 grid h-3.5 min-w-3.5 place-items-center rounded-full bg-red-500 px-1 text-[9px] font-bold text-white shadow ring-2 ring-background">
+                      <span className={`absolute -right-1.5 -top-1.5 grid h-3.5 min-w-3.5 place-items-center rounded-full ${badgeColor} ${badgePulse} px-1 text-[9px] font-bold text-white shadow ring-2 ring-background`}>
                         {warnCount}
                       </span>
                     )}
