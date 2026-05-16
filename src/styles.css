@@ -117,7 +117,13 @@
   .animate-pulse-glow,
   .animate-sparkle,
   .animate-shimmer,
-  .animate-tab-enter {
+  .animate-tab-enter,
+  .animate-tab-content-enter,
+  .animate-rain-drop,
+  .animate-snow-fall,
+  .animate-thunder-flash,
+  .animate-cloud-sweep,
+  .animate-star-twinkle {
     animation: none !important;
   }
 }
