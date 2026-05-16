@@ -38,6 +38,7 @@ export function useBlitzortungWS(enabled = true): UseBlitzortungResult {
     let ws: WebSocket;
     try {
       ws = new WebSocket(url);
+      ws.binaryType = "arraybuffer";
     } catch {
       failsRef.current += 1;
       if (failsRef.current >= MAX_FAILS) setFailed(true);
