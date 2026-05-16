@@ -38,6 +38,7 @@ function SkeletonCard() {
 export function WarnungenPage() {
   const { data: weather, location, errorCode } = useWeather();
   const { data, loading, error, refresh, lastUpdated } = useRiskWarningsCtx();
+  const { data: officialData } = useOfficialWarningsCtx();
   const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
