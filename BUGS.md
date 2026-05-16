@@ -22,6 +22,7 @@
 | 16.05. | Ansbach | Aktuell | Gewitterpoteitial stimmt nicht mit Gweiiterrisioko im Tab Warnung überein (gewollt?) | 🟠 | offen |
 | 16.05. | Ansbach | Nowcast | Wettericons sind nicht unter den uhrzeiten | 🟠 | offen |
 | 16.05. | Ansbach | Nowcast | Legende Nowcast (welche Farbe bedeute was) | 💡 | offen |
+| 16.05. | Ansbach | Aktuell | Refresh Animation bei allen Tabs | 💡 | offen |
 
 
 ---
