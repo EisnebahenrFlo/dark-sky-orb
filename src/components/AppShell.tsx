@@ -95,7 +95,7 @@ export function AppShell() {
         </div>
       </nav>
 
-      <main>
+      <main key={pathname} className="animate-tab-enter">
         <Outlet />
       </main>
 
