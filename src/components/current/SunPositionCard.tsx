@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Sunrise, Sunset, Moon, Sun } from "lucide-react";
+import { Sunrise, Sunset, Sun } from "lucide-react";
 
 interface Props {
   sunrise: string;
@@ -76,42 +76,32 @@ export function SunPositionCard({ sunrise, sunset, nextSunrise }: Props) {
   }
 
   const cx = 100;
-  const cy = 100;
   const r = 80;
   const angle = Math.PI * (1 - progress);
   const sunX = cx + r * Math.cos(angle);
-  const sunY = cy - r * Math.sin(angle);
+  const sunY = 100 - r * Math.sin(angle);
 
   const activePath = `M 20 100 A ${r} ${r} 0 0 1 ${sunX.toFixed(2)} ${sunY.toFixed(2)}`;
   const sunColor = getSunColor(progress * 100);
 
-  // 8 static rays at 45° increments
-  const rays = Array.from({ length: 8 }, (_, i) => {
-    const a = (i * Math.PI) / 4;
-    const r1 = 9;
-    const r2 = 18;
-    return {
-      x1: sunX + Math.cos(a) * r1,
-      y1: sunY + Math.sin(a) * r1,
-      x2: sunX + Math.cos(a) * r2,
-      y2: sunY + Math.sin(a) * r2,
-    };
-  });
+  // Mid-arc position for the night moon marker (top of arc).
+  const moonX = cx;
+  const moonY = 100 - r;
 
   return (
-    <div className="glass rounded-2xl p-6 sm:p-8">
+    <div className="glass mb-12 rounded-2xl p-6 sm:p-8">
       <div className="mb-4 flex items-center gap-2 text-xs uppercase tracking-wider text-muted-foreground">
         <Sun className="h-3.5 w-3.5" strokeWidth={1.5} />
         Sonnenstand
       </div>
 
       <div className="mx-auto w-full max-w-md">
-        <svg viewBox="0 0 200 110" className="w-full" aria-hidden>
+        <svg viewBox="0 0 200 115" className="w-full" aria-hidden>
           <defs>
             <linearGradient id="sunArcGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-              <stop offset="0%" stopColor="#f97316" />
-              <stop offset="50%" stopColor="#fbbf24" />
-              <stop offset="100%" stopColor={sunColor} />
+              <stop offset="0%" stopColor="#f97316" stopOpacity={0.8} />
+              <stop offset="50%" stopColor="#fbbf24" stopOpacity={0.85} />
+              <stop offset="100%" stopColor={sunColor} stopOpacity={0.8} />
             </linearGradient>
           </defs>
 
@@ -120,70 +110,55 @@ export function SunPositionCard({ sunrise, sunset, nextSunrise }: Props) {
             d="M 20 100 A 80 80 0 0 1 180 100"
             fill="none"
             stroke="currentColor"
-            className="text-muted-foreground/30"
-            strokeWidth={3}
+            className="text-muted-foreground/25"
+            strokeWidth={4}
             strokeLinecap="round"
           />
 
-          {/* Active arc */}
+          {/* Active arc (covered portion) */}
           {isDay && progress > 0 && (
             <path
               d={activePath}
               fill="none"
               stroke="url(#sunArcGrad)"
-              strokeWidth={3}
+              strokeWidth={4}
               strokeLinecap="round"
             />
           )}
 
-          {/* Sun marker — static */}
+          {/* Sun marker — simple circle with subtle white border */}
           {isDay && (
-            <>
-              {/* Static halo */}
-              <circle cx={sunX} cy={sunY} r={18} fill={sunColor} opacity={0.25} />
-              {/* Static rays */}
-              {rays.map((ray, i) => (
-                <line
-                  key={i}
-                  x1={ray.x1}
-                  y1={ray.y1}
-                  x2={ray.x2}
-                  y2={ray.y2}
-                  stroke={sunColor}
-                  strokeWidth={1.25}
-                  strokeLinecap="round"
-                  opacity={0.5}
-                />
-              ))}
-              {/* Sun core */}
-              <circle cx={sunX} cy={sunY} r={6} fill={sunColor} />
-            </>
+            <circle
+              cx={sunX}
+              cy={sunY}
+              r={10}
+              fill={sunColor}
+              stroke="#ffffff"
+              strokeWidth={1.5}
+            />
           )}
 
-          {/* Moon — static when night */}
+          {/* Moon marker — static, neutral grey */}
           {!isDay && (
-            <g transform="translate(94 38)">
-              <circle cx={6} cy={6} r={11} fill="currentColor" className="text-muted-foreground/15" />
-              <Moon
-                x={-2}
-                y={-2}
-                width={16}
-                height={16}
-                className="text-muted-foreground"
-                strokeWidth={1.75}
-              />
-            </g>
+            <circle
+              cx={moonX}
+              cy={moonY}
+              r={10}
+              fill="#94a3b8"
+              stroke="#ffffff"
+              strokeWidth={1.5}
+            />
           )}
         </svg>
 
-        <div className="mt-1 flex items-center justify-between text-xs text-muted-foreground">
-          <div className="flex flex-col items-start gap-0.5">
-            <Sunrise className="h-4 w-4 text-accent" strokeWidth={1.75} />
-            <span className="font-mono tabular-nums text-foreground">{formatTime(sunrise)}</span>
+        <div className="mt-2 flex items-center justify-between text-sm text-muted-foreground">
+          <div className="flex flex-col items-start gap-1">
+            <Sunrise className="h-5 w-5 text-accent" strokeWidth={1.75} />
+            <span className="font-mono text-sm tabular-nums text-foreground">{formatTime(sunrise)}</span>
           </div>
-          <div className="flex flex-col items-end gap-0.5">
-            <Sunset className="h-4 w-4 text-accent" strokeWidth={1.75} />
-            <span className="font-mono tabular-nums text-foreground">{formatTime(sunset)}</span>
+          <div className="flex flex-col items-end gap-1">
+            <Sunset className="h-5 w-5 text-accent" strokeWidth={1.75} />
+            <span className="font-mono text-sm tabular-nums text-foreground">{formatTime(sunset)}</span>
           </div>
         </div>
       </div>
