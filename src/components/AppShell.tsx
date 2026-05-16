@@ -172,7 +172,12 @@ export function AppShell() {
             Datenschutz
           </a>
         </div>
-        <div>MeteoFlo v{APP_VERSION}</div>
+      <div className="flex items-center justify-center gap-2">
+        MeteoFlo v{APP_VERSION}
+        <span className="rounded border border-orange-500/20 bg-orange-500/10 px-1.5 py-0.5 text-[10px] font-bold text-orange-500">
+          DEV BUILD
+        </span>
+      </div>
       </footer>
     </div>
   );
