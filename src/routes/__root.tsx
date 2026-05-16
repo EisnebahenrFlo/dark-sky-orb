@@ -3,7 +3,6 @@ import {
   createRootRouteWithContext,
   useRouter,
   HeadContent,
-  Outlet,
 } from "@tanstack/react-router";
 import { Toaster } from "@/components/ui/sonner";
 import { ThemeProvider, useTheme } from "@/hooks/useTheme";
