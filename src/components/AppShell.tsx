@@ -17,6 +17,7 @@ import { useWeather } from "@/contexts/WeatherContext";
 import { useRiskWarningsCtx } from "@/contexts/RiskWarningsContext";
 import { useOfficialWarningsCtx } from "@/contexts/OfficialWarningsContext";
 import { APP_VERSION } from "@/lib/constants";
+import { isDevEnvironment } from "@/lib/environment";
 import { WeatherTabTransition } from "@/components/transitions/WeatherTabTransition";
 
 const TABS = [
