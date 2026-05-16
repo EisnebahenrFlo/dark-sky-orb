@@ -25,6 +25,8 @@ export function Nowcast({
   count?: number;
   showHeader?: boolean;
 }) {
+  const { resolved } = useTheme();
+  const KIND_COLOR = kindColors(resolved === "dark");
   const points = minutely.time.slice(0, count).map((t, i) => ({
     time: formatTime(t),
     iso: t,
