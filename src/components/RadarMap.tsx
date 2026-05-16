@@ -95,7 +95,7 @@ export default function RadarMap() {
               <TileLayer
                 key={currentFrame.path}
                 url={frameTileUrl(data.host, currentFrame)}
-                opacity={0.7}
+                opacity={0.85}
                 maxZoom={10}
                 zIndex={10}
               />
