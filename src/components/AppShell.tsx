@@ -17,6 +17,7 @@ import { useWeather } from "@/contexts/WeatherContext";
 import { useRiskWarningsCtx } from "@/contexts/RiskWarningsContext";
 import { useOfficialWarningsCtx } from "@/contexts/OfficialWarningsContext";
 import { APP_VERSION } from "@/lib/constants";
+import { isDevEnvironment } from "@/lib/environment";
 import { WeatherTabTransition } from "@/components/transitions/WeatherTabTransition";
 
 const TABS = [
@@ -172,7 +173,14 @@ export function AppShell() {
             Datenschutz
           </a>
         </div>
-        <div>MeteoFlo v{APP_VERSION}</div>
+        <div className="flex items-center justify-center gap-2">
+          MeteoFlo v{APP_VERSION}
+          {isDevEnvironment() && (
+            <span className="rounded bg-amber-500/20 px-1.5 py-0.5 text-[10px] font-bold text-amber-700 dark:text-amber-300">
+              DEV
+            </span>
+          )}
+        </div>
       </footer>
     </div>
   );
