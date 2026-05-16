@@ -5,12 +5,24 @@
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0a0a1a",
-  "theme_color": "#4f46e5",
+  "theme_color": "#3b82f6",
   "icons": [
     {
-      "src": "/favicon.svg",
+      "src": "/meteoflo-icon.svg",
       "sizes": "any",
-      "type": "image/svg+xml"
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/meteoflo-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png"
     }
   ]
 }
