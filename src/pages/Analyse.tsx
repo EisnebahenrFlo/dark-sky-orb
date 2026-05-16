@@ -20,6 +20,7 @@ import { useWeather } from "@/contexts/WeatherContext";
 import { UnsupportedLocationNotice } from "@/components/PageState";
 import { AnalysisLoader } from "@/components/loaders/AnalysisLoader";
 import { WeatherLoader } from "@/components/loaders/WeatherLoader";
+import { AnalysisDisclaimer } from "@/components/analysis/AnalysisDisclaimer";
 
 function relMin(ts: number) {
   const m = Math.max(0, Math.round((Date.now() - ts) / 60000));
