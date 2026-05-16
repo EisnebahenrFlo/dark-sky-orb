@@ -49,27 +49,27 @@ export function useBlitzortungWS(enabled = true): UseBlitzortungResult {
       setIsConnected(true);
       setFailed(false);
       failsRef.current = 0;
+      if (import.meta.env.DEV) console.info("[blitz] connected:", url);
       try {
         ws.send(JSON.stringify({ a: 111 }));
-      } catch {
-        /* noop */
+      } catch (err) {
+        if (import.meta.env.DEV) console.warn("[blitz] subscribe send failed", err);
       }
-      if (pingTimer.current) clearInterval(pingTimer.current);
-      pingTimer.current = setInterval(() => {
-        if (ws.readyState === WebSocket.OPEN) {
-          try {
-            ws.send(JSON.stringify({ a: 0 }));
-          } catch {
-            /* noop */
-          }
-        }
-      }, 30_000);
+      // NOTE: no application-level ping — Blitzortung protocol does not define
+      // one and sending `{a:0}` causes some servers to silently stop streaming.
     };
 
+    let msgCount = 0;
     ws.onmessage = (ev) => {
       try {
-        const decoded = lzwDecode(String(ev.data));
+        const raw = typeof ev.data === "string" ? ev.data : "";
+        if (!raw) return;
+        const decoded = lzwDecode(raw);
         const strike = parseStrike(decoded);
+        if (import.meta.env.DEV && msgCount < 3) {
+          console.info("[blitz] msg sample", { decoded: decoded.slice(0, 200), strike });
+          msgCount++;
+        }
         if (!strike) return;
         setStrikes((prev) => {
           const cutoff = Date.now() - MAX_AGE_MS;
@@ -77,8 +77,8 @@ export function useBlitzortungWS(enabled = true): UseBlitzortungResult {
           next.push(strike);
           return next;
         });
-      } catch {
-        /* ignore */
+      } catch (err) {
+        if (import.meta.env.DEV) console.warn("[blitz] decode error", err);
       }
     };
 
