@@ -2,9 +2,9 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { lzwDecode, parseStrike, type BlitzStrike } from "@/lib/blitzortungDecoder";
 
 const ENDPOINTS = [
-  "wss://ws1.blitzortung.org:443/",
-  "wss://ws7.blitzortung.org:443/",
-  "wss://ws8.blitzortung.org:443/",
+  "wss://ws1.blitzortung.org",
+  "wss://ws7.blitzortung.org",
+  "wss://ws8.blitzortung.org",
 ];
 
 const MAX_AGE_MS = 30 * 60 * 1000;
@@ -38,6 +38,7 @@ export function useBlitzortungWS(enabled = true): UseBlitzortungResult {
     let ws: WebSocket;
     try {
       ws = new WebSocket(url);
+      ws.binaryType = "arraybuffer";
     } catch {
       failsRef.current += 1;
       if (failsRef.current >= MAX_FAILS) setFailed(true);
@@ -49,27 +50,37 @@ export function useBlitzortungWS(enabled = true): UseBlitzortungResult {
       setIsConnected(true);
       setFailed(false);
       failsRef.current = 0;
+      if (import.meta.env.DEV) console.info("[blitz] connected:", url);
       try {
         ws.send(JSON.stringify({ a: 111 }));
-      } catch {
-        /* noop */
+      } catch (err) {
+        if (import.meta.env.DEV) console.warn("[blitz] subscribe send failed", err);
       }
-      if (pingTimer.current) clearInterval(pingTimer.current);
-      pingTimer.current = setInterval(() => {
-        if (ws.readyState === WebSocket.OPEN) {
-          try {
-            ws.send(JSON.stringify({ a: 0 }));
-          } catch {
-            /* noop */
-          }
-        }
-      }, 30_000);
+      // NOTE: no application-level ping — Blitzortung protocol does not define
+      // one and sending `{a:0}` causes some servers to silently stop streaming.
     };
 
+    let msgCount = 0;
     ws.onmessage = (ev) => {
       try {
-        const decoded = lzwDecode(String(ev.data));
+        let raw = "";
+        if (typeof ev.data === "string") {
+          raw = ev.data;
+        } else if (ev.data instanceof ArrayBuffer) {
+          // Some endpoints stream binary frames — decode as latin1 since the
+          // LZW dictionary uses raw byte values, not UTF-8 codepoints.
+          const bytes = new Uint8Array(ev.data);
+          let s = "";
+          for (let i = 0; i < bytes.length; i++) s += String.fromCharCode(bytes[i]);
+          raw = s;
+        }
+        if (!raw) return;
+        const decoded = lzwDecode(raw);
         const strike = parseStrike(decoded);
+        if (import.meta.env.DEV && msgCount < 3) {
+          console.info("[blitz] msg sample", { decoded: decoded.slice(0, 200), strike });
+          msgCount++;
+        }
         if (!strike) return;
         setStrikes((prev) => {
           const cutoff = Date.now() - MAX_AGE_MS;
@@ -77,8 +88,8 @@ export function useBlitzortungWS(enabled = true): UseBlitzortungResult {
           next.push(strike);
           return next;
         });
-      } catch {
-        /* ignore */
+      } catch (err) {
+        if (import.meta.env.DEV) console.warn("[blitz] decode error", err);
       }
     };
 
