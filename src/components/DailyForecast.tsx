@@ -1,16 +1,17 @@
 import { safeFixed } from "@/lib/safeFormat";
 import { useState } from "react";
-import { ChevronDown, Sunrise, Sunset, Wind, Navigation, Droplets, CloudRain, Snowflake, Sun } from "lucide-react";
-import type { DailyData } from "@/lib/weather";
+import { ChevronDown, Sunrise, Sunset, Wind, Navigation, Droplets, CloudRain, Snowflake, Sun, Zap } from "lucide-react";
+import type { DailyData, HourlyData } from "@/lib/weather";
 import { weekdayLabel, windDirectionLabel } from "@/lib/weather";
 import { EffectiveWeatherIcon } from "./WeatherIcon";
 import { SectionHeader } from "./SectionHeader";
+import { dailyThunderRiskFromHourly } from "@/lib/thunderRisk";
 
 function timeOnly(iso: string) {
   return new Date(iso).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" });
 }
 
-function DayRow({ daily, i }: { daily: DailyData; i: number }) {
+function DayRow({ daily, i, hourly }: { daily: DailyData; i: number; hourly?: HourlyData }) {
   const [open, setOpen] = useState(false);
   const min = Math.round(daily.temperature_2m_min[i]);
   const max = Math.round(daily.temperature_2m_max[i]);
@@ -19,6 +20,10 @@ function DayRow({ daily, i }: { daily: DailyData; i: number }) {
   const precip = daily.precipitation_sum[i] ?? 0;
   const wind = Math.round(daily.wind_speed_10m_max[i]);
   const dir = daily.wind_direction_10m_dominant[i];
+  const thunder = hourly
+    ? dailyThunderRiskFromHourly(hourly.time, hourly.cape, hourly.lifted_index, daily.time[i])
+    : { risk: 0, label: "Kein", color: "transparent" };
+  const showThunder = thunder.risk >= 20;
 
   return (
     <div className="glass overflow-hidden rounded-2xl">
@@ -35,7 +40,7 @@ function DayRow({ daily, i }: { daily: DailyData; i: number }) {
 
         <EffectiveWeatherIcon code={code} precipitation={precip} cloudCover={precip > 0 ? 100 : 50} isDay={1} className="h-8 w-8 shrink-0 text-primary" />
 
-        <div className="flex flex-1 items-center gap-3 text-sm">
+        <div className="flex flex-1 flex-wrap items-center gap-x-3 gap-y-1 text-sm">
           <div className="hidden items-center gap-1 text-muted-foreground sm:flex">
             <Droplets className="h-3.5 w-3.5" strokeWidth={1.5} />
             <span className="tabular-nums">{pop}%</span>
@@ -45,6 +50,16 @@ function DayRow({ daily, i }: { daily: DailyData; i: number }) {
             <Wind className="h-3.5 w-3.5" strokeWidth={1.5} />
             <span className="tabular-nums">{wind} km/h</span>
           </div>
+          {showThunder && (
+            <div
+              className="flex items-center gap-1 text-xs font-medium"
+              style={{ color: thunder.color }}
+              title={`Gewitter-Risiko: ${thunder.label}`}
+            >
+              <Zap className="h-3.5 w-3.5" strokeWidth={1.75} />
+              <span>Gewitter: {thunder.label}</span>
+            </div>
+          )}
         </div>
 
         <div className="flex items-center gap-3 font-display tabular-nums">
@@ -117,13 +132,13 @@ function Detail({
   );
 }
 
-export function DailyForecast({ daily }: { daily: DailyData }) {
+export function DailyForecast({ daily, hourly }: { daily: DailyData; hourly?: HourlyData }) {
   return (
     <section>
       <SectionHeader title="7-Tage-Übersicht" subtitle="Tippen für Details" />
       <div className="space-y-2">
         {daily.time.map((_, i) => (
-          <DayRow key={i} daily={daily} i={i} />
+          <DayRow key={i} daily={daily} i={i} hourly={hourly} />
         ))}
       </div>
     </section>
