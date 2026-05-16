@@ -55,7 +55,7 @@ export function Nowcast({
           <>
             <div className="h-40 w-full">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={points} margin={{ top: 10, right: 4, left: -16, bottom: 0 }}>
+                <BarChart data={points} margin={{ top: 10, right: 8, left: 8, bottom: 0 }}>
                   <XAxis
                     dataKey="time"
                     tick={{ fill: "var(--muted-foreground)", fontSize: 11 }}
@@ -66,7 +66,7 @@ export function Nowcast({
                     tick={{ fill: "var(--muted-foreground)", fontSize: 11 }}
                     tickLine={false}
                     axisLine={false}
-                    width={40}
+                    width={56}
                     unit=" mm"
                   />
                   <Tooltip
