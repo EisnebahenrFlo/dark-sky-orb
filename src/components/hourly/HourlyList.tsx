@@ -50,6 +50,8 @@ export function HourlyList({ hourly, daily }: { hourly: HourlyData; daily: Daily
       isDay: hourly.is_day[i],
       cloud: hourly.cloud_cover?.[i] ?? 0,
       isCurrent,
+      cape: hourly.cape?.[i] ?? null,
+      li: hourly.lifted_index?.[i] ?? null,
     };
   });
 

@@ -123,21 +123,22 @@ export function AppShell() {
                 <Link
                   key={to}
                   to={to}
-                  className={`flex flex-1 flex-col items-center gap-0.5 rounded-xl py-2 transition-colors ${
+                  aria-label={label}
+                  title={label}
+                  className={`flex flex-1 items-center justify-center rounded-xl py-3 transition-colors ${
                     active
                       ? "bg-primary text-primary-foreground"
                       : "text-muted-foreground hover:text-foreground"
                   }`}
                 >
                   <span className="relative inline-flex">
-                    <Icon className="h-4 w-4" strokeWidth={1.75} />
+                    <Icon className="h-6 w-6" strokeWidth={1.75} />
                     {to === "/warnungen" && warnCount > 0 && (
-                      <span className={`absolute -right-1.5 -top-1.5 grid h-3.5 min-w-3.5 place-items-center rounded-full ${badgeColor} ${badgePulse} px-1 text-[9px] font-bold text-white shadow ring-2 ring-background`}>
+                      <span className={`absolute -right-2 -top-1.5 grid h-4 min-w-4 place-items-center rounded-full ${badgeColor} ${badgePulse} px-1 text-[9px] font-bold text-white shadow ring-2 ring-background`}>
                         {warnCount}
                       </span>
                     )}
                   </span>
-                  <span className="text-[10px] font-medium">{label}</span>
                 </Link>
               );
             })}

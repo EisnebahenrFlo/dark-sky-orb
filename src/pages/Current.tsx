@@ -32,7 +32,7 @@ export function CurrentPage() {
           <div className="space-y-6">
             <WeatherHero location={location} data={data.current} updatedAt={dataUpdatedAt} />
             <WarningIndicatorCard />
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
               <UvIndexStat value={uv} isDay={!!data.current.is_day} />
               {data.hourly && <LightningPotentialStat hourly={data.hourly} />}
             </div>

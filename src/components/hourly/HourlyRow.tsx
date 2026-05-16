@@ -1,7 +1,8 @@
-import { Droplets, Wind } from "lucide-react";
+import { Droplets, Wind, Zap } from "lucide-react";
 import { safeFixed } from "@/lib/safeFormat";
 import { EffectiveWeatherIcon } from "@/components/WeatherIcon";
 import { getEffectiveWeather } from "@/lib/weatherDescription";
+import { calculateThunderRisk } from "@/lib/thunderRisk";
 
 export interface HourlyRowData {
   iso: string;
@@ -16,11 +17,15 @@ export interface HourlyRowData {
   isDay: number;
   cloud: number;
   isCurrent: boolean;
+  cape?: number | null;
+  li?: number | null;
 }
 
 export function HourlyRow({ row }: { row: HourlyRowData }) {
   const popHigh = row.pop >= 50;
   const eff = getEffectiveWeather(row.code, row.precip, row.cloud, row.isDay);
+  const thunder = calculateThunderRisk(row.cape ?? null, row.li ?? null);
+  const showThunder = thunder.risk >= 20;
 
   return (
     <div
@@ -58,8 +63,16 @@ export function HourlyRow({ row }: { row: HourlyRowData }) {
         {Math.round(row.temp)}°
       </div>
 
-      {/* Precipitation prob */}
+      {/* Precipitation prob + mobile thunder dot */}
       <div className="flex w-16 shrink-0 items-center justify-end gap-1 text-xs tabular-nums sm:w-20">
+        {showThunder && (
+          <span
+            className="mr-0.5 inline-block h-1.5 w-1.5 rounded-full sm:hidden"
+            style={{ backgroundColor: thunder.color }}
+            title={`Gewitter: ${thunder.label}`}
+            aria-label={`Gewitter: ${thunder.label}`}
+          />
+        )}
         <Droplets
           className={`h-3.5 w-3.5 ${popHigh ? "text-primary" : "text-muted-foreground/60"}`}
           strokeWidth={1.75}
@@ -72,6 +85,22 @@ export function HourlyRow({ row }: { row: HourlyRowData }) {
       {/* Precipitation amount (only when > 0) */}
       <div className="hidden w-16 shrink-0 text-right text-xs tabular-nums text-muted-foreground sm:block">
         {row.precip > 0 ? `${safeFixed(row.precip, 1)} mm` : "—"}
+      </div>
+
+      {/* Thunder (desktop) */}
+      <div className="hidden w-20 shrink-0 items-center justify-end gap-1 text-xs tabular-nums sm:flex">
+        {showThunder ? (
+          <>
+            <Zap
+              className="h-3.5 w-3.5"
+              strokeWidth={1.75}
+              style={{ color: thunder.color }}
+            />
+            <span style={{ color: thunder.color }}>{thunder.label}</span>
+          </>
+        ) : (
+          <span className="text-muted-foreground/40">—</span>
+        )}
       </div>
 
       {/* Wind */}
