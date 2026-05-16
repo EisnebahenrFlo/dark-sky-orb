@@ -3,7 +3,6 @@ import {
   createRootRouteWithContext,
   useRouter,
   HeadContent,
-  Scripts,
 } from "@tanstack/react-router";
 import { Toaster } from "@/components/ui/sonner";
 import { ThemeProvider, useTheme } from "@/hooks/useTheme";
@@ -14,8 +13,6 @@ import { AppShell } from "@/components/AppShell";
 import { SplashScreen } from "@/components/SplashScreen";
 import { AppErrorBoundary } from "@/components/errors/AppErrorBoundary";
 import { ErrorSplash } from "@/components/errors/ErrorSplash";
-
-import appCss from "../styles.css?url";
 
 function NotFoundComponent() {
   return <ErrorSplash type="404" />;
@@ -39,49 +36,14 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
   head: () => ({
     meta: [
-      { charSet: "utf-8" },
-      { name: "viewport", content: "width=device-width, initial-scale=1" },
       { title: "MeteoFlo · Wetter für DACH & Italien" },
       { name: "description", content: "Detailliertes Wetter, KI-Synoptik und Warnungen für DACH und Italien." },
-      { name: "author", content: "MeteoFlo" },
-      { property: "og:title", content: "MeteoFlo · Wetter für DACH & Italien" },
-      { property: "og:description", content: "Detailliertes Wetter, KI-Synoptik und Warnungen für DACH und Italien." },
-      { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary" },
-      { name: "twitter:site", content: "@Lovable" },
-      { name: "twitter:title", content: "MeteoFlo · Wetter für DACH & Italien" },
-      { name: "twitter:description", content: "Detailliertes Wetter, KI-Synoptik und Warnungen für DACH und Italien." },
-      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/d7bdc356-4b91-4779-8a22-7e9f6b9d2d88/id-preview-37189194--5e8a4b5a-6f75-40c6-995f-38e1aa8f3435.lovable.app-1778741184334.png" },
-      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/d7bdc356-4b91-4779-8a22-7e9f6b9d2d88/id-preview-37189194--5e8a4b5a-6f75-40c6-995f-38e1aa8f3435.lovable.app-1778741184334.png" },
-    ],
-    links: [
-      { rel: "stylesheet", href: appCss },
-      { rel: "icon", type: "image/svg+xml", href: "/favicon.svg" },
-      { rel: "manifest", href: "/manifest.json" },
-      { rel: "preconnect", href: "https://fonts.googleapis.com" },
-      { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
-      { rel: "stylesheet", href: "https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" },
     ],
   }),
-  shellComponent: RootShell,
   component: RootComponent,
   notFoundComponent: NotFoundComponent,
   errorComponent: ErrorComponent,
 });
-
-function RootShell({ children }: { children: React.ReactNode }) {
-  return (
-    <html lang="en">
-      <head>
-        <HeadContent />
-      </head>
-      <body>
-        {children}
-        <Scripts />
-      </body>
-    </html>
-  );
-}
 
 function ThemedToaster() {
   const { resolved } = useTheme();
@@ -94,12 +56,12 @@ function RootComponent() {
   return (
     <ThemeProvider>
       <QueryClientProvider client={queryClient}>
+        <HeadContent />
         <AppErrorBoundary>
           <WeatherProvider>
             <RiskWarningsProvider>
               <OfficialWarningsProvider>
                 <SplashScreen />
-                {/* AppShell renders the persistent header/search/tabs and <Outlet /> */}
                 <AppShell />
                 <ThemedToaster />
               </OfficialWarningsProvider>
