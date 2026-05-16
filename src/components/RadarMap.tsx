@@ -33,6 +33,7 @@ function Recenter({ lat, lon }: { lat: number; lon: number }) {
 }
 
 const FRAME_MS = 500;
+const LOOP_RESET_PAUSE_MS = 1000;
 
 export default function RadarMap() {
   const { location } = useWeather();
@@ -61,9 +62,11 @@ export default function RadarMap() {
     }
   }, [frames.length, pastCount]);
 
+  // Use a longer pause when we just wrapped from the last frame back to the first.
+  const isAtLoopEnd = frames.length > 0 && index === frames.length - 1;
   useInterval(
     () => setIndex((i) => (frames.length ? (i + 1) % frames.length : 0)),
-    isPlaying && frames.length ? FRAME_MS : null,
+    isPlaying && frames.length ? (isAtLoopEnd ? FRAME_MS + LOOP_RESET_PAUSE_MS : FRAME_MS) : null,
   );
 
   const baseTile =

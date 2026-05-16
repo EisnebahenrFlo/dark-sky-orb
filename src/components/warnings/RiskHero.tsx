@@ -1,17 +1,24 @@
 import type { RiskWarnings } from "@/hooks/useRiskWarnings";
 import { colorClasses, type RiskColorKey } from "./colors";
 
-const LEVEL_LABEL: Record<string, string> = {
-  kein: "Kein Risiko",
-  schwach: "Schwach",
-  mäßig: "Mäßig",
-  hoch: "Hoch",
-  sehr_hoch: "Sehr hoch",
-  extrem: "Extrem",
-};
+interface ScoreMeta {
+  label: string;
+  color: RiskColorKey;
+}
+
+/** Single source of truth for thunderstorm risk thresholds (Task 7). */
+export function scoreMeta(score: number): ScoreMeta {
+  if (score >= 81) return { label: "Sehr hoch", color: "red" };
+  if (score >= 61) return { label: "Hoch", color: "red" };
+  if (score >= 41) return { label: "Mäßig", color: "orange" };
+  if (score >= 21) return { label: "Schwach", color: "yellow" };
+  if (score >= 6) return { label: "Sehr schwach", color: "green" };
+  return { label: "Kein Risiko", color: "green" };
+}
 
 export function RiskHero({ risk }: { risk: RiskWarnings["gewitter_risiko_6h"] }) {
-  const c = colorClasses[(risk.color as RiskColorKey) ?? "green"] ?? colorClasses.green;
+  const meta = scoreMeta(risk.score);
+  const c = colorClasses[meta.color] ?? colorClasses.green;
   return (
     <div
       className={`relative overflow-hidden rounded-2xl border-l-4 ${c.border} border-y border-r border-border bg-card p-6 shadow-sm sm:p-8`}
@@ -31,7 +38,7 @@ export function RiskHero({ risk }: { risk: RiskWarnings["gewitter_risiko_6h"] })
         <span
           className={`inline-flex shrink-0 items-center rounded-full ${c.bg} ${c.text} px-3 py-1 text-xs font-semibold uppercase tracking-wider`}
         >
-          {LEVEL_LABEL[risk.level] ?? risk.level}
+          {meta.label}
         </span>
       </div>
 

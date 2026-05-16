@@ -6,7 +6,8 @@ import { UnsupportedLocationNotice } from "@/components/PageState";
 import { RiskHero } from "@/components/warnings/RiskHero";
 import { WarningCard } from "@/components/warnings/WarningCard";
 import { DisclaimerBanner } from "@/components/warnings/DisclaimerBanner";
-import { colorClasses, type RiskColorKey } from "@/components/warnings/colors";
+import { colorClasses } from "@/components/warnings/colors";
+import { scoreMeta } from "@/components/warnings/RiskHero";
 import { WarningsLoader } from "@/components/loaders/WarningsLoader";
 import { WeatherLoader } from "@/components/loaders/WeatherLoader";
 import { OfficialWarningsSection } from "@/components/warnings/OfficialWarningsSection";
@@ -52,9 +53,8 @@ export function WarnungenPage() {
     return <WeatherLoader city={location.name} />;
   }
 
-  const stickyColor = data
-    ? colorClasses[(data.gewitter_risiko_6h.color as RiskColorKey) ?? "green"] ?? colorClasses.green
-    : null;
+  const stickyMeta = data ? scoreMeta(data.gewitter_risiko_6h.score) : null;
+  const stickyColor = stickyMeta ? colorClasses[stickyMeta.color] : null;
 
   return (
     <div className="space-y-5">
@@ -80,7 +80,7 @@ export function WarnungenPage() {
               <span
                 className={`rounded-full ${stickyColor.bg} ${stickyColor.text} px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider`}
               >
-                {data.gewitter_risiko_6h.level}
+                {stickyMeta!.label}
               </span>
             </div>
           </div>
@@ -119,44 +119,47 @@ export function WarnungenPage() {
           )}
           <RiskHero risk={data.gewitter_risiko_6h} />
 
-          {/* Reihenfolge (User-Wunsch): Hero → KI-Auswertung → Amtliche Warnungen → Disclaimer.
-              KI-Einschätzung steht im Fokus, amtliche Warnungen dienen als zusätzliche Referenz. */}
-          <section className="space-y-3">
-            <div className="flex items-baseline justify-between gap-3 px-1">
-              <div>
-                <h2 className="font-display text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-                  KI-Auswertung · 12 h
-                </h2>
-                <p className="mt-0.5 text-[11px] text-muted-foreground/80">
-                  Algorithmus-basierte Risikoeinschätzung – nicht amtlich
-                </p>
-              </div>
-              {data.warnungen_12h.length > 0 && (
-                <span className="text-xs text-muted-foreground">
-                  {data.warnungen_12h.length}{" "}
-                  {data.warnungen_12h.length === 1 ? "Warnung" : "Warnungen"}
-                </span>
-              )}
-            </div>
+          {/* Reihenfolge: Hero → Amtliche Warnungen (Primärquelle) → KI-Auswertung (Ergänzung) → Disclaimer. */}
+          <div className="space-y-8">
+            <OfficialWarningsSection />
 
-            {data.warnungen_12h.length === 0 ? (
-              <div className="flex items-center gap-3 rounded-2xl border border-green-500/30 bg-green-500/5 p-5 sm:p-6">
-                <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-green-500/10 text-green-600 dark:text-green-400">
-                  <CheckCircle2 className="h-5 w-5" strokeWidth={1.75} />
-                </div>
+            <section className="space-y-3">
+              <div className="flex items-baseline justify-between gap-3 px-1">
                 <div>
-                  <p className="font-medium text-foreground">Keine aktiven Warnungen</p>
-                  <p className="text-sm text-muted-foreground">
-                    Aktuell sind keine markanten Wetterereignisse zu erwarten.
+                  <h2 className="font-display text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+                    KI-Auswertung · 12 h
+                  </h2>
+                  <p className="mt-0.5 text-[11px] text-muted-foreground/80">
+                    Synoptische KI-Risikoeinschätzung – nicht amtlich
                   </p>
                 </div>
+                {data.warnungen_12h.length > 0 && (
+                  <span className="text-xs text-muted-foreground">
+                    {data.warnungen_12h.length}{" "}
+                    {data.warnungen_12h.length === 1 ? "Warnung" : "Warnungen"}
+                  </span>
+                )}
               </div>
-            ) : (
-              data.warnungen_12h.map((w, i) => <WarningCard key={`${w.id}_${i}`} warning={w} />)
-            )}
-          </section>
 
-          <OfficialWarningsSection />
+              {data.warnungen_12h.length === 0 ? (
+                <div className="flex items-center gap-3 rounded-2xl border border-border bg-muted/30 p-5 sm:p-6">
+                  <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-muted text-muted-foreground">
+                    <CheckCircle2 className="h-5 w-5" strokeWidth={1.75} />
+                  </div>
+                  <div>
+                    <p className="font-medium text-foreground">
+                      Die KI-Auswertung sieht aktuell keine kritischen Wetterereignisse.
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      Hinweis: amtliche Warnungen können davon abweichen – siehe oben.
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                data.warnungen_12h.map((w, i) => <WarningCard key={`${w.id}_${i}`} warning={w} />)
+              )}
+            </section>
+          </div>
 
           {data.summary && (
             <div className="rounded-2xl border border-border bg-card p-6 text-center sm:p-8">
