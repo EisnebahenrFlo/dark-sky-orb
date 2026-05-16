@@ -148,10 +148,10 @@ export function WarnungenPage() {
                   </div>
                   <div>
                     <p className="font-medium text-foreground">
-                      Die KI-Auswertung sieht aktuell keine kritischen Wetterereignisse.
+                      Die KI-Auswertung sieht aktuell keine kritischen konvektiven Risiken.
                     </p>
                     <p className="text-sm text-muted-foreground">
-                      Hinweis: amtliche Warnungen können davon abweichen – siehe oben.
+                      Amtliche Warnungen können davon abweichen – diese stehen weiter oben.
                     </p>
                   </div>
                 </div>
