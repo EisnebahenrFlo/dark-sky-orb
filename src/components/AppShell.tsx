@@ -17,6 +17,7 @@ import { useWeather } from "@/contexts/WeatherContext";
 import { useRiskWarningsCtx } from "@/contexts/RiskWarningsContext";
 import { useOfficialWarningsCtx } from "@/contexts/OfficialWarningsContext";
 import { APP_VERSION } from "@/lib/constants";
+import { WeatherTabTransition } from "@/components/transitions/WeatherTabTransition";
 
 const TABS = [
   { to: "/", icon: Sun, label: "Aktuell" },
@@ -95,8 +96,10 @@ export function AppShell() {
         </div>
       </nav>
 
-      <main key={pathname} className="animate-tab-enter">
-        <Outlet />
+      <main>
+        <WeatherTabTransition>
+          <Outlet />
+        </WeatherTabTransition>
       </main>
 
       {/* Mobile bottom nav */}
