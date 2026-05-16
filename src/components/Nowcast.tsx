@@ -3,13 +3,18 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 
 import { precipKind, formatTime, type MinutelyData } from "@/lib/weather";
 import { EffectiveWeatherIcon } from "./WeatherIcon";
 import { SectionHeader } from "./SectionHeader";
+import { useTheme } from "@/hooks/useTheme";
 
-const KIND_COLOR: Record<string, string> = {
-  rain: "oklch(0.78 0.16 230)",
-  shower: "oklch(0.7 0.18 300)",
-  snow: "oklch(0.97 0.01 250)",
-  none: "oklch(0.4 0.02 260)",
-};
+function kindColors(isDark: boolean): Record<string, string> {
+  return {
+    rain: "oklch(0.78 0.16 230)",
+    shower: "oklch(0.7 0.18 300)",
+    // Slate tones for stronger contrast against glass backgrounds.
+    // Light mode: slate-400 (#94a3b8). Dark mode: slate-200 (#e2e8f0).
+    snow: isDark ? "#e2e8f0" : "#94a3b8",
+    none: "oklch(0.4 0.02 260)",
+  };
+}
 
 export function Nowcast({
   minutely,
