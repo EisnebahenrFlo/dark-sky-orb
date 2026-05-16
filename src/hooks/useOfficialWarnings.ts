@@ -72,7 +72,15 @@ export function useOfficialWarnings() {
         });
         const json = await res.json();
         if (!res.ok) throw new Error(json?.error || "Amtliche Warnungen konnten nicht geladen werden");
-        setData(json as OfficialWarningsResponse);
+        const payload = json as OfficialWarningsResponse;
+        // MeteoAlarm Level 1 (grün) = "keine Gefahr / Informational" – nicht als Warnung anzeigen.
+        // DWD-Level 1 sind echte Vorabinformationen und bleiben erhalten.
+        const filtered = (payload.warnings ?? []).filter((w) => {
+          const isMeteoAlarm = typeof w.source === "string" && w.source.startsWith("MeteoAlarm");
+          if (isMeteoAlarm && (w.level ?? 1) < 2) return false;
+          return true;
+        });
+        setData({ ...payload, warnings: filtered });
         setLastUpdated(Date.now());
       } catch (e: any) {
         if (e?.name === "AbortError") return;
