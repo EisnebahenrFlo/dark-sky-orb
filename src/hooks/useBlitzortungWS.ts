@@ -63,7 +63,17 @@ export function useBlitzortungWS(enabled = true): UseBlitzortungResult {
     let msgCount = 0;
     ws.onmessage = (ev) => {
       try {
-        const raw = typeof ev.data === "string" ? ev.data : "";
+        let raw = "";
+        if (typeof ev.data === "string") {
+          raw = ev.data;
+        } else if (ev.data instanceof ArrayBuffer) {
+          // Some endpoints stream binary frames — decode as latin1 since the
+          // LZW dictionary uses raw byte values, not UTF-8 codepoints.
+          const bytes = new Uint8Array(ev.data);
+          let s = "";
+          for (let i = 0; i < bytes.length; i++) s += String.fromCharCode(bytes[i]);
+          raw = s;
+        }
         if (!raw) return;
         const decoded = lzwDecode(raw);
         const strike = parseStrike(decoded);
