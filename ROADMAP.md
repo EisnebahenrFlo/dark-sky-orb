@@ -1,160 +1,217 @@
-# Projekt MeteoFlo
+═══════════════════════════════════════════
+PROJEKT METEOFLO
+═══════════════════════════════════════════
 
-**URL:** meteoflo.com
-**Preview:** [Lovable Preview](https://preview--meteoflo.lovable.app/)
-**Version:** v1.0.0-rc1 → **Release 1.0 geplant: 20.05.2026**
+URL: meteoflo.com
+Version: v1.0.0-rc1
+Release 1.0 geplant: 20.05.2026
 
----
 
-## ✅ Status: v1.0 ist Feature-Complete
+═══════════════════════════════════════════
+✅ STATUS: v1.0 IST FEATURE-COMPLETE
+═══════════════════════════════════════════
 
 Alle geplanten Features für 1.0 sind drin. Die wichtigsten Bugs sind gefixt. Reif für den Release.
 
-### 🎉 Implementierte Features
 
-**Kernfunktionen**
-- Aktuelles Wetter mit Gewitterpotential
-- Nowcast (2h & 6h) mit Niederschlagsart (Regen, Starkregen, Schnee, Graupel, Hagel)
-- Stündliche Vorhersage mit Gewitterpotential
-- 7-Tage Vorhersage mit Gewitterpotential
-- Wetterradar (RainViewer) mit Autoplay
-- Native Blitzortung
-- UV-Index
-- Sonnenstand (Aufgang / Untergang / Verlauf)
+🎉 IMPLEMENTIERTE FEATURES
 
-**KI-Features**
-- Synoptische KI-Wetteranalyse
-- KI-Wetter- und Unwetterwarnung (experimentell)
-- KI-Gewitter- und Unwetterauswertung
+Kernfunktionen:
+• Aktuelles Wetter mit Gewitterpotential
+• Nowcast (2h & 6h) mit Niederschlagsart (Regen, Starkregen, Schnee, Graupel, Hagel)
+• Stündliche Vorhersage mit Gewitterpotential
+• 7-Tage Vorhersage mit Gewitterpotential
+• Wetterradar (RainViewer) mit Autoplay
+• Native Blitzortung
+• UV-Index
+• Sonnenstand (Aufgang / Untergang / Verlauf)
 
-**Warnungen**
-- Amtliche Wetterwarnungen DACH (DWD)
-- Amtliche Wetterwarnungen Italien (MeteoAlarm) mit DE-Übersetzung
-- Warn-Indikator im Tab „Aktuell"
+KI-Features:
+• Synoptische KI-Wetteranalyse
+• KI-Wetter- und Unwetterwarnung (experimentell)
+• KI-Gewitter- und Unwetterauswertung
 
-**App & UX**
-- ReBrand „MeteoFlo" + eigene Domain meteoflo.com
-- Standort-Favoriten
-- Splash- und Lade-Screen-Animationen
-- Animierter Tab-Wechsel
-- Fehler-Splashscreen mit Home-Button
-- Dark / Light Mode
-- Datenschutz und Impressum
+Warnungen:
+• Amtliche Wetterwarnungen DACH (DWD)
+• Amtliche Wetterwarnungen Italien (MeteoAlarm) mit DE-Übersetzung
+• Warn-Indikator im Tab „Aktuell" mit Verlinkung zur Warnungen-Seite
 
-### 🐛 Bugfixes & Polish (Mai 2026)
+App & UX:
+• ReBrand „MeteoFlo" + eigene Domain meteoflo.com
+• Standort-Favoriten
+• Splash- und Lade-Screen-Animationen
+• Animierter Tab-Wechsel
+• Fehler-Splashscreen mit Home-Button
+• Dark / Light Mode
+• Datenschutz und Impressum
 
-- Sonnenstand-Design überarbeitet
-- Badge zeigte „1" trotz keiner Warnungen → gefixt
-- Ladebalken bei KI-Analyse
-- Blitzortung Cookie-Fenster behoben
-- UI Polish stündliche Vorhersagen
-- Wetterradar Darkmode lesbar
-- **Karte Wetterradar UND Blitzortung im Darkmode lesbar (Bundle B)**
-- Regen-Icon trotz 0,0mm Niederschlag → konsistent
-- Wetterradar Zoomstufe + Autoplay funktionieren
-- Palermo „Page Not Found" → gefixt
-- Standort/Infos bei KI-Warnungen → richtiger Standort
-- KI-Analyse aktualisiert bei Standortwechsel
-- **Wetterwarnungs-Summary zeigt korrekt amtliche Warnungen (Bundle A)**
-- **Grüne MeteoAlarm-Warnungen für Italien werden ausgefiltert (Bundle A)**
-- **Blitzortung zeigt jetzt sichtbare Blitze (Bundle B)**
 
----
+🐛 BUGFIXES & POLISH (MAI 2026)
 
-## 🔵 Phase 7 — Pre-Release Endspurt (jetzt bis 20.05.)
+• Sonnenstand-Design überarbeitet
+• Badge zeigte „1" trotz keiner Warnungen → gefixt
+• Ladebalken bei KI-Analyse
+• Blitzortung Cookie-Fenster behoben
+• UI Polish stündliche Vorhersagen
+• Regen-Icon trotz 0,0mm Niederschlag → konsistent
+• Wetterradar Zoomstufe + Autoplay funktionieren
+• Palermo „Page Not Found" → gefixt
+• Standort/Infos bei KI-Warnungen → richtiger Standort
+• KI-Analyse aktualisiert bei Standortwechsel
+• Bundle A: Wetterwarnungs-Summary zeigt amtliche Warnungen korrekt
+• Bundle A: Grüne MeteoAlarm-Warnungen (Italien Level 1) werden gefiltert
+• Bundle B: Blitzortung zeigt jetzt sichtbare Blitze
+• Bundle B: Karte Wetterradar UND Blitzortung im Darkmode lesbar
 
-**Credit-Budget:** 8,8 verbleibend
-**Strategie:** Keine größeren Änderungen mehr. Credits-Polster aufheben für Hotfixes, falls im Selbsttest noch was Kritisches auftaucht. Polish kommt nach dem Release.
 
-### To-Do bis Release
+═══════════════════════════════════════════
+🔵 PHASE 7 — PRE-RELEASE ENDSPURT (BIS 20.05.)
+═══════════════════════════════════════════
 
-- [ ] Selbsttest in den nächsten Tagen (Alltagsnutzung, Standortwechsel)
-- [ ] Eventuell GitHub Release-Tag v1.0.0-rc2 setzen, falls noch Code-Änderungen kommen
-- [ ] BUGS.md im Repo vorbereiten zum Sammeln von Tester-Feedback
-- [ ] Tester einladen (max. 6-8 Personen)
-- [ ] Tester-Onboarding-Mail / Doc vorbereiten
+Credit-Budget: 8,8 verbleibend → als Hotfix-Puffer aufheben
+Strategie: Keine größeren Änderungen mehr. Selbsttest in Ruhe weiterführen, Bugs sammeln, in Phase 8 fixen.
 
----
 
-## 🟢 Alpha-Test (20.05. – ca. 14.06., während Credit-Cooldown)
+TO-DO BIS RELEASE
 
-**Strategie:** Beobachten, sammeln, NICHT panisch fixen. Bugs in die Liste unten eintragen. Erst nach Credit-Reset systematisch abarbeiten.
+☐ Selbsttest weiterführen (Alltagsnutzung, Standortwechsel)
+☐ Bugs in BUGs.md eintragen
+☐ Eventuell GitHub Release-Tag v1.0.0-rc2 setzen, falls noch Code-Änderungen kommen
+☐ Tester einladen (max. 6-8 Personen)
+☐ Tester-Onboarding-Mail / Doc vorbereiten
 
-### Bugs aus Alpha (laufend füllen)
 
-*(noch leer — wird während Alpha gefüllt)*
+═══════════════════════════════════════════
+🟢 ALPHA-TEST (20.05. – CA. 14.06.)
+═══════════════════════════════════════════
 
-### Feature-Wünsche von Testern (laufend füllen)
+Strategie: Beobachten, sammeln, NICHT panisch fixen. Bugs in BUGs.md. Erst nach Credit-Reset systematisch abarbeiten.
 
-*(noch leer — wird während Alpha gefüllt)*
 
-### UI/UX-Beobachtungen (laufend füllen)
+BUGS AUS ALPHA (laufend füllen — in BUGs.md)
 
-*(noch leer — wird während Alpha gefüllt)*
+(noch leer — wird während Alpha gefüllt)
 
----
 
-## 🟡 Phase 8 — Post-Release Polish (ab ca. 14.06., neue 100 Credits)
+FEATURE-WÜNSCHE VON TESTERN
 
-### Offene Polish-Punkte vor Alpha (aus v1.0)
+(noch leer — wird während Alpha gefüllt)
 
-- Schnee im Nowcast kaum ablesbar
-- Schnee-Tabwechsel-Animation überarbeiten
-- Nowcast UI komplett überarbeiten — *braucht noch Ideen-Sammlung*
 
-### Plus alle Findings aus dem Alpha-Test
+UI/UX-BEOBACHTUNGEN
 
-(siehe oben)
+(noch leer — wird während Alpha gefüllt)
 
----
 
-## 🟢 Phase 9 — Neue Features (ab ca. 14.06.)
+═══════════════════════════════════════════
+🟡 PHASE 8 — POST-RELEASE POLISH (AB CA. 14.06.)
+═══════════════════════════════════════════
 
-### 🎯 Hohe Synergie / Quick Wins
 
-- **GPS-Standort-Bestimmung** — Standardfeature, fehlt eigentlich noch
-- **Standortbezogene KI-Tagesinfo** — „Heute wird das Wetter so… also kannst du in… Regenschirm mitnehmen…"
-- **Push-Benachrichtigungen** für Warnungen
-- **Warn-Indikator** auf „Aktuell" mit direkter Verlinkung zur Warnungen-Seite
-- **Detail-Ansicht für Warnungen** + Teilen-Funktion (evtl. als Overlay)
+BUGS AUS SELBSTTEST (gefunden 16.05.)
 
-### 🎁 Spezielle Zielgruppen
+🟠 Wettericons im Nowcast nicht unter den Uhrzeiten — Layout-Bug
+🟠 Gewitterpotential (Tab „Aktuell") ≠ Gewitterrisiko (Tab „Warnungen") — Konsistenz, klären ob beabsichtigt oder Bug
+🟡 Favoriten: Wetterdaten-Abruf dauert zu lange — Performance / Caching
 
-- **Bergwetter** (Wanderer, Skifahrer)
-- **Gezeiten** (Küste, Segler)
-- **Pollenflug** (Allergiker)
-- **Gewässertemperatur** (Schwimmer, Angler)
-- **NINA-Gefahrenmeldungen** (Sicherheitsbewusste)
 
-### 💎 Größere Vorhaben
+OFFENE POLISH-PUNKTE AUS v1.0
 
-- Mehrere KI-Warnkarten
-- Einsteiger- vs. Nerd-Modus
-- KI Wetter-Lexikon (langfristig)
+• Schnee im Nowcast kaum ablesbar
+• Schnee-Tabwechsel-Animation überarbeiten
+• Nowcast UI komplett überarbeiten — inkl. Legende-Idee (was bedeuten welche Farben?)
 
----
 
-## 📊 Credit-Übersicht
+PLUS ALLE FINDINGS AUS ALPHA-TEST
 
-| Datum | Verbrauch | Rest |
-|---|---|---|
-| Start 16.05. | — | 14,8 |
-| Bundle A: Warnungs-Filter | ~3 | ~12 |
-| Bundle B: Blitzortung + Karten Darkmode | ~3 | **8,8** |
-| Reserve für Hotfixes bis 20.05. | — | 8,8 |
-| Credit-Reset (ca. 14.06.) | +100 | ~108 |
+(aus BUGs.md übernehmen)
 
----
 
-## 📝 Notizen für die Alpha-Phase
+═══════════════════════════════════════════
+🟢 PHASE 9 — KI-FEATURE-OFFENSIVE (AB CA. 14.06.)
+═══════════════════════════════════════════
 
-**Worauf achten beim Sammeln:**
-- Beim Bug: *Datum, Standort, Tab, was passiert, was sollte passieren*
-- Beim Feature-Wunsch: *Wer hat's vorgeschlagen, wofür wäre es gut, wie oft käme es vor*
-- Beim UI/UX-Punkt: *Welcher Tab, was nervt konkret, Screenshot wenn möglich*
+Strategie: MeteoFlo soll sich durch KI von 0815-Wetter-Apps abheben. Phase 9 fokussiert deshalb fast komplett auf KI-Features. Standard-Wetter-Features sind solide, aber kein USP.
 
-**Was NICHT tun in Alpha:**
-- Bei jedem Bug sofort patchen
-- Mehr als 6-8 Tester einladen
-- Neue Features in Alpha einbauen (verwirrt Tester)
-- Defensiv auf Kritik reagieren
+
+🥇 KI-CORE (DIFFERENZIERUNGS-FEATURES)
+
+1. „Frag MeteoFlo" — Konversations-Chat
+   Nutzer fragt natürlich: „Soll ich die Wäsche raushängen?" / „Brauche ich Sonnencreme?" / „Wie wird's Mittwoch in Hamburg?" — KI antwortet kontextuell mit aktuellen Daten.
+   → DER Game-Changer für die App. Wetter-Concierge statt Daten-Dashboard.
+
+2. KI-Aktivitäts-Empfehlung
+   „Heute perfekt für: Joggen ab 7 Uhr, Garten ab 14 Uhr, Grillen unsicher (Schauer möglich)." Konkret, handlungsorientiert, direkt umsetzbar.
+
+3. KI-Wettervergleich
+   „So warm wie sonst im Juli." / „6 Grad kälter als gestern." / „Erste 25°C des Jahres." Klimadaten + KI = Aha-Momente.
+
+4. KI-Reisewetter
+   „Ich fahre Donnerstag 3 Tage nach Rom." → KI fasst Wetter dort zusammen, vergleicht mit Zuhause, gibt Packing-Tipps. Nutzt bestehende Multi-Country-Coverage.
+
+5. Spezialisierte KI-Warnkarten je Risiko-Typ
+   Verschiedene KI-Karten mit fachspezifischer Auswertung pro Risiko:
+   • Gewitter-Karte: CAPE, LI, Helizität, Konvergenz, Zugbahn-Prognose
+   • Glatteis-Karte: Bodentemperatur, Taupunkt, Niederschlagsart, Stundenverlauf
+   • Hitze-Karte: Heat-Indizes, Hitzeperioden-Dauer, gefährdete Gruppen, Tipps
+   • Sturm-Karte: Windspitzen, Böen, Druckverlauf, Trog/Tief-Bewegung
+   • Starkregen-Karte: Niederschlagsraten, Stauwetterlage, Hochwassergefahr
+   → Aktiviert dynamisch je nach aktueller Risiko-Lage.
+
+
+🥈 WETTER-FEATURES OHNE KI (solide, aber kein USP)
+
+• GPS-Standort-Bestimmung — Pflichtfeature, fehlt eigentlich noch
+• Push-Benachrichtigungen für amtliche Warnungen
+• Detail-Ansicht für Warnungen + Teilen-Funktion (evtl. als Overlay)
+
+
+🗄️ BACKLOG (kann immer noch warten)
+
+• KI-Wetter-Lexikon — Tap auf Begriffe wie „CAPE", „Trog", „Vb-Lage" → KI erklärt's in 2 Sätzen
+• Bergwetter (nur wenn Tester explizit nachfragen)
+• Pollenflug
+• Gewässertemperatur
+• Gezeiten
+• NINA-Gefahrenmeldungen
+• Einsteiger- vs Nerd-Modus
+
+
+═══════════════════════════════════════════
+📊 CREDIT-ÜBERSICHT
+═══════════════════════════════════════════
+
+Datum                                          Verbrauch    Rest
+─────────────────────────────────────────────  ──────────  ──────
+Start 16.05.                                       —        14,8
+Bundle A: Warnungs-Filter                          ~3       ~12
+Bundle B: Blitzortung + Karten Darkmode            ~3       8,8
+Reserve für Hotfixes bis 20.05.                    —        8,8
+Credit-Reset (ca. 14.06.)                         +100      ~108
+
+
+═══════════════════════════════════════════
+📝 NOTIZEN FÜR DIE ALPHA-PHASE
+═══════════════════════════════════════════
+
+
+WORAUF ACHTEN BEIM SAMMELN (BUGs.md füttern):
+
+• Beim Bug: Datum, Standort, Tab, was passiert, was sollte passieren, Screenshot wenn möglich
+• Beim Feature-Wunsch: Wer hat's vorgeschlagen, wofür wäre es gut
+• Beim UI/UX-Punkt: Welcher Tab, was nervt konkret
+
+
+WAS NICHT TUN IN ALPHA:
+
+• Bei jedem Bug sofort patchen (sammeln, dann in Phase 8 abarbeiten)
+• Mehr als 6-8 Tester einladen (Feedback wird unübersichtlich)
+• Neue Features in Alpha einbauen (verwirrt Tester, kostet Credits)
+• Defensiv auf Kritik reagieren („das ist Absicht weil…")
+
+
+WAS JA TUN:
+
+• Tester aktiv nachfragen („Hast du heute MeteoFlo benutzt?")
+• Erkenne Muster im Feedback (3 Tester sagen dasselbe → ernst nehmen)
+• Selbst die App im Alltag nutzen — beste Bug-Quelle
