@@ -1,4 +1,27 @@
 import { Brain, Sparkles } from "lucide-react";
+import { LoadingProgress, type LoadingPhase } from "./LoadingProgress";
+import { RotatingLoadingMessage } from "./RotatingLoadingMessage";
+
+const ANALYSIS_LOADING_MESSAGES = [
+  "Berechne Tropopausen-Stabilität…",
+  "Frage Petrus nach Details…",
+  "Lese Wolkenstrukturen…",
+  "Sortiere Isobaren der Reihe nach…",
+  "Wirf Würfel auf die Großwetterlage…",
+  "Studiere 500hPa-Geopotential…",
+  "Spüre dem Jetstream nach…",
+  "Befrage Kaltfronten persönlich…",
+  "Stelle Synoptiker-Hut auf…",
+  "Übersetze atmosphärisches Kauderwelsch…",
+  "Rechne CAPE-Werte zwischen den Zeilen…",
+  "Frage die Hochs nach ihren Plänen…",
+] as const;
+
+const ANALYSIS_PHASES: LoadingPhase[] = [
+  { label: "Wetterdaten sammeln", targetProgress: 20, duration: 600 },
+  { label: "KI analysiert Synoptik", targetProgress: 90, duration: 4000 },
+  { label: "Ergebnis formatieren", targetProgress: 100, duration: 400 },
+];
 
 function ShimmerCard({ height = 96 }: { height?: number }) {
   return (
@@ -22,11 +45,7 @@ export function AnalysisLoader() {
     <div className="space-y-5 animate-fade-in">
       <div className="glass flex flex-col items-center gap-4 rounded-3xl border border-border/60 p-10">
         <div className="relative h-20 w-20">
-          <div className="absolute inset-0 rounded-full bg-accent/20 blur-xl animate-pulse-glow" />
-          <Brain
-            className="relative h-20 w-20 text-accent animate-pulse-glow"
-            strokeWidth={1.5}
-          />
+          <Brain className="relative h-20 w-20 text-accent" strokeWidth={1.5} />
           {sparkles.map((s, i) => (
             <Sparkles
               key={i}
@@ -36,9 +55,8 @@ export function AnalysisLoader() {
             />
           ))}
         </div>
-        <p className="text-sm font-medium text-muted-foreground">
-          KI analysiert die Wetterlage…
-        </p>
+        <RotatingLoadingMessage messages={ANALYSIS_LOADING_MESSAGES} />
+        <LoadingProgress phases={ANALYSIS_PHASES} />
       </div>
       <ShimmerCard height={120} />
       <ShimmerCard height={96} />

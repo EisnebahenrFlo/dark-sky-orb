@@ -35,6 +35,17 @@ export function AppShell() {
   const { data: officialData } = useOfficialWarningsCtx();
   const warnCount =
     (riskData?.warnungen_12h?.length ?? 0) + (officialData?.warnings?.length ?? 0);
+  let maxLevel = 0;
+  for (const w of riskData?.warnungen_12h ?? []) {
+    const r = w.stufe === "extrem" ? 4 : w.stufe === "unwetter" ? 3 : w.stufe === "markant" ? 2 : 1;
+    if (r > maxLevel) maxLevel = r;
+  }
+  for (const w of officialData?.warnings ?? []) {
+    if ((w.level ?? 1) > maxLevel) maxLevel = w.level ?? 1;
+  }
+  const badgeColor =
+    maxLevel >= 4 ? "bg-red-500" : maxLevel === 3 ? "bg-orange-500" : maxLevel === 2 ? "bg-yellow-500" : "bg-blue-500";
+  const badgePulse = maxLevel >= 3 ? "animate-pulse" : "";
   const { pathname } = useLocation();
 
   return (
@@ -84,7 +95,7 @@ export function AppShell() {
                 <span className="relative z-10 inline-flex">
                   <Icon className="h-4 w-4" strokeWidth={1.75} />
                   {to === "/warnungen" && warnCount > 0 && (
-                    <span className="absolute -right-1.5 -top-1.5 grid h-4 min-w-4 place-items-center rounded-full bg-red-500 px-1 text-[9px] font-bold text-white shadow ring-2 ring-background">
+                    <span className={`absolute -right-1.5 -top-1.5 grid h-4 min-w-4 place-items-center rounded-full ${badgeColor} ${badgePulse} px-1 text-[9px] font-bold text-white shadow ring-2 ring-background`}>
                       {warnCount}
                     </span>
                   )}
@@ -121,7 +132,7 @@ export function AppShell() {
                   <span className="relative inline-flex">
                     <Icon className="h-4 w-4" strokeWidth={1.75} />
                     {to === "/warnungen" && warnCount > 0 && (
-                      <span className="absolute -right-1.5 -top-1.5 grid h-3.5 min-w-3.5 place-items-center rounded-full bg-red-500 px-1 text-[9px] font-bold text-white shadow ring-2 ring-background">
+                      <span className={`absolute -right-1.5 -top-1.5 grid h-3.5 min-w-3.5 place-items-center rounded-full ${badgeColor} ${badgePulse} px-1 text-[9px] font-bold text-white shadow ring-2 ring-background`}>
                         {warnCount}
                       </span>
                     )}

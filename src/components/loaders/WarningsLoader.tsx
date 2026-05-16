@@ -1,4 +1,23 @@
 import { AlertTriangle } from "lucide-react";
+import { LoadingProgress, type LoadingPhase } from "./LoadingProgress";
+import { RotatingLoadingMessage } from "./RotatingLoadingMessage";
+
+const WARNINGS_LOADING_MESSAGES = [
+  "Scanne Risikolagen…",
+  "Bewerte konvektive Indizes…",
+  "Vergleiche mit DWD-Schwellen…",
+  "Frage den Sturm nach Details…",
+  "Sortiere Unwetter nach Wichtigkeit…",
+  "Prüfe ob Petrus es ernst meint…",
+  "Rechne Niederschlags-Wahrscheinlichkeiten…",
+  "Spüre dem Bodendruck nach…",
+] as const;
+
+const WARNINGS_PHASES: LoadingPhase[] = [
+  { label: "Risikodaten prüfen", targetProgress: 25, duration: 500 },
+  { label: "KI bewertet Lage", targetProgress: 90, duration: 3500 },
+  { label: "Warnungen sortieren", targetProgress: 100, duration: 300 },
+];
 
 function ShimmerCard({ height = 96 }: { height?: number }) {
   return (
@@ -14,22 +33,10 @@ export function WarningsLoader() {
     <div className="space-y-5 animate-fade-in">
       <div className="glass flex flex-col items-center gap-4 rounded-3xl border border-border/60 p-10">
         <div className="relative h-20 w-20">
-          <div
-            className="absolute inset-0 rounded-full animate-pulse-glow"
-            style={{
-              background:
-                "radial-gradient(circle, oklch(0.75 0.18 70 / 0.45) 0%, transparent 70%)",
-              filter: "blur(8px)",
-            }}
-          />
-          <AlertTriangle
-            className="relative h-20 w-20 text-accent animate-pulse-glow"
-            strokeWidth={1.5}
-          />
+          <AlertTriangle className="relative h-20 w-20 text-accent" strokeWidth={1.5} />
         </div>
-        <p className="text-sm font-medium text-muted-foreground">
-          Risiken werden ausgewertet…
-        </p>
+        <RotatingLoadingMessage messages={WARNINGS_LOADING_MESSAGES} />
+        <LoadingProgress phases={WARNINGS_PHASES} />
       </div>
       <ShimmerCard height={140} />
       <ShimmerCard height={96} />
