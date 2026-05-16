@@ -64,7 +64,6 @@ function RootComponent() {
               <OfficialWarningsProvider>
                 <SplashScreen />
                 <AppShell />
-                <Outlet />
                 <ThemedToaster />
               </OfficialWarningsProvider>
             </RiskWarningsProvider>
