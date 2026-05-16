@@ -138,6 +138,25 @@ export function AppShell() {
             Open-Meteo
           </a>
         </div>
+        <div className="flex items-center justify-center gap-3">
+          <a
+            href="https://github.com/EisnebahnrFlo/dark-sky-orb/blob/main/IMPRESSUM.md"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hover:text-foreground hover:underline"
+          >
+            Impressum
+          </a>
+          <span aria-hidden>·</span>
+          <a
+            href="https://github.com/EisnebahnrFlo/dark-sky-orb/blob/main/DATENSCHUTZ.md"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hover:text-foreground hover:underline"
+          >
+            Datenschutz
+          </a>
+        </div>
         <div>MeteoFlo v{APP_VERSION}</div>
       </footer>
     </div>
