@@ -17,11 +17,16 @@
 
 | Datum | Standort | Tab | Bug/Idee | Schwere | Status |
 |---|---|---|---|---|---|
-|  |  |  |  |  |  |
+| 16.05. | mehrere | Favoriten | Abruf der wetterdaten für Favoriten dauert zu lange | 🟡 | offen |
+| 16.05. | Ansbach | Aktuell | Wetterdaten stimmen mit Realwetter überein | Lob |  |
+| 16.05. | Ansbach | Aktuell | Gewitterpoteitial stimmt nicht mit Gweiiterrisioko im Tab Warnung überein (gewollt?) | 🟠 | offen |
+| 16.05. | Ansbach | Nowcast | Wettericons sind nicht unter den uhrzeiten | 🟠 | offen |
+| 16.05. | Ansbach | Nowcast | Legende Nowcast (welche Farbe bedeute was) | 💡 | offen |
+
 
 ---
 
-## Alpha-Test (20.-31.05.)
+## Alpha-Test (20.-13.06.)
 
 | Datum | Wer | Standort | Tab | Bug/Idee | Schwere | Status |
 |---|---|---|---|---|---|---|
