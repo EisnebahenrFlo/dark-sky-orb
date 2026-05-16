@@ -80,7 +80,7 @@ export function WarnungenPage() {
               <span
                 className={`rounded-full ${stickyColor.bg} ${stickyColor.text} px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider`}
               >
-                {data.gewitter_risiko_6h.level}
+                {stickyMeta!.label}
               </span>
             </div>
           </div>
