@@ -82,7 +82,8 @@
   .animate-spin-slow,
   .animate-pulse-glow,
   .animate-sparkle,
-  .animate-shimmer {
+  .animate-shimmer,
+  .animate-tab-enter {
     animation: none !important;
   }
 }
