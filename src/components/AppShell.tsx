@@ -35,6 +35,17 @@ export function AppShell() {
   const { data: officialData } = useOfficialWarningsCtx();
   const warnCount =
     (riskData?.warnungen_12h?.length ?? 0) + (officialData?.warnings?.length ?? 0);
+  let maxLevel = 0;
+  for (const w of riskData?.warnungen_12h ?? []) {
+    const r = w.stufe === "extrem" ? 4 : w.stufe === "unwetter" ? 3 : w.stufe === "markant" ? 2 : 1;
+    if (r > maxLevel) maxLevel = r;
+  }
+  for (const w of officialData?.warnings ?? []) {
+    if ((w.level ?? 1) > maxLevel) maxLevel = w.level ?? 1;
+  }
+  const badgeColor =
+    maxLevel >= 4 ? "bg-red-500" : maxLevel === 3 ? "bg-orange-500" : maxLevel === 2 ? "bg-yellow-500" : "bg-blue-500";
+  const badgePulse = maxLevel >= 3 ? "animate-pulse" : "";
   const { pathname } = useLocation();
 
   return (
