@@ -140,7 +140,7 @@ export function AppShell() {
         </div>
         <div className="flex items-center justify-center gap-3">
           <a
-            href="https://github.com/EisnebahnrFlo/dark-sky-orb/blob/main/IMPRESSUM.md"
+            href="https://github.com/EisnebahenrFlo/dark-sky-orb/blob/main/IMPRESSUM.md"
             target="_blank"
             rel="noopener noreferrer"
             className="hover:text-foreground hover:underline"
@@ -149,7 +149,7 @@ export function AppShell() {
           </a>
           <span aria-hidden>·</span>
           <a
-            href="https://github.com/EisnebahnrFlo/dark-sky-orb/blob/main/DATENSCHUTZ.md"
+            href="https://github.com/EisnebahenrFlo/dark-sky-orb/blob/main/DATENSCHUTZ.md"
             target="_blank"
             rel="noopener noreferrer"
             className="hover:text-foreground hover:underline"
