@@ -24,6 +24,9 @@
 | 16.05. | Ansbach | Nowcast | Legende Nowcast (welche Farbe bedeute was) | 💡 | offen |
 | 16.05. | Ansbach | Aktuell | Refresh Animation bei allen Tabs | 💡 | offen |
 | 16.05. | Weinzielein | Nowcast | Leichter Regen Realwetter - Im Nowcast steht nichts | 🟠 | offen |
+| 17.05. | Weinzielein | Aktuell | Umbau UI / ein UI für Mobil & 1 UI für Web | 💡 | offen |
+| 17.05. | Weinzielein | 7 Tage Vorhersage  | Anzeige Regenwolke, aber Niederscjlag 0,0 | 🟠 | offen |
+| 17.05. | Weinzielein | Stündliche Vorhersage  | Anzeige mehr details in den eizlenen Tabs | 💡 | offen |
 
 
 ---
