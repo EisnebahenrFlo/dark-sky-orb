@@ -23,6 +23,7 @@ import { UnsupportedLocationNotice } from "@/components/PageState";
 import { AnalysisLoader } from "@/components/loaders/AnalysisLoader";
 import { WeatherLoader } from "@/components/loaders/WeatherLoader";
 import { AnalysisDisclaimer } from "@/components/analysis/AnalysisDisclaimer";
+import { StaleBadge } from "@/components/StaleBadge";
 
 function relMin(ts: number) {
   const m = Math.max(0, Math.round((Date.now() - ts) / 60000));
@@ -126,8 +127,8 @@ export function AnalysePage() {
         </span>
       </div>
 
-      {/* Initial loading */}
-      {loading && !data && <AnalysisLoader />}
+      {/* Initial loading: show as long as we have neither data nor error */}
+      {!data && !error && <AnalysisLoader />}
 
       {/* Error */}
       {error && !data && (
@@ -253,6 +254,13 @@ export function AnalysePage() {
           </SectionCard>
 
           <AnalysisDisclaimer />
+
+          {data.stale && (
+            <div className="rounded-2xl border border-border bg-muted/30 p-3">
+              <StaleBadge ageMinutes={data.ageMinutes} />
+            </div>
+          )}
+
 
           <div className="flex flex-wrap items-center justify-between gap-3 pt-2 text-xs text-muted-foreground">
             <div className="italic">

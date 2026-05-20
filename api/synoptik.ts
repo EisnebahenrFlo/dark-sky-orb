@@ -1,10 +1,8 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { getCached, setCached, isFresh, isStaleButUsable, ageMinutes } from './_lib/cache';
 
-// In-Memory Cache: 30 Min pro Region
-const CACHE = new Map<string, { data: any; timestamp: number }>();
-const CACHE_TTL_MS = 30 * 60 * 1000;
-
-const MASTER_PROMPT = `Du bist erfahrener Synoptiker und Wetter-Analyst mit Schwerpunkt Mitteleuropa (DACH-Region), Alpenraum und Italien. Du analysierst auf Profi-Niveau – vergleichbar mit DWD-Wetterberatungen, ZAMG oder MeteoSwiss.
+// Static portion of the prompt — cacheable via Anthropic prompt caching.
+const STATIC_PROMPT = `Du bist erfahrener Synoptiker und Wetter-Analyst mit Schwerpunkt Mitteleuropa (DACH-Region), Alpenraum und Italien. Du analysierst auf Profi-Niveau – vergleichbar mit DWD-Wetterberatungen, ZAMG oder MeteoSwiss.
 
 # DEINE AUFGABE
 Analysiere die folgenden Wetterdaten und gib eine vollständige synoptische Bewertung als strukturiertes JSON zurück.
@@ -37,10 +35,6 @@ Polarfront- vs. Subtropischer Jet, Jet-Streak (linke/rechte Ausgangsregion), Cou
 
 ## Confidence
 Konsistenz der Daten bewerten. Bei Modell-Spread oder widersprüchlichen Parametern → niedrige Confidence, mit Begründung.
-
-# DATEN-INPUT
-Standort: {{LOCATION}}
-Wetterdaten: {{WEATHER_DATA}}
 
 # OUTPUT-FORMAT (STRIKT)
 Antworte AUSSCHLIESSLICH mit diesem JSON-Objekt – nichts davor, nichts danach. Sprache: Deutsch, präzise Fachterminologie.
@@ -98,7 +92,9 @@ Antworte AUSSCHLIESSLICH mit diesem JSON-Objekt – nichts davor, nichts danach.
 3. Beziehe dich auf konkrete Zahlen wenn sinnvoll (z.B. "CAPE 1800 J/kg").
 4. Max 3000 Zeichen total – präzise, nicht ausschweifend.
 5. NUR das JSON-Objekt zurückgeben.
-6. Korrekte deutsche Fachterminologie.`;
+6. Korrekte deutsche Fachterminologie.
+
+# DATEN-INPUT FOLGT IM NÄCHSTEN BLOCK`;
 
 type ErrorCode =
   | 'TIMEOUT'
@@ -162,12 +158,11 @@ async function callAnthropicWithRetry(body: unknown): Promise<
       const code: ErrorCode = status === 429 ? 'RATE_LIMIT' : 'API_ERROR';
       lastErr = { code, status, details: text.slice(0, 500) };
 
-      // Non-retryable client errors (400/401/403): bail immediately
       if (!retryable) {
         return { ok: false, ...lastErr };
       }
 
-      console.warn('Anthropic API retry', attempt, status);
+      console.warn('[synoptik] anthropic retry', attempt, status);
     } catch (e: any) {
       clearTimeout(timeoutId);
       const isTimeout = e?.name === 'AbortError';
@@ -176,7 +171,7 @@ async function callAnthropicWithRetry(body: unknown): Promise<
         status: isTimeout ? 504 : 500,
         details: String(e?.message ?? e),
       };
-      console.warn('Anthropic API retry', attempt, isTimeout ? 'TIMEOUT' : 'NETWORK');
+      console.warn('[synoptik] anthropic retry', attempt, isTimeout ? 'TIMEOUT' : 'NETWORK');
     }
 
     if (attempt < 3) {
@@ -209,6 +204,9 @@ function validateSchema(r: any): string | null {
   if (typeof r.highlight !== 'string' || !r.highlight.trim()) return 'highlight empty';
   return null;
 }
+
+const FRESH_MS = 30 * 60 * 1000;
+const STALE_MAX_MS = 24 * 60 * 60 * 1000;
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -247,28 +245,42 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   const dLat = typeof dataLat === 'number' ? Math.round(dataLat * 10) : 'x';
   const dLon = typeof dataLon === 'number' ? Math.round(dataLon * 10) : 'x';
-  const cacheKey = `${Math.round(locLat * 10)}_${Math.round(locLon * 10)}_${dLat}_${dLon}_${Math.floor(Date.now() / CACHE_TTL_MS)}`;
+  const halfHourBucket = Math.floor(Date.now() / FRESH_MS);
+  const cacheKey = `synoptik:${Math.round(locLat * 10)}_${Math.round(locLon * 10)}_${dLat}_${dLon}_${halfHourBucket}`;
+  const locLabel = `${location?.name ?? '?'} (${locLat},${locLon})`;
 
-  const cached = CACHE.get(cacheKey);
-  if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
+  // 1) Cache lookup
+  const cached = await getCached<any>(cacheKey);
+  if (cached && isFresh(cached.timestamp, FRESH_MS)) {
+    console.log('[synoptik] cache HIT (fresh)', { location: locLabel, key: cacheKey });
     return res.status(200).json({
       ...cached.data,
       cached: true,
-      cacheAge: Math.round((Date.now() - cached.timestamp) / 60000),
+      fromCache: true,
+      stale: false,
+      cacheAge: ageMinutes(cached.timestamp),
     });
   }
+  console.log('[synoptik] cache MISS', { location: locLabel, key: cacheKey, hasStale: !!cached });
 
-  const locLabel = `${location?.name ?? '?'} (${locLat},${locLon})`;
-
-  const prompt = MASTER_PROMPT.replace('{{LOCATION}}', JSON.stringify(location)).replace(
-    '{{WEATHER_DATA}}',
-    JSON.stringify(weatherData, null, 2),
-  );
+  // 2) Call Anthropic with prompt caching (static block cacheable)
+  const dynamicPart =
+    `# DATEN-INPUT\n` +
+    `Standort: ${JSON.stringify(location)}\n\n` +
+    `Wetterdaten:\n${JSON.stringify(weatherData, null, 2)}`;
 
   const apiResult = await callAnthropicWithRetry({
     model: 'claude-haiku-4-5-20251001',
     max_tokens: 3000,
-    messages: [{ role: 'user', content: prompt }],
+    messages: [
+      {
+        role: 'user',
+        content: [
+          { type: 'text', text: STATIC_PROMPT, cache_control: { type: 'ephemeral' } },
+          { type: 'text', text: dynamicPart },
+        ],
+      },
+    ],
   });
 
   if (!apiResult.ok) {
@@ -278,6 +290,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       status: apiResult.status,
       body: apiResult.details,
     });
+
+    // 3) Stale fallback
+    if (cached && isStaleButUsable(cached.timestamp, STALE_MAX_MS)) {
+      console.log('[synoptik] STALE fallback', {
+        location: locLabel,
+        ageMin: ageMinutes(cached.timestamp),
+      });
+      return res.status(200).json({
+        ...cached.data,
+        cached: true,
+        fromCache: true,
+        stale: true,
+        ageMinutes: ageMinutes(cached.timestamp),
+      });
+    }
+
     const userMsg =
       apiResult.code === 'TIMEOUT'
         ? 'KI-Analyse Zeitüberschreitung'
@@ -295,10 +323,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   } catch (parseError) {
     console.error('[synoptik] parse error', {
       location: locLabel,
-      code: 'PARSE_ERROR',
       err: String(parseError),
       raw: textContent.slice(0, 500),
     });
+    if (cached && isStaleButUsable(cached.timestamp, STALE_MAX_MS)) {
+      console.log('[synoptik] STALE fallback after parse error', { location: locLabel });
+      return res.status(200).json({
+        ...cached.data,
+        cached: true,
+        fromCache: true,
+        stale: true,
+        ageMinutes: ageMinutes(cached.timestamp),
+      });
+    }
     return errorResponse(
       res,
       500,
@@ -312,19 +349,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (schemaErr) {
     console.error('[synoptik] invalid response', {
       location: locLabel,
-      code: 'INVALID_RESPONSE',
       reason: schemaErr,
       raw: textContent.slice(0, 500),
     });
-    return errorResponse(
-      res,
-      500,
-      'INVALID_RESPONSE',
-      'KI-Antwort unvollständig',
-      schemaErr,
-    );
+    if (cached && isStaleButUsable(cached.timestamp, STALE_MAX_MS)) {
+      return res.status(200).json({
+        ...cached.data,
+        cached: true,
+        fromCache: true,
+        stale: true,
+        ageMinutes: ageMinutes(cached.timestamp),
+      });
+    }
+    return errorResponse(res, 500, 'INVALID_RESPONSE', 'KI-Antwort unvollständig', schemaErr);
   }
 
-  CACHE.set(cacheKey, { data: parsed, timestamp: Date.now() });
-  return res.status(200).json({ ...parsed, cached: false });
+  await setCached(cacheKey, parsed, 24 * 60 * 60);
+  console.log('[synoptik] cache SET', { location: locLabel, key: cacheKey });
+  return res.status(200).json({ ...parsed, cached: false, fromCache: false, stale: false });
 }
