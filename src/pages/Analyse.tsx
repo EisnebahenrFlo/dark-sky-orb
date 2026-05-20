@@ -127,8 +127,8 @@ export function AnalysePage() {
         </span>
       </div>
 
-      {/* Initial loading */}
-      {loading && !data && <AnalysisLoader />}
+      {/* Initial loading: show as long as we have neither data nor error */}
+      {!data && !error && <AnalysisLoader />}
 
       {/* Error */}
       {error && !data && (
