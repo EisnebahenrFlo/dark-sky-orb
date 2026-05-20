@@ -13,6 +13,7 @@ import { useInterval } from "@/hooks/useInterval";
 import { fetchRainbow, frameTileUrl } from "@/lib/rainbow";
 import { isDevEnvironment } from "@/lib/environment";
 import { RadarControls } from "./RadarControls";
+import { RadarLegend } from "./RadarLegend";
 
 // Fix default marker icons in bundlers
 L.Marker.prototype.options.icon = L.icon({
@@ -33,7 +34,8 @@ function Recenter({ lat, lon }: { lat: number; lon: number }) {
   return null;
 }
 
-const FRAME_MS = 500;
+const FRAME_MS_FAST = 400;
+const FRAME_MS_NEAR_NOW = 700;
 const LOOP_RESET_PAUSE_MS = 1000;
 
 export default function RadarMap() {
@@ -65,9 +67,11 @@ export default function RadarMap() {
   }, [frames.length, pastCount]);
 
   const isAtLoopEnd = frames.length > 0 && index === frames.length - 1;
+  const nearNow = pastCount > 0 && Math.abs(index - (pastCount - 1)) <= 2;
+  const baseDelay = nearNow ? FRAME_MS_NEAR_NOW : FRAME_MS_FAST;
   useInterval(
     () => setIndex((i) => (frames.length ? (i + 1) % frames.length : 0)),
-    isPlaying && frames.length ? (isAtLoopEnd ? FRAME_MS + LOOP_RESET_PAUSE_MS : FRAME_MS) : null,
+    isPlaying && frames.length ? (isAtLoopEnd ? baseDelay + LOOP_RESET_PAUSE_MS : baseDelay) : null,
   );
 
   const baseTile =
@@ -78,7 +82,7 @@ export default function RadarMap() {
   const baseAttr =
     '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a> &middot; Radar &copy; <a href="https://rainbow.ai">Rainbow.ai</a>';
 
-  const currentFrame = frames[index];
+  
 
   return (
     <div>
@@ -97,20 +101,23 @@ export default function RadarMap() {
             style={{ height: "100%", width: "100%", background: "var(--muted)" }}
           >
             <TileLayer key={resolved} url={baseTile} attribution={baseAttr} maxZoom={12} />
-            {currentFrame && data && (
-              <TileLayer
-                key={`${data.snapshot}-${currentFrame.offset}`}
-                url={frameTileUrl(data.snapshot, currentFrame)}
-                opacity={0.85}
-                maxZoom={12}
-                zIndex={10}
-              />
-            )}
+            {data &&
+              frames.map((f, i) => (
+                <TileLayer
+                  key={f.time}
+                  url={frameTileUrl(data.snapshot, f)}
+                  opacity={i === index ? 0.85 : 0}
+                  maxZoom={12}
+                  zIndex={10 + i}
+                />
+              ))}
             <Marker position={[location.latitude, location.longitude]} />
             <Recenter lat={location.latitude} lon={location.longitude} />
           </MapContainer>
         </div>
       </div>
+
+      {frames.length > 0 && <RadarLegend />}
 
       {frames.length > 0 && (
         <RadarControls
