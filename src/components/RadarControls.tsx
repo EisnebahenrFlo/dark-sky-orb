@@ -2,7 +2,7 @@ import { Play, Pause } from "lucide-react";
 import type { RainbowFrame } from "@/lib/rainbow";
 
 interface Props {
-  frames: RainViewerFrame[];
+  frames: RainbowFrame[];
   pastCount: number;
   index: number;
   isPlaying: boolean;
