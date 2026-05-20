@@ -19,6 +19,9 @@ export interface SynoptikAnalysis {
   confidence: { score: number; begründung: string };
   highlight: string;
   cached?: boolean;
+  fromCache?: boolean;
+  stale?: boolean;
+  ageMinutes?: number;
   cacheAge?: number;
 }
 
