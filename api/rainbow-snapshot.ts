@@ -50,7 +50,7 @@ async function fetchRainbowSnapshotWithRetry(): Promise<
       const resp = await fetch(
         'https://api.rainbow.ai/tiles/v1/snapshot?layer=precip',
         {
-          headers: { 'x-api-key': process.env.RAINBOW_API_KEY ?? '' },
+          headers: { 'Ocp-Apim-Subscription-Key': process.env.RAINBOW_API_KEY ?? '' },
           signal: controller.signal,
         },
       );
