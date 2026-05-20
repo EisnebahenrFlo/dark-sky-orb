@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { AlertCircle, CheckCircle2, RefreshCw, ShieldAlert } from "lucide-react";
+import { WarningsLoader } from "@/components/loaders/WarningsLoader";
 import { useRiskWarningsCtx } from "@/contexts/RiskWarningsContext";
 import { useOfficialWarningsCtx } from "@/contexts/OfficialWarningsContext";
 import { useWeather } from "@/contexts/WeatherContext";
@@ -32,19 +33,6 @@ const KI_ERROR_COPY: Record<RiskWarningsErrorCode, { title: string; body: string
   UNKNOWN: { title: "Etwas ist schiefgelaufen", body: "Bitte erneut versuchen." },
 };
 
-function KiSkeleton() {
-  return (
-    <div className="rounded-2xl border border-border bg-card p-5 sm:p-6">
-      <div className="flex items-start gap-3">
-        <div className="h-11 w-11 animate-pulse rounded-xl bg-muted" />
-        <div className="flex-1 space-y-2">
-          <div className="h-4 w-1/3 animate-pulse rounded bg-muted" />
-          <div className="h-3 w-2/3 animate-pulse rounded bg-muted" />
-        </div>
-      </div>
-    </div>
-  );
-}
 
 export function WarnungenPage() {
   const { data: weather, location, errorCode } = useWeather();
@@ -117,7 +105,7 @@ export function WarnungenPage() {
           )}
         </div>
 
-        {!data && !error && <KiSkeleton />}
+        {loading && !data && <WarningsLoader />}
 
         {error && !data && (
           <div className="flex flex-col items-center gap-4 rounded-2xl border border-border bg-card p-6 text-center shadow-sm">
