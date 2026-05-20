@@ -1,4 +1,6 @@
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
+  AlertCircle,
   AlertTriangle,
   Brain,
   CalendarClock,
@@ -12,7 +14,72 @@ import {
   Wind,
   Zap,
 } from "lucide-react";
-import { useSynoptikAnalysis } from "@/hooks/useSynoptikAnalysis";
+import { useSynoptikAnalysis, type SynoptikErrorCode } from "@/hooks/useSynoptikAnalysis";
+import { HeroCard } from "@/components/synoptik/HeroCard";
+import { SectionCard } from "@/components/synoptik/SectionCard";
+import { ConvectionBadge } from "@/components/synoptik/ConvectionBadge";
+import { useWeather } from "@/contexts/WeatherContext";
+import { UnsupportedLocationNotice } from "@/components/PageState";
+import { AnalysisLoader } from "@/components/loaders/AnalysisLoader";
+import { WeatherLoader } from "@/components/loaders/WeatherLoader";
+import { AnalysisDisclaimer } from "@/components/analysis/AnalysisDisclaimer";
+
+function relMin(ts: number) {
+  const m = Math.max(0, Math.round((Date.now() - ts) / 60000));
+  if (m < 1) return "gerade eben";
+  if (m === 1) return "vor 1 Min";
+  return `vor ${m} Min`;
+}
+
+const ERROR_COPY: Record<SynoptikErrorCode, { title: string; body: string }> = {
+  TIMEOUT: {
+    title: "Analyse dauert ungewöhnlich lange",
+    body: "Analyse dauert ungewöhnlich lange. Bitte erneut versuchen.",
+  },
+  RATE_LIMIT: {
+    title: "Kurz überlastet",
+    body: "MeteoFlo ist gerade etwas überlastet. Gleich nochmal versuchen?",
+  },
+  API_ERROR: {
+    title: "KI-Analyse nicht erreichbar",
+    body: "Die KI-Analyse ist temporär nicht erreichbar.",
+  },
+  PARSE_ERROR: {
+    title: "Analyse unvollständig",
+    body: "Analyse konnte nicht erstellt werden.",
+  },
+  INVALID_RESPONSE: {
+    title: "Analyse unvollständig",
+    body: "Analyse konnte nicht erstellt werden.",
+  },
+  BAD_REQUEST: {
+    title: "Analyse nicht möglich",
+    body: "Für diesen Standort konnte keine Analyse erstellt werden.",
+  },
+  NETWORK: {
+    title: "Verbindungsproblem",
+    body: "Verbindungsproblem. Bitte erneut versuchen.",
+  },
+  UNKNOWN: {
+    title: "Etwas ist schiefgelaufen",
+    body: "Verbindungsproblem. Bitte erneut versuchen.",
+  },
+};
+
+function useDebouncedAction(action: () => void, ms = 5000) {
+  const [disabled, setDisabled] = useState(false);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => {
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+  }, []);
+  const trigger = useCallback(() => {
+    if (disabled) return;
+    setDisabled(true);
+    action();
+    timeoutRef.current = setTimeout(() => setDisabled(false), ms);
+  }, [disabled, action, ms]);
+  return { trigger, disabled };
+}
 import { HeroCard } from "@/components/synoptik/HeroCard";
 import { SectionCard } from "@/components/synoptik/SectionCard";
 import { ConvectionBadge } from "@/components/synoptik/ConvectionBadge";
