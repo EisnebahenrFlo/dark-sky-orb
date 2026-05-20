@@ -1,5 +1,5 @@
 // Vercel Serverless Function – Gewitter-Risiko + KI-Warnungen
-import { getCached, setCached, isFresh, isStaleButUsable, ageMinutes } from './_lib/cache';
+import { getCached, setCached, isFresh, isStaleButUsable, ageMinutes } from './_lib/cache.js';
 
 const THRESHOLDS = {
   wind_gust_markant: 70, wind_gust_severe: 90, wind_gust_extreme: 118,
