@@ -117,7 +117,7 @@ export function WarnungenPage() {
           )}
         </div>
 
-        {loading && !data && <KiSkeleton />}
+        {!data && !error && <KiSkeleton />}
 
         {error && !data && (
           <div className="flex flex-col items-center gap-4 rounded-2xl border border-border bg-card p-6 text-center shadow-sm">
