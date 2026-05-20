@@ -117,6 +117,8 @@ export default function RadarMap() {
         </div>
       </div>
 
+      {frames.length > 0 && <RadarLegend />}
+
       {frames.length > 0 && (
         <RadarControls
           frames={frames}
