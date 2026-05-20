@@ -13,7 +13,7 @@ export function CurrentLocationCard({ onAdded }: { onAdded?: () => void }) {
   const handleAdd = () => {
     const r = addFavorite(fav);
     if (r.ok) {
-      toast.success(`${fav.name} zu Favoriten hinzugefügt`);
+      toast.success(`${fav.name} zu Favoriten hinzugefügt`, { duration: 2000 });
       onAdded?.();
     } else if (r.reason === "max") {
       toast.error(`Maximum von ${max} Favoriten erreicht`, {

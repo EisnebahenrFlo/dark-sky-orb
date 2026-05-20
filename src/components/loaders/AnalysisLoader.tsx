@@ -7,13 +7,13 @@ const ANALYSIS_LOADING_MESSAGES = [
   "Frage Petrus nach Details…",
   "Lese Wolkenstrukturen…",
   "Sortiere Isobaren der Reihe nach…",
-  "Wirf Würfel auf die Großwetterlage…",
+  "Werfe Würfel auf die Großwetterlage…",
   "Studiere 500hPa-Geopotential…",
   "Spüre dem Jetstream nach…",
   "Befrage Kaltfronten persönlich…",
-  "Stelle Synoptiker-Hut auf…",
+  "Setze den Synoptiker-Hut auf…",
   "Übersetze atmosphärisches Kauderwelsch…",
-  "Rechne CAPE-Werte zwischen den Zeilen…",
+  "Lese CAPE-Werte zwischen den Zeilen…",
   "Frage die Hochs nach ihren Plänen…",
 ] as const;
 
