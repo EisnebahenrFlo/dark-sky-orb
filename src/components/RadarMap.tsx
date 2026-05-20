@@ -10,7 +10,8 @@ import shadowUrl from "leaflet/dist/images/marker-shadow.png";
 import { useWeather } from "@/contexts/WeatherContext";
 import { useTheme } from "@/hooks/useTheme";
 import { useInterval } from "@/hooks/useInterval";
-import { fetchRainViewer, frameTileUrl } from "@/lib/rainviewer";
+import { fetchRainbow, frameTileUrl } from "@/lib/rainbow";
+import { isDevEnvironment } from "@/lib/environment";
 import { RadarControls } from "./RadarControls";
 
 // Fix default marker icons in bundlers
@@ -38,10 +39,11 @@ const LOOP_RESET_PAUSE_MS = 1000;
 export default function RadarMap() {
   const { location } = useWeather();
   const { resolved } = useTheme();
+  const isDev = isDevEnvironment();
 
   const { data } = useQuery({
-    queryKey: ["rainviewer"],
-    queryFn: fetchRainViewer,
+    queryKey: ["rainbow"],
+    queryFn: fetchRainbow,
     refetchInterval: 5 * 60 * 1000,
     staleTime: 60_000,
   });
@@ -62,7 +64,6 @@ export default function RadarMap() {
     }
   }, [frames.length, pastCount]);
 
-  // Use a longer pause when we just wrapped from the last frame back to the first.
   const isAtLoopEnd = frames.length > 0 && index === frames.length - 1;
   useInterval(
     () => setIndex((i) => (frames.length ? (i + 1) % frames.length : 0)),
@@ -75,28 +76,33 @@ export default function RadarMap() {
       : "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png";
 
   const baseAttr =
-    '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>';
+    '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a> &middot; Radar &copy; <a href="https://rainbow.ai">Rainbow.ai</a>';
 
   const currentFrame = frames[index];
 
   return (
     <div>
-      <div className="glass overflow-hidden rounded-3xl">
+      <div className="glass relative overflow-hidden rounded-3xl">
+        {isDev && (
+          <div className="pointer-events-none absolute right-3 top-3 z-[500] rounded-full bg-yellow-400/95 px-2.5 py-1 text-[10px] font-medium uppercase tracking-wider text-yellow-950 shadow-md">
+            DEV: Rainbow.ai Test
+          </div>
+        )}
         <div className="h-[420px] w-full sm:h-[520px]">
           <MapContainer
             center={[location.latitude, location.longitude]}
             zoom={7}
-            maxZoom={10}
+            maxZoom={12}
             scrollWheelZoom
             style={{ height: "100%", width: "100%", background: "var(--muted)" }}
           >
-            <TileLayer key={resolved} url={baseTile} attribution={baseAttr} maxZoom={10} />
+            <TileLayer key={resolved} url={baseTile} attribution={baseAttr} maxZoom={12} />
             {currentFrame && data && (
               <TileLayer
-                key={currentFrame.path}
-                url={frameTileUrl(data.host, currentFrame)}
+                key={`${data.snapshot}-${currentFrame.offset}`}
+                url={frameTileUrl(data.snapshot, currentFrame)}
                 opacity={0.85}
-                maxZoom={10}
+                maxZoom={12}
                 zIndex={10}
               />
             )}
