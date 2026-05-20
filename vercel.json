@@ -1,5 +1,13 @@
 {
   "rewrites": [
     { "source": "/((?!api/).*)", "destination": "/index.html" }
-  ]
+  ],
+  "functions": {
+    "api/synoptik.ts": {
+      "includeFiles": "api/_lib/**"
+    },
+    "api/risk-warnings.ts": {
+      "includeFiles": "api/_lib/**"
+    }
+  }
 }
