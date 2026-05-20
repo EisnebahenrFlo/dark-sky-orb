@@ -1,4 +1,6 @@
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
+  AlertCircle,
   AlertTriangle,
   Brain,
   CalendarClock,
@@ -12,7 +14,7 @@ import {
   Wind,
   Zap,
 } from "lucide-react";
-import { useSynoptikAnalysis } from "@/hooks/useSynoptikAnalysis";
+import { useSynoptikAnalysis, type SynoptikErrorCode } from "@/hooks/useSynoptikAnalysis";
 import { HeroCard } from "@/components/synoptik/HeroCard";
 import { SectionCard } from "@/components/synoptik/SectionCard";
 import { ConvectionBadge } from "@/components/synoptik/ConvectionBadge";
@@ -27,6 +29,56 @@ function relMin(ts: number) {
   if (m < 1) return "gerade eben";
   if (m === 1) return "vor 1 Min";
   return `vor ${m} Min`;
+}
+
+const ERROR_COPY: Record<SynoptikErrorCode, { title: string; body: string }> = {
+  TIMEOUT: {
+    title: "Analyse dauert ungewöhnlich lange",
+    body: "Analyse dauert ungewöhnlich lange. Bitte erneut versuchen.",
+  },
+  RATE_LIMIT: {
+    title: "Kurz überlastet",
+    body: "MeteoFlo ist gerade etwas überlastet. Gleich nochmal versuchen?",
+  },
+  API_ERROR: {
+    title: "KI-Analyse nicht erreichbar",
+    body: "Die KI-Analyse ist temporär nicht erreichbar.",
+  },
+  PARSE_ERROR: {
+    title: "Analyse unvollständig",
+    body: "Analyse konnte nicht erstellt werden.",
+  },
+  INVALID_RESPONSE: {
+    title: "Analyse unvollständig",
+    body: "Analyse konnte nicht erstellt werden.",
+  },
+  BAD_REQUEST: {
+    title: "Analyse nicht möglich",
+    body: "Für diesen Standort konnte keine Analyse erstellt werden.",
+  },
+  NETWORK: {
+    title: "Verbindungsproblem",
+    body: "Verbindungsproblem. Bitte erneut versuchen.",
+  },
+  UNKNOWN: {
+    title: "Etwas ist schiefgelaufen",
+    body: "Verbindungsproblem. Bitte erneut versuchen.",
+  },
+};
+
+function useDebouncedAction(action: () => void, ms = 5000) {
+  const [disabled, setDisabled] = useState(false);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => {
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+  }, []);
+  const trigger = useCallback(() => {
+    if (disabled) return;
+    setDisabled(true);
+    action();
+    timeoutRef.current = setTimeout(() => setDisabled(false), ms);
+  }, [disabled, action, ms]);
+  return { trigger, disabled };
 }
 
 function SkeletonCard() {
@@ -49,16 +101,20 @@ function SkeletonCard() {
 }
 
 export function AnalysePage() {
-  const { data: weather, location, errorCode } = useWeather();
-  const { data, loading, error, refresh, lastUpdated } = useSynoptikAnalysis();
+  const { data: weather, location, errorCode: weatherErrorCode } = useWeather();
+  const { data, loading, error, errorCode, refresh, lastUpdated } = useSynoptikAnalysis();
+  const retry = useDebouncedAction(() => refresh(), 5000);
+  const refreshAction = useDebouncedAction(() => refresh(), 5000);
 
-  if (errorCode === "unsupported_location") {
+  if (weatherErrorCode === "unsupported_location") {
     return <UnsupportedLocationNotice />;
   }
 
   if (!weather) {
     return <WeatherLoader city={location.name} />;
   }
+
+  const copy = ERROR_COPY[errorCode ?? "UNKNOWN"];
 
   return (
     <div className="space-y-5">
@@ -75,17 +131,21 @@ export function AnalysePage() {
 
       {/* Error */}
       {error && !data && (
-        <div className="flex flex-col items-start gap-3 rounded-2xl border border-destructive/30 bg-destructive/5 p-6">
-          <div className="flex items-center gap-2 text-destructive">
-            <AlertTriangle className="h-5 w-5" />
-            <span className="font-medium">Analyse fehlgeschlagen</span>
+        <div className="flex flex-col items-center gap-4 rounded-2xl border border-border bg-card p-8 text-center shadow-sm">
+          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted">
+            <AlertCircle className="h-6 w-6 text-foreground/70" strokeWidth={1.75} />
           </div>
-          <p className="text-sm text-muted-foreground">{error}</p>
+          <div className="space-y-1.5">
+            <h3 className="text-base font-semibold text-foreground">{copy.title}</h3>
+            <p className="text-sm text-muted-foreground">{copy.body}</p>
+          </div>
           <button
-            onClick={() => refresh()}
-            className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+            onClick={retry.trigger}
+            disabled={retry.disabled || loading}
+            className="inline-flex items-center gap-2 rounded-2xl bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground shadow-sm transition-opacity hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            <RefreshCw className="h-4 w-4" /> Erneut versuchen
+            <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+            Erneut versuchen
           </button>
         </div>
       )}
@@ -202,9 +262,9 @@ export function AnalysePage() {
               )}
             </div>
             <button
-              onClick={() => refresh()}
-              disabled={loading}
-              className="inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-foreground transition-colors hover:bg-foreground/5 disabled:opacity-50"
+              onClick={refreshAction.trigger}
+              disabled={loading || refreshAction.disabled}
+              className="inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-foreground transition-colors hover:bg-foreground/5 disabled:cursor-not-allowed disabled:opacity-50"
             >
               <RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} />
               Neu analysieren
