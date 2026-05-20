@@ -101,16 +101,20 @@ function SkeletonCard() {
 }
 
 export function AnalysePage() {
-  const { data: weather, location, errorCode } = useWeather();
-  const { data, loading, error, refresh, lastUpdated } = useSynoptikAnalysis();
+  const { data: weather, location, errorCode: weatherErrorCode } = useWeather();
+  const { data, loading, error, errorCode, refresh, lastUpdated } = useSynoptikAnalysis();
+  const retry = useDebouncedAction(() => refresh(), 5000);
+  const refreshAction = useDebouncedAction(() => refresh(), 5000);
 
-  if (errorCode === "unsupported_location") {
+  if (weatherErrorCode === "unsupported_location") {
     return <UnsupportedLocationNotice />;
   }
 
   if (!weather) {
     return <WeatherLoader city={location.name} />;
   }
+
+  const copy = ERROR_COPY[errorCode ?? "UNKNOWN"];
 
   return (
     <div className="space-y-5">
@@ -127,17 +131,21 @@ export function AnalysePage() {
 
       {/* Error */}
       {error && !data && (
-        <div className="flex flex-col items-start gap-3 rounded-2xl border border-destructive/30 bg-destructive/5 p-6">
-          <div className="flex items-center gap-2 text-destructive">
-            <AlertTriangle className="h-5 w-5" />
-            <span className="font-medium">Analyse fehlgeschlagen</span>
+        <div className="flex flex-col items-center gap-4 rounded-2xl border border-border bg-card p-8 text-center shadow-sm">
+          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted">
+            <AlertCircle className="h-6 w-6 text-foreground/70" strokeWidth={1.75} />
           </div>
-          <p className="text-sm text-muted-foreground">{error}</p>
+          <div className="space-y-1.5">
+            <h3 className="text-base font-semibold text-foreground">{copy.title}</h3>
+            <p className="text-sm text-muted-foreground">{copy.body}</p>
+          </div>
           <button
-            onClick={() => refresh()}
-            className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+            onClick={retry.trigger}
+            disabled={retry.disabled || loading}
+            className="inline-flex items-center gap-2 rounded-2xl bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground shadow-sm transition-opacity hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            <RefreshCw className="h-4 w-4" /> Erneut versuchen
+            <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+            Erneut versuchen
           </button>
         </div>
       )}
@@ -254,9 +262,9 @@ export function AnalysePage() {
               )}
             </div>
             <button
-              onClick={() => refresh()}
-              disabled={loading}
-              className="inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-foreground transition-colors hover:bg-foreground/5 disabled:opacity-50"
+              onClick={refreshAction.trigger}
+              disabled={loading || refreshAction.disabled}
+              className="inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-foreground transition-colors hover:bg-foreground/5 disabled:cursor-not-allowed disabled:opacity-50"
             >
               <RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} />
               Neu analysieren
