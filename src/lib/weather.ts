@@ -105,8 +105,9 @@ export interface WeatherData {
 const ALLOWED_COUNTRIES = new Set(["DE", "AT", "CH", "IT"]);
 
 export async function searchCities(query: string): Promise<GeoResult[]> {
-  if (!query.trim()) return [];
-  const url = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(query)}&count=10&language=de`;
+  const trimmed = query.trim();
+  if (!trimmed) return [];
+  const url = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(trimmed)}&count=10&language=de`;
   const res = await fetch(url);
   if (!res.ok) throw new Error("Suche fehlgeschlagen");
   const data = await res.json();
