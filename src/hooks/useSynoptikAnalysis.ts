@@ -61,11 +61,22 @@ function buildSubset(weatherData: any) {
   };
 }
 
+export type SynoptikErrorCode =
+  | "TIMEOUT"
+  | "RATE_LIMIT"
+  | "API_ERROR"
+  | "PARSE_ERROR"
+  | "INVALID_RESPONSE"
+  | "BAD_REQUEST"
+  | "NETWORK"
+  | "UNKNOWN";
+
 export function useSynoptikAnalysis() {
   const { data: weatherData, location, isFetching: weatherFetching } = useWeather();
   const [data, setData] = useState<SynoptikAnalysis | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [errorCode, setErrorCode] = useState<SynoptikErrorCode | null>(null);
   const [lastUpdated, setLastUpdated] = useState<number | null>(null);
   const loadedKeyRef = useRef<string | null>(null);
 
@@ -74,13 +85,9 @@ export function useSynoptikAnalysis() {
       if (!weatherData || !location) return;
       setLoading(true);
       setError(null);
+      setErrorCode(null);
       try {
         const subset = buildSubset(weatherData);
-        console.log("[synoptik] sending:", {
-          location,
-          hasLatLon: typeof subset.latitude === "number" && typeof subset.longitude === "number",
-          subsetKeys: Object.keys(subset),
-        });
         const baseUrl = import.meta.env.VITE_API_BASE_URL || "";
         const res = await fetch(`${baseUrl}/api/synoptik`, {
           method: "POST",
@@ -88,12 +95,16 @@ export function useSynoptikAnalysis() {
           body: JSON.stringify({ weatherData: subset, location }),
           signal,
         });
-        const json = await res.json();
-        if (!res.ok) throw new Error(json?.error || "Analyse fehlgeschlagen");
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          setErrorCode((json?.code as SynoptikErrorCode) || "API_ERROR");
+          throw new Error(json?.error || "Analyse fehlgeschlagen");
+        }
         setData(json as SynoptikAnalysis);
         setLastUpdated(Date.now());
       } catch (e: any) {
         if (e?.name === "AbortError") return;
+        setErrorCode((prev) => prev ?? "NETWORK");
         setError(e?.message || "Unbekannter Fehler");
       } finally {
         setLoading(false);
@@ -102,20 +113,18 @@ export function useSynoptikAnalysis() {
     [weatherData, location],
   );
 
-  // Clear stale analysis immediately when location changes
   useEffect(() => {
     setData(null);
     setError(null);
+    setErrorCode(null);
     setLastUpdated(null);
     setLoading(true);
     loadedKeyRef.current = null;
   }, [location.latitude, location.longitude]);
 
-  // Fetch only when fresh weather data for the current location is available
   useEffect(() => {
     if (!weatherData || !location) return;
     if (weatherFetching) return;
-    // Coordinate match: weatherData must belong to current location
     if (
       Math.abs(weatherData.latitude - location.latitude) > 0.5 ||
       Math.abs(weatherData.longitude - location.longitude) > 0.5
@@ -139,5 +148,5 @@ export function useSynoptikAnalysis() {
 
   const refresh = useCallback(() => fetchAnalysis(), [fetchAnalysis]);
 
-  return { data, loading, error, refresh, lastUpdated };
+  return { data, loading, error, errorCode, refresh, lastUpdated };
 }

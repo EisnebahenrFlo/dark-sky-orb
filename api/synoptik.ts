@@ -100,93 +100,231 @@ Antworte AUSSCHLIESSLICH mit diesem JSON-Objekt – nichts davor, nichts danach.
 5. NUR das JSON-Objekt zurückgeben.
 6. Korrekte deutsche Fachterminologie.`;
 
+type ErrorCode =
+  | 'TIMEOUT'
+  | 'RATE_LIMIT'
+  | 'API_ERROR'
+  | 'PARSE_ERROR'
+  | 'INVALID_RESPONSE'
+  | 'BAD_REQUEST';
+
+function errorResponse(
+  res: VercelResponse,
+  status: number,
+  code: ErrorCode,
+  error: string,
+  details?: string,
+) {
+  return res.status(status).json({ error, code, ...(details ? { details } : {}) });
+}
+
+const RETRY_DELAYS_MS = [500, 1500, 4500];
+const REQUEST_TIMEOUT_MS = 30_000;
+
+async function sleep(ms: number) {
+  return new Promise((r) => setTimeout(r, ms));
+}
+
+async function callAnthropicWithRetry(body: unknown): Promise<
+  | { ok: true; data: any }
+  | { ok: false; code: ErrorCode; status: number; details: string }
+> {
+  let lastErr: { code: ErrorCode; status: number; details: string } = {
+    code: 'API_ERROR',
+    status: 500,
+    details: 'unknown',
+  };
+
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+    try {
+      const resp = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': process.env.ANTHROPIC_API_KEY!,
+          'anthropic-version': '2023-06-01',
+        },
+        body: JSON.stringify(body),
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
+
+      if (resp.ok) {
+        const data = await resp.json();
+        return { ok: true, data };
+      }
+
+      const text = await resp.text();
+      const status = resp.status;
+      const retryable = status === 429 || status >= 500;
+      const code: ErrorCode = status === 429 ? 'RATE_LIMIT' : 'API_ERROR';
+      lastErr = { code, status, details: text.slice(0, 500) };
+
+      // Non-retryable client errors (400/401/403): bail immediately
+      if (!retryable) {
+        return { ok: false, ...lastErr };
+      }
+
+      console.warn('Anthropic API retry', attempt, status);
+    } catch (e: any) {
+      clearTimeout(timeoutId);
+      const isTimeout = e?.name === 'AbortError';
+      lastErr = {
+        code: isTimeout ? 'TIMEOUT' : 'API_ERROR',
+        status: isTimeout ? 504 : 500,
+        details: String(e?.message ?? e),
+      };
+      console.warn('Anthropic API retry', attempt, isTimeout ? 'TIMEOUT' : 'NETWORK');
+    }
+
+    if (attempt < 3) {
+      await sleep(RETRY_DELAYS_MS[attempt - 1]);
+    }
+  }
+
+  return { ok: false, ...lastErr };
+}
+
+function extractJson(text: string): any {
+  const trimmed = text.trim();
+  const fenced = trimmed.match(/```json\s*([\s\S]*?)\s*```/i);
+  if (fenced) return JSON.parse(fenced[1].trim());
+  const first = trimmed.indexOf('{');
+  const last = trimmed.lastIndexOf('}');
+  if (first !== -1 && last !== -1 && last > first) {
+    return JSON.parse(trimmed.slice(first, last + 1).trim());
+  }
+  return JSON.parse(trimmed);
+}
+
+function validateSchema(r: any): string | null {
+  if (!r || typeof r !== 'object') return 'not an object';
+  if (!r.großwetterlage?.klassifikation || !r.großwetterlage?.beschreibung)
+    return 'großwetterlage incomplete';
+  if (!r.konvektion?.potenzial) return 'konvektion.potenzial missing';
+  if (!r.entwicklung?.next_24h) return 'entwicklung.next_24h missing';
+  if (typeof r.confidence?.score !== 'number') return 'confidence.score not a number';
+  if (typeof r.highlight !== 'string' || !r.highlight.trim()) return 'highlight empty';
+  return null;
+}
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  // CORS für Browser-Calls erlauben
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
   if (req.method === 'OPTIONS') return res.status(200).end();
-  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+  if (req.method !== 'POST')
+    return errorResponse(res, 405, 'BAD_REQUEST', 'Method not allowed');
 
-  const { weatherData, location } = req.body;
+  const { weatherData, location } = req.body ?? {};
 
   if (!weatherData || !location) {
-    return res.status(400).json({ error: 'Missing weatherData or location' });
+    return errorResponse(res, 400, 'BAD_REQUEST', 'Missing weatherData or location');
   }
 
-  // Normalize location coords (frontend sends latitude/longitude)
   const locLat = typeof location.latitude === 'number' ? location.latitude : location.lat;
   const locLon = typeof location.longitude === 'number' ? location.longitude : location.lon;
   const dataLat = weatherData?.latitude;
   const dataLon = weatherData?.longitude;
 
   if (typeof locLat !== 'number' || typeof locLon !== 'number') {
-    return res.status(400).json({ error: 'location missing latitude/longitude' });
+    return errorResponse(res, 400, 'BAD_REQUEST', 'location missing latitude/longitude');
   }
-  // Lenient: only validate mismatch when both lat/lon are present
   if (typeof dataLat === 'number' && typeof dataLon === 'number') {
     if (Math.abs(dataLat - locLat) > 1.0 || Math.abs(dataLon - locLon) > 1.0) {
-      return res.status(400).json({
-        error: 'location and weatherData mismatch',
-        details: `location ${locLat},${locLon} vs data ${dataLat},${dataLon}`,
-      });
+      return errorResponse(
+        res,
+        400,
+        'BAD_REQUEST',
+        'location and weatherData mismatch',
+        `location ${locLat},${locLon} vs data ${dataLat},${dataLon}`,
+      );
     }
   }
 
-  // Cache-Key: location + (optional) weatherData coords + half-hour window
   const dLat = typeof dataLat === 'number' ? Math.round(dataLat * 10) : 'x';
   const dLon = typeof dataLon === 'number' ? Math.round(dataLon * 10) : 'x';
   const cacheKey = `${Math.round(locLat * 10)}_${Math.round(locLon * 10)}_${dLat}_${dLon}_${Math.floor(Date.now() / CACHE_TTL_MS)}`;
 
   const cached = CACHE.get(cacheKey);
   if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
-    return res.status(200).json({ ...cached.data, cached: true, cacheAge: Math.round((Date.now() - cached.timestamp) / 60000) });
-  }
-
-  try {
-    const prompt = MASTER_PROMPT
-      .replace('{{LOCATION}}', JSON.stringify(location))
-      .replace('{{WEATHER_DATA}}', JSON.stringify(weatherData, null, 2));
-
-    const anthropicResponse = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': process.env.ANTHROPIC_API_KEY!,
-        'anthropic-version': '2023-06-01',
-      },
-      body: JSON.stringify({
-        model: 'claude-haiku-4-5-20251001',
-        max_tokens: 2000,
-        messages: [{ role: 'user', content: prompt }],
-      }),
+    return res.status(200).json({
+      ...cached.data,
+      cached: true,
+      cacheAge: Math.round((Date.now() - cached.timestamp) / 60000),
     });
-
-    if (!anthropicResponse.ok) {
-      const errorText = await anthropicResponse.text();
-      console.error('Anthropic API error:', errorText);
-      return res.status(500).json({ error: 'KI-Analyse fehlgeschlagen', details: errorText });
-    }
-
-    const data = await anthropicResponse.json();
-    const textContent = data.content[0].text;
-
-    // JSON extrahieren (robuster Parser)
-    let result;
-    try {
-      const jsonMatch = textContent.match(/```json\s*([\s\S]*?)\s*```/) || textContent.match(/(\{[\s\S]*\})/);
-      result = JSON.parse(jsonMatch ? jsonMatch[1] : textContent);
-    } catch (parseError) {
-      console.error('JSON parse error:', parseError, 'Raw:', textContent);
-      return res.status(500).json({ error: 'KI-Antwort konnte nicht geparst werden', raw: textContent });
-    }
-
-    CACHE.set(cacheKey, { data: result, timestamp: Date.now() });
-    return res.status(200).json({ ...result, cached: false });
-
-  } catch (error: any) {
-    console.error('Synoptik handler error:', error);
-    return res.status(500).json({ error: error.message });
   }
+
+  const locLabel = `${location?.name ?? '?'} (${locLat},${locLon})`;
+
+  const prompt = MASTER_PROMPT.replace('{{LOCATION}}', JSON.stringify(location)).replace(
+    '{{WEATHER_DATA}}',
+    JSON.stringify(weatherData, null, 2),
+  );
+
+  const apiResult = await callAnthropicWithRetry({
+    model: 'claude-haiku-4-5-20251001',
+    max_tokens: 3000,
+    messages: [{ role: 'user', content: prompt }],
+  });
+
+  if (!apiResult.ok) {
+    console.error('[synoptik] anthropic failed', {
+      location: locLabel,
+      code: apiResult.code,
+      status: apiResult.status,
+      body: apiResult.details,
+    });
+    const userMsg =
+      apiResult.code === 'TIMEOUT'
+        ? 'KI-Analyse Zeitüberschreitung'
+        : apiResult.code === 'RATE_LIMIT'
+          ? 'KI-Analyse derzeit überlastet'
+          : 'KI-Analyse fehlgeschlagen';
+    return errorResponse(res, apiResult.status, apiResult.code, userMsg, apiResult.details);
+  }
+
+  const textContent: string = apiResult.data?.content?.[0]?.text ?? '';
+
+  let parsed: any;
+  try {
+    parsed = extractJson(textContent);
+  } catch (parseError) {
+    console.error('[synoptik] parse error', {
+      location: locLabel,
+      code: 'PARSE_ERROR',
+      err: String(parseError),
+      raw: textContent.slice(0, 500),
+    });
+    return errorResponse(
+      res,
+      500,
+      'PARSE_ERROR',
+      'KI-Antwort konnte nicht geparst werden',
+      textContent.slice(0, 500),
+    );
+  }
+
+  const schemaErr = validateSchema(parsed);
+  if (schemaErr) {
+    console.error('[synoptik] invalid response', {
+      location: locLabel,
+      code: 'INVALID_RESPONSE',
+      reason: schemaErr,
+      raw: textContent.slice(0, 500),
+    });
+    return errorResponse(
+      res,
+      500,
+      'INVALID_RESPONSE',
+      'KI-Antwort unvollständig',
+      schemaErr,
+    );
+  }
+
+  CACHE.set(cacheKey, { data: parsed, timestamp: Date.now() });
+  return res.status(200).json({ ...parsed, cached: false });
 }
