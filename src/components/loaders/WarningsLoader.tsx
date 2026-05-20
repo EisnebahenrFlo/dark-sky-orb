@@ -8,8 +8,8 @@ const WARNINGS_LOADING_MESSAGES = [
   "Vergleiche mit DWD-Schwellen…",
   "Frage den Sturm nach Details…",
   "Sortiere Unwetter nach Wichtigkeit…",
-  "Prüfe ob Petrus es ernst meint…",
-  "Rechne Niederschlags-Wahrscheinlichkeiten…",
+  "Prüfe, ob Petrus es ernst meint…",
+  "Berechne Niederschlags-Wahrscheinlichkeiten…",
   "Spüre dem Bodendruck nach…",
 ] as const;
 
