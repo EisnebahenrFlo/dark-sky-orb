@@ -80,21 +80,6 @@ function useDebouncedAction(action: () => void, ms = 5000) {
   }, [disabled, action, ms]);
   return { trigger, disabled };
 }
-import { HeroCard } from "@/components/synoptik/HeroCard";
-import { SectionCard } from "@/components/synoptik/SectionCard";
-import { ConvectionBadge } from "@/components/synoptik/ConvectionBadge";
-import { useWeather } from "@/contexts/WeatherContext";
-import { UnsupportedLocationNotice } from "@/components/PageState";
-import { AnalysisLoader } from "@/components/loaders/AnalysisLoader";
-import { WeatherLoader } from "@/components/loaders/WeatherLoader";
-import { AnalysisDisclaimer } from "@/components/analysis/AnalysisDisclaimer";
-
-function relMin(ts: number) {
-  const m = Math.max(0, Math.round((Date.now() - ts) / 60000));
-  if (m < 1) return "gerade eben";
-  if (m === 1) return "vor 1 Min";
-  return `vor ${m} Min`;
-}
 
 function SkeletonCard() {
   return (
