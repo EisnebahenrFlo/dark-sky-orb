@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { AlertCircle, CheckCircle2, RefreshCw, ShieldAlert } from "lucide-react";
+import { WarningsLoader } from "@/components/loaders/WarningsLoader";
 import { useRiskWarningsCtx } from "@/contexts/RiskWarningsContext";
 import { useOfficialWarningsCtx } from "@/contexts/OfficialWarningsContext";
 import { useWeather } from "@/contexts/WeatherContext";
