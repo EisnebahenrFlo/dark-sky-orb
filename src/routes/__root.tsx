@@ -47,7 +47,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 
 function ThemedToaster() {
   const { resolved } = useTheme();
-  return <Toaster theme={resolved} position="top-right" richColors />;
+  return <Toaster theme={resolved} position="bottom-center" richColors duration={2000} />;
 }
 
 function RootComponent() {
