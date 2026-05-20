@@ -61,11 +61,8 @@ export function useRiskWarnings() {
       if (!weatherData || !location) return;
       setLoading(true);
       setError(null);
+      setErrorCode(null);
       try {
-        console.log("[risk-warnings] sending:", {
-          location,
-          hasLatLon: typeof weatherData.latitude === "number" && typeof weatherData.longitude === "number",
-        });
         const baseUrl = import.meta.env.VITE_API_BASE_URL || "";
         const res = await fetch(`${baseUrl}/api/risk-warnings`, {
           method: "POST",
@@ -73,12 +70,16 @@ export function useRiskWarnings() {
           body: JSON.stringify({ weatherData, location }),
           signal,
         });
-        const json = await res.json();
-        if (!res.ok) throw new Error(json?.error || "Warnungen konnten nicht geladen werden");
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          setErrorCode((json?.code as RiskWarningsErrorCode) || "API_ERROR");
+          throw new Error(json?.error || "Warnungen konnten nicht geladen werden");
+        }
         setData(json as RiskWarnings);
         setLastUpdated(Date.now());
       } catch (e: any) {
         if (e?.name === "AbortError") return;
+        setErrorCode((prev) => prev ?? "NETWORK");
         setError(e?.message || "Unbekannter Fehler");
       } finally {
         setLoading(false);
@@ -92,6 +93,7 @@ export function useRiskWarnings() {
     ctrlRef.current?.abort();
     setData(null);
     setError(null);
+    setErrorCode(null);
     setLastUpdated(null);
     setLoading(true);
     loadedKeyRef.current = null;
@@ -163,5 +165,5 @@ export function useRiskWarnings() {
     return fetchWarnings(ctrl.signal);
   }, [fetchWarnings]);
 
-  return { data, loading, error, refresh, lastUpdated };
+  return { data, loading, error, errorCode, refresh, lastUpdated };
 }
