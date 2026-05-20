@@ -82,7 +82,7 @@ export default function RadarMap() {
   const baseAttr =
     '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a> &middot; Radar &copy; <a href="https://rainbow.ai">Rainbow.ai</a>';
 
-  const currentFrame = frames[index];
+  
 
   return (
     <div>
