@@ -29,7 +29,20 @@ export interface RiskWarnings {
   summary: string;
   disclaimer: string;
   cached?: boolean;
+  fromCache?: boolean;
+  stale?: boolean;
+  ageMinutes?: number;
 }
+
+export type RiskWarningsErrorCode =
+  | "TIMEOUT"
+  | "RATE_LIMIT"
+  | "API_ERROR"
+  | "PARSE_ERROR"
+  | "INVALID_RESPONSE"
+  | "BAD_REQUEST"
+  | "NETWORK"
+  | "UNKNOWN";
 
 const REFRESH_MS = 15 * 60 * 1000;
 
@@ -38,6 +51,7 @@ export function useRiskWarnings() {
   const [data, setData] = useState<RiskWarnings | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [errorCode, setErrorCode] = useState<RiskWarningsErrorCode | null>(null);
   const [lastUpdated, setLastUpdated] = useState<number | null>(null);
   const loadedKeyRef = useRef<string | null>(null);
   const ctrlRef = useRef<AbortController | null>(null);
