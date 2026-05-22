@@ -72,8 +72,8 @@ function DayRow({ daily, i, hourly, current }: { daily: DailyData; i: number; ho
         </div>
 
         <div className="flex items-center gap-3 font-display tabular-nums">
-          <span className="text-muted-foreground">{min}°</span>
-          <span className="text-lg">{max}°</span>
+          <span className="text-muted-foreground">{min != null ? `${min}°` : "—"}</span>
+          <span className="text-lg">{max != null ? `${max}°` : "—"}</span>
         </div>
 
         <ChevronDown
