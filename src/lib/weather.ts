@@ -169,7 +169,14 @@ export async function fetchWeather(lat: number, lon: number, countryCode?: strin
     WeatherData,
     WeatherData,
   ];
-  const json: WeatherData = { ...shortJson, daily: longJson.daily };
+  const json: WeatherData = {
+    ...shortJson,
+    daily: longJson.daily,
+    hourly: {
+      ...shortJson.hourly,
+      uv_index: longJson.hourly?.uv_index ?? shortJson.hourly?.uv_index,
+    },
+  };
   // eslint-disable-next-line no-console
   console.log("[weather] models=", { short: getWeatherModel(countryCode), long: "best_match" }, {
     lat,
