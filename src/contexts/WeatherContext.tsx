@@ -35,7 +35,7 @@ function load<T>(key: string, fallback: T): T {
 }
 
 export function WeatherProvider({ children }: { children: ReactNode }) {
-  const [location, setLocation] = useState<GeoResult>(DEFAULT);
+  const [location, setLocation] = useState<GeoResult | null>(null);
   const [recent, setRecent] = useState<GeoResult[]>([]);
 
   useEffect(() => {
@@ -56,10 +56,10 @@ export function WeatherProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem(RECENT_KEY);
   };
 
-  const data = useWeatherData(location.latitude, location.longitude);
+  const data = useWeatherData(location?.latitude ?? 0, location?.longitude ?? 0, !!location);
 
   return (
-    <Ctx.Provider value={{ ...data, location, recent, selectLocation, clearRecent }}>
+    <Ctx.Provider value={{ ...data, location: location ?? DEFAULT, recent, selectLocation, clearRecent }}>
       {children}
     </Ctx.Provider>
   );
