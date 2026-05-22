@@ -24,6 +24,7 @@ export function HourlyForecast({ hourly }: { hourly: HourlyData }) {
     code: hourly.weather_code[i],
     isDay: hourly.is_day[i],
     cloud: hourly.cloud_cover?.[i] ?? 0,
+    cloudLow: hourly.cloud_cover_low?.[i],
   }));
 
   return (
