@@ -19,12 +19,12 @@ function iconAnimationStyle(code: number): React.CSSProperties {
   return {};
 }
 
-function temperatureGradientClass(t: number): string {
-  if (t < 0) return "from-blue-100 to-blue-50 dark:from-blue-500/15 dark:to-blue-400/10";
-  if (t < 10) return "from-sky-100 to-sky-50 dark:from-sky-500/15 dark:to-sky-400/10";
-  if (t < 18) return "from-green-100 to-emerald-50 dark:from-green-500/15 dark:to-emerald-400/10";
-  if (t < 25) return "from-amber-100 to-yellow-50 dark:from-amber-500/15 dark:to-yellow-400/10";
-  return "from-orange-100 to-red-50 dark:from-orange-500/15 dark:to-red-400/10";
+function getHeroGradient(temp: number): string {
+  if (temp < 0) return "linear-gradient(135deg, #dbeafe, #eff6ff)";
+  if (temp < 10) return "linear-gradient(135deg, #e0f2fe, #f0f9ff)";
+  if (temp < 18) return "linear-gradient(135deg, #dcfce7, #ecfdf5)";
+  if (temp < 25) return "linear-gradient(135deg, #fef9c3, #fefce8)";
+  return "linear-gradient(135deg, #fed7aa, #fff7ed)";
 }
 
 function Stat({ icon: Icon, label, value, sub }: { icon: typeof Wind; label: string; value: string; sub?: string }) {
@@ -43,7 +43,7 @@ function Stat({ icon: Icon, label, value, sub }: { icon: typeof Wind; label: str
 export function WeatherHero({ location, data, updatedAt }: Props) {
   const effective = getEffectiveWeather(data.weather_code, data.precipitation, data.cloud_cover, data.is_day, data.relative_humidity_2m, new Date(data.time).getHours());
   const iconStyle = iconAnimationStyle(data.weather_code);
-  const gradient = temperatureGradientClass(data.temperature_2m);
+  const heroBackground = getHeroGradient(data.temperature_2m);
   return (
     <div className="space-y-6">
       <style>{`
@@ -54,7 +54,10 @@ export function WeatherHero({ location, data, updatedAt }: Props) {
         @keyframes wh-sway { from { transform: rotate(-5deg); } to { transform: rotate(5deg); } }
         @keyframes wh-flicker { 0%, 60%, 100% { opacity: 1; } 70% { opacity: 0.6; } 80% { opacity: 1; } }
       `}</style>
-      <div className={`glass relative overflow-hidden rounded-3xl bg-gradient-to-br p-8 transition-all duration-1000 sm:p-12 ${gradient}`}>
+      <div
+        className="glass relative overflow-hidden rounded-3xl p-8 sm:p-12"
+        style={{ background: heroBackground, transition: "background 1s ease" }}
+      >
         <div className="absolute -right-16 -top-16 opacity-[0.07]">
           <EffectiveWeatherIcon code={data.weather_code} precipitation={data.precipitation} cloudCover={data.cloud_cover} isDay={data.is_day} className="h-[28rem] w-[28rem]" />
         </div>
