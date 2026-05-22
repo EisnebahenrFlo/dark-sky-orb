@@ -1,6 +1,6 @@
 import type { LucideIcon } from "lucide-react";
 import { getEffectiveCode, getWeatherIcon } from "@/components/WeatherIcon";
-import { wmoDescription } from "@/lib/weather";
+import { getContextualDescription } from "@/lib/weather";
 
 export interface WeatherInfo {
   icon: LucideIcon;
