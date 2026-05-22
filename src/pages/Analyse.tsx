@@ -26,7 +26,10 @@ import { WeatherLoader } from "@/components/loaders/WeatherLoader";
 import { AnalysisDisclaimer } from "@/components/analysis/AnalysisDisclaimer";
 import { StaleBadge } from "@/components/StaleBadge";
 
+const formatHighlight = (text: string) => text.replaceAll(";", " ·");
+
 function relMin(ts: number) {
+
   const m = Math.max(0, Math.round((Date.now() - ts) / 60000));
   if (m < 1) return "gerade eben";
   if (m === 1) return "vor 1 Min";
