@@ -141,13 +141,13 @@ function Detail({
   );
 }
 
-export function DailyForecast({ daily, hourly }: { daily: DailyData; hourly?: HourlyData }) {
+export function DailyForecast({ daily, hourly, current }: { daily: DailyData; hourly?: HourlyData; current?: CurrentWeather }) {
   return (
     <section>
       <SectionHeader title="7-Tage-Übersicht" subtitle="Tippen für Details" />
       <div className="space-y-2">
         {daily.time.map((_, i) => (
-          <DayRow key={i} daily={daily} i={i} hourly={hourly} />
+          <DayRow key={i} daily={daily} i={i} hourly={hourly} current={current} />
         ))}
       </div>
     </section>
