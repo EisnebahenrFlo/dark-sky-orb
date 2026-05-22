@@ -42,15 +42,15 @@ Antworte AUSSCHLIESSLICH mit diesem JSON-Objekt – nichts davor, nichts danach.
 {
   "großwetterlage": {
     "klassifikation": "z.B. 'Trog Mitteleuropa (TrM)' oder 'Westlage zyklonal (WZ)'",
-    "beschreibung": "2-3 Sätze synoptische Einordnung"
+    "beschreibung": "2-3 Sätze — verständlich und lebendig, nicht als Amtsbericht"
   },
   "höhenstruktur_500hPa": {
     "muster": "z.B. 'Langwelliger Trog' / 'Höhenkeil'",
-    "beschreibung": "1-2 Sätze: Geopotential, Achse, Drehzentren"
+    "beschreibung": "2-3 Sätze — verständlich und lebendig, nicht als Amtsbericht"
   },
   "bodendruck": {
     "muster": "z.B. 'Atlantik-Tief mit Frontalzone' / 'Genuatief'",
-    "beschreibung": "1-2 Sätze"
+    "beschreibung": "2-3 Sätze — verständlich und lebendig, nicht als Amtsbericht"
   },
   "luftmasse": {
     "klassifikation": "z.B. 'Subpolare Meeresluft (mP)'",
@@ -59,7 +59,7 @@ Antworte AUSSCHLIESSLICH mit diesem JSON-Objekt – nichts davor, nichts danach.
   "fronten_aktivität": {
     "vorhanden": true,
     "typ": "z.B. 'Kaltfront-Passage in 6-12h'",
-    "auswirkung": "1-2 Sätze"
+    "auswirkung": "2-3 Sätze — verständlich und lebendig, nicht als Amtsbericht"
   },
   "konvektion": {
     "potenzial": "kein|schwach|mäßig|hoch|extrem",
@@ -75,15 +75,15 @@ Antworte AUSSCHLIESSLICH mit diesem JSON-Objekt – nichts davor, nichts danach.
     "beschreibung": "wenn relevant: Position und Auswirkung, sonst leer"
   },
   "entwicklung": {
-    "next_24h": "1-2 Sätze konkret",
-    "next_48h": "1-2 Sätze",
-    "trend_3_7d": "1-2 Sätze gröber"
+    "next_24h": "Konkret und alltagsnah — was bedeutet das für den normalen Menschen draußen?",
+    "next_48h": "Konkret und alltagsnah — was bedeutet das für den normalen Menschen draußen?",
+    "trend_3_7d": "Konkret und alltagsnah — was bedeutet das für den normalen Menschen draußen?"
   },
   "confidence": {
     "score": 75,
     "begründung": "1 Satz: warum dieser Score"
   },
-  "highlight": "Der EINE wichtigste Punkt für heute, prägnant in 1 Satz"
+  "highlight": "Der EINE wichtigste Punkt für heute — in einem Satz den jeder versteht, gerne mit konkretem Alltagsbezug (z.B. 'Heute Nachmittag Gewitter möglich — Ausflüge lieber auf den Vormittag legen')"
 }
 
 # KRITISCHE REGELN
