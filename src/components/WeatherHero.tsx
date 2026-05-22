@@ -47,12 +47,12 @@ export function WeatherHero({ location, data, updatedAt }: Props) {
   return (
     <div className="space-y-6">
       <style>{`
-        @keyframes wh-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-        @keyframes wh-drift { from { transform: translateX(-4px); } to { transform: translateX(4px); } }
-        @keyframes wh-pulse { from { opacity: 0.8; } to { opacity: 1; } }
-        @keyframes wh-bob { from { transform: translateY(0); } to { transform: translateY(3px); } }
-        @keyframes wh-sway { from { transform: rotate(-5deg); } to { transform: rotate(5deg); } }
-        @keyframes wh-flicker { 0%, 60%, 100% { opacity: 1; } 70% { opacity: 0.6; } 80% { opacity: 1; } }
+        @keyframes wh-sun { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.05); } }
+        @keyframes wh-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
+        @keyframes wh-fade { from { opacity: 0.7; } to { opacity: 1; } }
+        @keyframes wh-rain { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(2px); } }
+        @keyframes wh-flash { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        @keyframes wh-snow { from { transform: translateX(-2px); } to { transform: translateX(2px); } }
       `}</style>
       <div
         className="glass relative overflow-hidden rounded-3xl p-8 sm:p-12"
