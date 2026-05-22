@@ -1,7 +1,7 @@
 import { safeFixed } from "@/lib/safeFormat";
 import { useState } from "react";
 import { ChevronDown, Sunrise, Sunset, Wind, Navigation, Droplets, CloudRain, Snowflake, Sun, Zap } from "lucide-react";
-import type { DailyData, HourlyData } from "@/lib/weather";
+import type { CurrentWeather, DailyData, HourlyData } from "@/lib/weather";
 import { weekdayLabel, windDirectionLabel } from "@/lib/weather";
 import { EffectiveWeatherIcon } from "./WeatherIcon";
 import { SectionHeader } from "./SectionHeader";
