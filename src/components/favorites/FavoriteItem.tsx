@@ -127,6 +127,7 @@ export function FavoriteItem({
             <AlertDialogCancel>Abbrechen</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => {
+                haptic("medium");
                 onDelete();
                 setConfirmOpen(false);
               }}
