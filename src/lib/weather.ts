@@ -21,6 +21,7 @@ export interface CurrentWeather {
   precipitation: number;
   cloud_cover: number;
   is_day: number;
+  uv_index?: number;
   time: string;
 }
 
