@@ -23,7 +23,7 @@ export interface HourlyRowData {
 
 export function HourlyRow({ row }: { row: HourlyRowData }) {
   const popHigh = row.pop >= 50;
-  const eff = getEffectiveWeather(row.code, row.precip, row.cloud, row.isDay);
+  const eff = getEffectiveWeather(row.code, row.precip, row.cloud, row.isDay, undefined, new Date(row.iso).getHours());
   const thunder = calculateThunderRisk(row.cape ?? null, row.li ?? null);
   const showThunder = thunder.risk >= 20;
 

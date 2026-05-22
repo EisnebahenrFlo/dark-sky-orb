@@ -202,6 +202,50 @@ export function wmoDescription(code: number): string {
   return map[code] ?? "Unbekannt";
 }
 
+export function getContextualDescription(
+  code: number,
+  hour?: number,
+  humidity?: number,
+  cloudCoverLow?: number,
+): string {
+  const h = hour ?? -1;
+  const hum = humidity ?? 0;
+  const lowCloud = cloudCoverLow ?? 100;
+
+  // Morgens
+  if (h >= 5 && h <= 9) {
+    if (code === 0 && hum >= 90) return "Klarer Morgen mit Bodendunst";
+    if (code === 1 && hum >= 85) return "Leicht dunstig, wird sonnig";
+    if (code === 45 || code === 48) return lowCloud < 30 ? "Morgennebel, lichtet sich" : "Zäher Nebel";
+    if (code === 61 || code === 63) return "Morgendlicher Regen";
+  }
+
+  // Tagsüber
+  if (h >= 10 && h <= 17) {
+    if (code === 0) return "Sonnig";
+    if (code === 1) return "Überwiegend sonnig";
+    if (code === 2) return "Wechselnd bewölkt";
+    if (code === 80 || code === 81 || code === 82) return "Schauer möglich";
+    if (code === 95 || code === 96 || code === 99) return "Gewittergefahr";
+  }
+
+  // Abends
+  if (h >= 18 && h <= 22) {
+    if (code === 0) return "Klarer Abend";
+    if (code === 1) return "Ruhiger Abend";
+    if (code === 95 || code === 96 || code === 99) return "Abendgewitter";
+  }
+
+  // Nachts
+  if (h >= 23 || (h >= 0 && h <= 4)) {
+    if (code === 0) return "Klare Nacht";
+    if (code === 1) return "Ruhige Nacht";
+    if (code === 61 || code === 63 || code === 65) return "Nächtlicher Regen";
+  }
+
+  return wmoDescription(code);
+}
+
 export function windDirectionLabel(deg: number): string {
   const dirs = ["N", "NNO", "NO", "ONO", "O", "OSO", "SO", "SSO", "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW"];
   return dirs[Math.round(deg / 22.5) % 16];

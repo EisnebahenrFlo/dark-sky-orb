@@ -1,6 +1,6 @@
 import type { LucideIcon } from "lucide-react";
 import { getEffectiveCode, getWeatherIcon } from "@/components/WeatherIcon";
-import { wmoDescription } from "@/lib/weather";
+import { getContextualDescription } from "@/lib/weather";
 
 export interface WeatherInfo {
   icon: LucideIcon;
@@ -27,7 +27,7 @@ export function getEffectiveWeather(
   const effective = getEffectiveCode(weatherCode, precipitation, cloudCover, humidity, hour, cloudCoverLow);
   return {
     icon: getWeatherIcon(effective, dayNum),
-    description: wmoDescription(effective),
+    description: getContextualDescription(effective, hour, humidity, cloudCoverLow),
     wmoCode: effective,
   };
 }
