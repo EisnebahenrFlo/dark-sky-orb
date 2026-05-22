@@ -38,7 +38,16 @@ function DayRow({ daily, i, hourly, current }: { daily: DailyData; i: number; ho
           </div>
         </div>
 
-        <EffectiveWeatherIcon code={code} precipitation={precip} cloudCover={precip > 0 ? 100 : 50} isDay={1} className="h-8 w-8 shrink-0 text-primary" />
+        <EffectiveWeatherIcon
+          code={code}
+          precipitation={precip}
+          cloudCover={precip > 0 ? 100 : 50}
+          cloudCoverLow={i === 0 ? hourly?.cloud_cover_low?.[0] : undefined}
+          humidity={i === 0 ? current?.relative_humidity_2m : undefined}
+          hour={i === 0 && current?.time ? new Date(current.time).getHours() : undefined}
+          isDay={1}
+          className="h-8 w-8 shrink-0 text-primary"
+        />
 
         <div className="flex flex-1 flex-wrap items-center gap-x-3 gap-y-1 text-sm">
           <div className="hidden items-center gap-1 text-muted-foreground sm:flex">
