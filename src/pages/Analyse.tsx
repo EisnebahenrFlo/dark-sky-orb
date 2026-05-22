@@ -15,6 +15,7 @@ import {
   Zap,
 } from "lucide-react";
 import { useSynoptikAnalysis, type SynoptikErrorCode } from "@/hooks/useSynoptikAnalysis";
+import { getWeatherModelLabel } from "@/lib/weather";
 import { HeroCard } from "@/components/synoptik/HeroCard";
 import { SectionCard } from "@/components/synoptik/SectionCard";
 import { ConvectionBadge } from "@/components/synoptik/ConvectionBadge";
