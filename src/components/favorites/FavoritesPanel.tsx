@@ -86,10 +86,9 @@ export function FavoritesPanel({ open, onOpenChange }: Props) {
             </div>
 
             {favorites.length === 0 ? (
-              <div className="glass rounded-xl p-5 text-center text-sm text-muted-foreground">
-                Noch keine Favoriten. Tippe oben auf{" "}
-                <span className="font-medium text-foreground">Favorit</span>, um den
-                aktuellen Standort hinzuzufügen.
+              <div className="glass flex flex-col items-center justify-center gap-3 rounded-xl p-8 text-center">
+                <Star className="h-10 w-10 text-muted-foreground" strokeWidth={1.5} />
+                <p className="text-sm text-muted-foreground">Noch keine Favoriten gespeichert</p>
               </div>
             ) : (
               <div className="glass divide-y divide-border rounded-xl overflow-hidden">
