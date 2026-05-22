@@ -42,12 +42,12 @@ const ERROR_COPY: Record<SynoptikErrorCode, { title: string; body: string }> = {
     body: "Analyse dauert ungewöhnlich lange. Bitte erneut versuchen.",
   },
   RATE_LIMIT: {
-    title: "Kurz überlastet",
-    body: "MeteoFlo ist gerade etwas überlastet. Gleich nochmal versuchen?",
+    title: "KI-Dienste vorübergehend überlastet",
+    body: "Das liegt an Anthropic, nicht an MeteoFlo. Bitte in ein paar Minuten erneut versuchen.",
   },
   API_ERROR: {
-    title: "KI-Analyse nicht erreichbar",
-    body: "Die KI-Analyse ist temporär nicht erreichbar.",
+    title: "KI-Dienste vorübergehend überlastet",
+    body: "Das liegt an Anthropic, nicht an MeteoFlo. Bitte in ein paar Minuten erneut versuchen.",
   },
   PARSE_ERROR: {
     title: "Analyse unvollständig",
