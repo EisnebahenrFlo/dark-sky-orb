@@ -1,5 +1,5 @@
 import { Fragment } from "react";
-import type { CurrentData, DailyData, HourlyData } from "@/lib/weather";
+import type { CurrentWeather, DailyData, HourlyData } from "@/lib/weather";
 import { HourlyRow, type HourlyRowData } from "./HourlyRow";
 import { SunDivider } from "./SunDivider";
 
