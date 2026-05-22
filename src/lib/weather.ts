@@ -115,7 +115,27 @@ export async function searchCities(query: string): Promise<GeoResult[]> {
   return results.filter((r) => ALLOWED_COUNTRIES.has(r.country_code));
 }
 
-export async function fetchWeather(lat: number, lon: number): Promise<WeatherData> {
+function getWeatherModel(countryCode?: string): string {
+  switch (countryCode?.toUpperCase()) {
+    case "DE": return "icon_d2";
+    case "AT": return "geosphere_austria";
+    case "CH": return "icon_ch2";
+    case "IT": return "italia_meteo_arpae_icon_2i";
+    default:   return "best_match";
+  }
+}
+
+export function getWeatherModelLabel(countryCode?: string): string {
+  switch (countryCode?.toUpperCase()) {
+    case "DE": return "DWD ICON D2 · 2 km";
+    case "AT": return "GeoSphere Austria · 2 km";
+    case "CH": return "MeteoSwiss ICON CH2 · 1 km";
+    case "IT": return "ItaliaMeteo ARPAE · 2 km";
+    default:   return "Open-Meteo Best Match";
+  }
+}
+
+export async function fetchWeather(lat: number, lon: number, countryCode?: string): Promise<WeatherData> {
   const params = new URLSearchParams({
     latitude: String(lat),
     longitude: String(lon),
@@ -130,16 +150,17 @@ export async function fetchWeather(lat: number, lon: number): Promise<WeatherDat
       "weather_code,temperature_2m_max,temperature_2m_min,apparent_temperature_max,apparent_temperature_min,sunrise,sunset,uv_index_max,precipitation_sum,rain_sum,snowfall_sum,precipitation_hours,precipitation_probability_max,wind_speed_10m_max,wind_gusts_10m_max,wind_direction_10m_dominant",
     forecast_days: "7",
     timezone: "auto",
+    models: getWeatherModel(countryCode),
   });
   const url = `https://api.open-meteo.com/v1/forecast?${params.toString()}`;
   const res = await fetch(url);
   if (!res.ok) throw new Error("Wetterdaten fehlgeschlagen");
   const json = (await res.json()) as WeatherData;
-  // Debug: verify which model coverage delivered the data
   // eslint-disable-next-line no-console
-  console.log("[weather] model=best_match (default)", {
+  console.log("[weather] model=", getWeatherModel(countryCode), {
     lat,
     lon,
+    countryCode,
     hasHourly: !!json.hourly,
     hasDaily: !!json.daily,
     hasMinutely15: !!json.minutely_15,
