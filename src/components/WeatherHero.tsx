@@ -69,14 +69,15 @@ export function WeatherHero({ location, data, updatedAt }: Props) {
               {Math.round(data.temperature_2m)}°
             </div>
             <div className="flex items-center gap-3">
-              <EffectiveWeatherIcon
-                code={data.weather_code}
-                precipitation={data.precipitation}
-                cloudCover={data.cloud_cover}
-                isDay={data.is_day}
-                className="h-14 w-14 text-primary"
-                style={iconStyle}
-              />
+              <span className="inline-flex" style={iconStyle}>
+                <EffectiveWeatherIcon
+                  code={data.weather_code}
+                  precipitation={data.precipitation}
+                  cloudCover={data.cloud_cover}
+                  isDay={data.is_day}
+                  className="h-14 w-14 text-primary"
+                />
+              </span>
               <div>
                 <div className="text-lg font-medium">{effective.description}</div>
                 <div className="text-sm text-muted-foreground">
