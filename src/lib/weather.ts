@@ -201,7 +201,7 @@ export async function fetchWeather(lat: number, lon: number, countryCode?: strin
     longitude: String(lon),
     daily:
       "weather_code,temperature_2m_max,temperature_2m_min,apparent_temperature_max,apparent_temperature_min,sunrise,sunset,uv_index_max,precipitation_sum,rain_sum,snowfall_sum,precipitation_hours,precipitation_probability_max,wind_speed_10m_max,wind_gusts_10m_max,wind_direction_10m_dominant",
-    hourly: "uv_index,is_day",
+    hourly: "uv_index,is_day,weather_code",
     forecast_days: "7",
     timezone: "auto",
     models: "best_match",
