@@ -26,8 +26,6 @@ export function CurrentPage() {
   return (
     <PageState>
       {(data) => {
-        const idx = currentHourIndex(data.hourly?.time, data.current.time);
-        void idx;
         const uv = data.current.uv_index;
         return (
           <div className="space-y-6">
