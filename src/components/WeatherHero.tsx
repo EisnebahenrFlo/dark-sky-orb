@@ -8,6 +8,25 @@ import { RelativeTime } from "./RelativeTime";
 
 interface Props { location: GeoResult; data: CurrentWeather; updatedAt: number }
 
+function iconAnimationStyle(code: number): React.CSSProperties {
+  if (code === 0 || code === 1) return { animation: "wh-spin 20s linear infinite", transformOrigin: "50% 50%" };
+  if (code === 2) return { animation: "wh-drift 4s ease-in-out infinite alternate" };
+  if (code === 3) return { animation: "wh-pulse 3s ease-in-out infinite alternate" };
+  if (code === 45 || code === 48) return { opacity: 0.85 };
+  if (code >= 71 && code <= 77) return { animation: "wh-sway 3s ease-in-out infinite alternate", transformOrigin: "50% 50%" };
+  if (code >= 61 && code <= 82) return { animation: "wh-bob 1.5s ease-in-out infinite alternate" };
+  if (code >= 95 && code <= 99) return { animation: "wh-flicker 2.8s ease-in-out infinite" };
+  return {};
+}
+
+function temperatureGradientClass(t: number): string {
+  if (t < 0) return "from-blue-100 to-blue-50 dark:from-blue-500/15 dark:to-blue-400/10";
+  if (t < 10) return "from-sky-100 to-sky-50 dark:from-sky-500/15 dark:to-sky-400/10";
+  if (t < 18) return "from-green-100 to-emerald-50 dark:from-green-500/15 dark:to-emerald-400/10";
+  if (t < 25) return "from-amber-100 to-yellow-50 dark:from-amber-500/15 dark:to-yellow-400/10";
+  return "from-orange-100 to-red-50 dark:from-orange-500/15 dark:to-red-400/10";
+}
+
 function Stat({ icon: Icon, label, value, sub }: { icon: typeof Wind; label: string; value: string; sub?: string }) {
   return (
     <div className="glass rounded-2xl p-5">
@@ -23,9 +42,19 @@ function Stat({ icon: Icon, label, value, sub }: { icon: typeof Wind; label: str
 
 export function WeatherHero({ location, data, updatedAt }: Props) {
   const effective = getEffectiveWeather(data.weather_code, data.precipitation, data.cloud_cover, data.is_day, data.relative_humidity_2m, new Date(data.time).getHours());
+  const iconStyle = iconAnimationStyle(data.weather_code);
+  const gradient = temperatureGradientClass(data.temperature_2m);
   return (
     <div className="space-y-6">
-      <div className="glass relative overflow-hidden rounded-3xl p-8 sm:p-12">
+      <style>{`
+        @keyframes wh-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        @keyframes wh-drift { from { transform: translateX(-4px); } to { transform: translateX(4px); } }
+        @keyframes wh-pulse { from { opacity: 0.8; } to { opacity: 1; } }
+        @keyframes wh-bob { from { transform: translateY(0); } to { transform: translateY(3px); } }
+        @keyframes wh-sway { from { transform: rotate(-5deg); } to { transform: rotate(5deg); } }
+        @keyframes wh-flicker { 0%, 60%, 100% { opacity: 1; } 70% { opacity: 0.6; } 80% { opacity: 1; } }
+      `}</style>
+      <div className={`glass relative overflow-hidden rounded-3xl bg-gradient-to-br p-8 transition-all duration-1000 sm:p-12 ${gradient}`}>
         <div className="absolute -right-16 -top-16 opacity-[0.07]">
           <EffectiveWeatherIcon code={data.weather_code} precipitation={data.precipitation} cloudCover={data.cloud_cover} isDay={data.is_day} className="h-[28rem] w-[28rem]" />
         </div>
@@ -40,7 +69,15 @@ export function WeatherHero({ location, data, updatedAt }: Props) {
               {Math.round(data.temperature_2m)}°
             </div>
             <div className="flex items-center gap-3">
-              <EffectiveWeatherIcon code={data.weather_code} precipitation={data.precipitation} cloudCover={data.cloud_cover} isDay={data.is_day} className="h-14 w-14 text-primary" />
+              <span className="inline-flex" style={iconStyle}>
+                <EffectiveWeatherIcon
+                  code={data.weather_code}
+                  precipitation={data.precipitation}
+                  cloudCover={data.cloud_cover}
+                  isDay={data.is_day}
+                  className="h-14 w-14 text-primary"
+                />
+              </span>
               <div>
                 <div className="text-lg font-medium">{effective.description}</div>
                 <div className="text-sm text-muted-foreground">
