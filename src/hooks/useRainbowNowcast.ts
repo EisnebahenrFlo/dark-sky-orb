@@ -1,9 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
 import { useWeather } from "@/contexts/WeatherContext";
 
+export type RainbowPrecipType = "rain" | "snow" | "ice" | "none" | "no_precipitation";
+
 export interface RainbowNowcastItem {
   precipRate: number;
-  precipType: "rain" | "snow" | "ice" | "none";
+  precipType: RainbowPrecipType;
   timestampBegin: number;
   timestampEnd: number;
 }
