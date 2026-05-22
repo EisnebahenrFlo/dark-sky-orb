@@ -13,12 +13,12 @@ function timeOnly(iso: string) {
 
 function DayRow({ daily, i, hourly, current }: { daily: DailyData; i: number; hourly?: HourlyData; current?: CurrentWeather }) {
   const [open, setOpen] = useState(false);
-  const min = Math.round(daily.temperature_2m_min[i]);
-  const max = Math.round(daily.temperature_2m_max[i]);
+  const min = daily.temperature_2m_min[i] != null ? Math.round(daily.temperature_2m_min[i]) : null;
+  const max = daily.temperature_2m_max[i] != null ? Math.round(daily.temperature_2m_max[i]) : null;
   const code = daily.weather_code[i];
   const pop = daily.precipitation_probability_max[i] ?? 0;
   const precip = daily.precipitation_sum[i] ?? 0;
-  const wind = Math.round(daily.wind_speed_10m_max[i]);
+  const wind = daily.wind_speed_10m_max[i] != null ? Math.round(daily.wind_speed_10m_max[i]) : null;
   const dir = daily.wind_direction_10m_dominant[i];
   const thunder = hourly
     ? dailyThunderRiskFromHourly(hourly.time, hourly.cape, hourly.lifted_index, daily.time[i])
@@ -57,7 +57,7 @@ function DayRow({ daily, i, hourly, current }: { daily: DailyData; i: number; ho
           </div>
           <div className="hidden items-center gap-1 text-muted-foreground md:flex">
             <Wind className="h-3.5 w-3.5" strokeWidth={1.5} />
-            <span className="tabular-nums">{wind} km/h</span>
+            <span className="tabular-nums">{wind != null ? `${wind} km/h` : "—"}</span>
           </div>
           {showThunder && (
             <div
@@ -72,8 +72,8 @@ function DayRow({ daily, i, hourly, current }: { daily: DailyData; i: number; ho
         </div>
 
         <div className="flex items-center gap-3 font-display tabular-nums">
-          <span className="text-muted-foreground">{min}°</span>
-          <span className="text-lg">{max}°</span>
+          <span className="text-muted-foreground">{min != null ? `${min}°` : "—"}</span>
+          <span className="text-lg">{max != null ? `${max}°` : "—"}</span>
         </div>
 
         <ChevronDown
