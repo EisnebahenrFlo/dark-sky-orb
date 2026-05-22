@@ -19,7 +19,7 @@ export function HourlyPage() {
         {(data) => (
           <section className="space-y-5">
             <SectionHeader title="Stündlich" subtitle="Nächste 24 Stunden" />
-            <HourlyList hourly={data.hourly} daily={data.daily} />
+            <HourlyList hourly={data.hourly} daily={data.daily} current={data.current} />
             <HourlyChart hourly={data.hourly} />
           </section>
         )}
