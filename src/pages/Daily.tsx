@@ -13,7 +13,7 @@ export function DailyPage() {
           7-Tage-Vorhersage für <span className="font-medium text-foreground">{location.name}</span>
         </span>
       </div>
-      <PageState>{(data) => <DailyForecast daily={data.daily} hourly={data.hourly} />}</PageState>
+      <PageState>{(data) => <DailyForecast daily={data.daily} hourly={data.hourly} current={data.current} />}</PageState>
     </div>
   );
 }

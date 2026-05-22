@@ -1,7 +1,7 @@
 import { safeFixed } from "@/lib/safeFormat";
 import { useState } from "react";
 import { ChevronDown, Sunrise, Sunset, Wind, Navigation, Droplets, CloudRain, Snowflake, Sun, Zap } from "lucide-react";
-import type { DailyData, HourlyData } from "@/lib/weather";
+import type { CurrentWeather, DailyData, HourlyData } from "@/lib/weather";
 import { weekdayLabel, windDirectionLabel } from "@/lib/weather";
 import { EffectiveWeatherIcon } from "./WeatherIcon";
 import { SectionHeader } from "./SectionHeader";
@@ -11,7 +11,7 @@ function timeOnly(iso: string) {
   return new Date(iso).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" });
 }
 
-function DayRow({ daily, i, hourly }: { daily: DailyData; i: number; hourly?: HourlyData }) {
+function DayRow({ daily, i, hourly, current }: { daily: DailyData; i: number; hourly?: HourlyData; current?: CurrentWeather }) {
   const [open, setOpen] = useState(false);
   const min = Math.round(daily.temperature_2m_min[i]);
   const max = Math.round(daily.temperature_2m_max[i]);
@@ -38,7 +38,16 @@ function DayRow({ daily, i, hourly }: { daily: DailyData; i: number; hourly?: Ho
           </div>
         </div>
 
-        <EffectiveWeatherIcon code={code} precipitation={precip} cloudCover={precip > 0 ? 100 : 50} isDay={1} className="h-8 w-8 shrink-0 text-primary" />
+        <EffectiveWeatherIcon
+          code={code}
+          precipitation={precip}
+          cloudCover={precip > 0 ? 100 : 50}
+          cloudCoverLow={i === 0 ? hourly?.cloud_cover_low?.[0] : undefined}
+          humidity={i === 0 ? current?.relative_humidity_2m : undefined}
+          hour={i === 0 && current?.time ? new Date(current.time).getHours() : undefined}
+          isDay={1}
+          className="h-8 w-8 shrink-0 text-primary"
+        />
 
         <div className="flex flex-1 flex-wrap items-center gap-x-3 gap-y-1 text-sm">
           <div className="hidden items-center gap-1 text-muted-foreground sm:flex">
@@ -132,13 +141,13 @@ function Detail({
   );
 }
 
-export function DailyForecast({ daily, hourly }: { daily: DailyData; hourly?: HourlyData }) {
+export function DailyForecast({ daily, hourly, current }: { daily: DailyData; hourly?: HourlyData; current?: CurrentWeather }) {
   return (
     <section>
       <SectionHeader title="7-Tage-Übersicht" subtitle="Tippen für Details" />
       <div className="space-y-2">
         {daily.time.map((_, i) => (
-          <DayRow key={i} daily={daily} i={i} hourly={hourly} />
+          <DayRow key={i} daily={daily} i={i} hourly={hourly} current={current} />
         ))}
       </div>
     </section>
