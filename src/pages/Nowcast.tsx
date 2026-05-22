@@ -218,7 +218,7 @@ function RainbowChart({ data, minutes }: { data: RainbowNowcastResponse; minutes
         </div>
       )}
 
-      <div className="relative w-full">
+      <div className="relative w-full overflow-hidden">
         {noPrecip ? (
           <div className="grid h-40 place-items-center text-center">
             <div>
@@ -230,7 +230,9 @@ function RainbowChart({ data, minutes }: { data: RainbowNowcastResponse; minutes
           <svg
             viewBox={`0 0 ${VB_W} ${VB_H + 20}`}
             preserveAspectRatio="none"
-            className="h-40 w-full"
+            width="100%"
+            height="auto"
+            className="block h-40 w-full max-w-full"
             aria-label="Niederschlagsverlauf"
           >
             {/* Baseline */}
