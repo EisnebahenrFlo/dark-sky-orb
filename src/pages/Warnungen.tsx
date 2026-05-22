@@ -24,8 +24,8 @@ function relMin(ts: number) {
 
 const KI_ERROR_COPY: Record<RiskWarningsErrorCode, { title: string; body: string }> = {
   TIMEOUT: { title: "KI-Formulierung dauert ungewöhnlich lange", body: "Die KI-Auswertung antwortet gerade nicht. Bitte erneut versuchen." },
-  RATE_LIMIT: { title: "Kurz überlastet", body: "MeteoFlo ist gerade etwas überlastet. Gleich nochmal versuchen?" },
-  API_ERROR: { title: "KI-Formulierung temporär nicht verfügbar", body: "Die KI-Auswertung ist temporär nicht erreichbar." },
+  RATE_LIMIT: { title: "KI-Dienste vorübergehend überlastet", body: "Das liegt an Anthropic, nicht an MeteoFlo. Bitte in ein paar Minuten erneut versuchen." },
+  API_ERROR: { title: "KI-Dienste vorübergehend überlastet", body: "Das liegt an Anthropic, nicht an MeteoFlo. Bitte in ein paar Minuten erneut versuchen." },
   PARSE_ERROR: { title: "KI-Antwort unvollständig", body: "Die KI-Antwort konnte nicht ausgewertet werden." },
   INVALID_RESPONSE: { title: "KI-Antwort unvollständig", body: "Die KI-Antwort konnte nicht ausgewertet werden." },
   BAD_REQUEST: { title: "KI-Auswertung nicht möglich", body: "Für diesen Standort konnte keine KI-Auswertung erstellt werden." },
