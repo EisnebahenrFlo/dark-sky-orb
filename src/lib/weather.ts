@@ -149,6 +149,38 @@ function getCurrentUvFromLongTerm(
   return longHourly.uv_index[bestIdx] ?? 0;
 }
 
+function getDayRepresentativeCode(
+  hourlyTimes: string[],
+  hourlyCodes: number[],
+  dateStr: string,
+  minHour: number,
+): number {
+  const relevant: number[] = [];
+  for (let i = 0; i < hourlyTimes.length; i++) {
+    const t = new Date(hourlyTimes[i]);
+    const tDate = t.toISOString().slice(0, 10);
+    const hour = t.getHours();
+    if (tDate === dateStr && hour >= minHour && hour <= 18) {
+      relevant.push(hourlyCodes[i]);
+    }
+  }
+  if (relevant.length === 0) return 0;
+  const priority = (code: number): number => {
+    if (code >= 95) return 7;
+    if (code >= 80) return 6;
+    if (code >= 71) return 5;
+    if (code >= 61) return 4;
+    if (code >= 51) return 3;
+    if (code === 45 || code === 48) return 2;
+    if (code === 3) return 1;
+    return 0;
+  };
+  return relevant.reduce(
+    (best, code) => (priority(code) > priority(best) ? code : best),
+    relevant[0],
+  );
+}
+
 export async function fetchWeather(lat: number, lon: number, countryCode?: string): Promise<WeatherData> {
   const shortParams = new URLSearchParams({
     latitude: String(lat),
