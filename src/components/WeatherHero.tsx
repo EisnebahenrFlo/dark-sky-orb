@@ -9,22 +9,22 @@ import { RelativeTime } from "./RelativeTime";
 interface Props { location: GeoResult; data: CurrentWeather; updatedAt: number }
 
 function iconAnimationStyle(code: number): React.CSSProperties {
-  if (code === 0 || code === 1) return { animation: "wh-spin 20s linear infinite", transformOrigin: "50% 50%" };
-  if (code === 2) return { animation: "wh-drift 4s ease-in-out infinite alternate" };
-  if (code === 3) return { animation: "wh-pulse 3s ease-in-out infinite alternate" };
+  if (code === 0 || code === 1) return { animation: "wh-sun 3s ease-in-out infinite", transformOrigin: "50% 50%" };
+  if (code === 2) return { animation: "wh-bob 4s ease-in-out infinite" };
+  if (code === 3) return { animation: "wh-fade 5s ease-in-out infinite alternate" };
+  if (code >= 71 && code <= 77) return { animation: "wh-snow 3s ease-in-out infinite alternate" };
+  if (code >= 61 && code <= 82) return { animation: "wh-rain 2s ease-in-out infinite" };
+  if (code >= 95 && code <= 99) return { animation: "wh-flash 1.5s ease-in-out infinite" };
   if (code === 45 || code === 48) return { opacity: 0.85 };
-  if (code >= 71 && code <= 77) return { animation: "wh-sway 3s ease-in-out infinite alternate", transformOrigin: "50% 50%" };
-  if (code >= 61 && code <= 82) return { animation: "wh-bob 1.5s ease-in-out infinite alternate" };
-  if (code >= 95 && code <= 99) return { animation: "wh-flicker 2.8s ease-in-out infinite" };
   return {};
 }
 
 function getHeroGradient(temp: number): string {
-  if (temp < 0) return "linear-gradient(135deg, #dbeafe, #eff6ff)";
-  if (temp < 10) return "linear-gradient(135deg, #e0f2fe, #f0f9ff)";
-  if (temp < 18) return "linear-gradient(135deg, #dcfce7, #ecfdf5)";
-  if (temp < 25) return "linear-gradient(135deg, #fef9c3, #fefce8)";
-  return "linear-gradient(135deg, #fed7aa, #fff7ed)";
+  if (temp < 0) return "linear-gradient(180deg, rgba(219,234,254,0.3) 0%, transparent 60%)";
+  if (temp < 10) return "linear-gradient(180deg, rgba(224,242,254,0.25) 0%, transparent 60%)";
+  if (temp < 18) return "linear-gradient(180deg, rgba(220,252,231,0.2) 0%, transparent 60%)";
+  if (temp < 25) return "linear-gradient(180deg, rgba(254,249,195,0.25) 0%, transparent 60%)";
+  return "linear-gradient(180deg, rgba(254,215,170,0.25) 0%, transparent 60%)";
 }
 
 function Stat({ icon: Icon, label, value, sub }: { icon: typeof Wind; label: string; value: string; sub?: string }) {
