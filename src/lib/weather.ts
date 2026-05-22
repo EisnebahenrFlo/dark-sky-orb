@@ -226,6 +226,12 @@ export function getContextualDescription(
   const hum = humidity ?? 0;
   const lowCloud = cloudCoverLow ?? 100;
 
+  // Klar / Sonnig: Tag vs. Nacht
+  const isNight = h >= 23 || (h >= 0 && h <= 4);
+  if (code === 0) return isNight ? "Klare Nacht" : "Sonnig";
+  if (code === 1) return isNight ? "Ruhige Nacht" : "Überwiegend sonnig";
+
+
   // Morgens
   if (h >= 5 && h <= 9) {
     if (code === 0 && hum >= 90) return "Klarer Morgen mit Bodendunst";
