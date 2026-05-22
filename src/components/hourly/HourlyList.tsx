@@ -29,7 +29,7 @@ export function HourlyList({
 }: {
   hourly: HourlyData;
   daily: DailyData;
-  current?: CurrentData;
+  current?: CurrentWeather;
 }) {
   const now = Date.now();
 
