@@ -18,6 +18,7 @@ import { useRiskWarningsCtx } from "@/contexts/RiskWarningsContext";
 import { useOfficialWarningsCtx } from "@/contexts/OfficialWarningsContext";
 import { APP_VERSION } from "@/lib/constants";
 import { isDevEnvironment } from "@/lib/environment";
+import { haptic } from "@/lib/utils";
 import { WeatherTabTransition } from "@/components/transitions/WeatherTabTransition";
 
 const TABS = [
