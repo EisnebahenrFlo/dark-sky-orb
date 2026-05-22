@@ -153,32 +153,49 @@ function getDayRepresentativeCode(
   hourlyTimes: string[],
   hourlyCodes: number[],
   dateStr: string,
-  minHour: number,
+  isToday: boolean,
+  currentHour: number,
 ): number {
-  const relevant: number[] = [];
+  const relevant: Array<{ code: number; weight: number }> = [];
   for (let i = 0; i < hourlyTimes.length; i++) {
     const t = new Date(hourlyTimes[i]);
     const tDate = t.toISOString().slice(0, 10);
     const hour = t.getHours();
-    if (tDate === dateStr && hour >= minHour && hour <= 18) {
-      relevant.push(hourlyCodes[i]);
+    if (tDate !== dateStr) continue;
+    if (hour < 7 || hour > 20) continue;
+    let weight = 1;
+    if (isToday) {
+      if (hour < currentHour) continue;
+      if (hour <= currentHour + 3) weight = 4;
+      else if (hour <= currentHour + 6) weight = 2;
+    } else {
+      if (hour >= 10 && hour <= 15) weight = 3;
     }
+    relevant.push({ code: hourlyCodes[i], weight });
   }
   if (relevant.length === 0) return 0;
-  const priority = (code: number): number => {
-    if (code >= 95) return 7;
-    if (code >= 80) return 6;
-    if (code >= 71) return 5;
+  const categorize = (code: number): number => {
+    if (code >= 95) return 6;
+    if (code >= 80) return 5;
     if (code >= 61) return 4;
     if (code >= 51) return 3;
     if (code === 45 || code === 48) return 2;
     if (code === 3) return 1;
+    if (code === 2) return 0.5;
     return 0;
   };
-  return relevant.reduce(
-    (best, code) => (priority(code) > priority(best) ? code : best),
-    relevant[0],
-  );
+  const totalWeight = relevant.reduce((s, r) => s + r.weight, 0);
+  const weightedScore =
+    relevant.reduce((s, r) => s + categorize(r.code) * r.weight, 0) / totalWeight;
+  if (weightedScore >= 5.5) return 95;
+  if (weightedScore >= 4.5) return 80;
+  if (weightedScore >= 3.5) return 61;
+  if (weightedScore >= 2.5) return 51;
+  if (weightedScore >= 1.5) return 45;
+  if (weightedScore >= 0.8) return 3;
+  if (weightedScore >= 0.3) return 2;
+  if (weightedScore >= 0.1) return 1;
+  return 0;
 }
 
 export async function fetchWeather(lat: number, lon: number, countryCode?: string): Promise<WeatherData> {
@@ -223,7 +240,8 @@ export async function fetchWeather(lat: number, lon: number, countryCode?: strin
       longJson.hourly.time,
       longJson.hourly.weather_code,
       dateStr,
-      idx === 0 ? Math.max(9, currentHour + 1) : 9,
+      idx === 0,
+      currentHour,
     ),
   );
   const json: WeatherData = {
