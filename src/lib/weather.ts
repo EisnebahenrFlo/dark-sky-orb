@@ -21,6 +21,7 @@ export interface CurrentWeather {
   precipitation: number;
   cloud_cover: number;
   is_day: number;
+  uv_index?: number;
   time: string;
 }
 
@@ -138,7 +139,7 @@ export async function fetchWeather(lat: number, lon: number, countryCode?: strin
     latitude: String(lat),
     longitude: String(lon),
     current:
-      "temperature_2m,apparent_temperature,relative_humidity_2m,weather_code,wind_speed_10m,wind_gusts_10m,wind_direction_10m,pressure_msl,precipitation,cloud_cover,is_day",
+      "temperature_2m,apparent_temperature,relative_humidity_2m,weather_code,wind_speed_10m,wind_gusts_10m,wind_direction_10m,pressure_msl,precipitation,cloud_cover,is_day,uv_index",
     minutely_15: "precipitation,weather_code,temperature_2m,wind_speed_10m",
     forecast_minutely_15: "24",
     hourly:
