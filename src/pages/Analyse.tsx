@@ -163,10 +163,11 @@ export function AnalysePage() {
             </div>
           )}
           <HeroCard
-            highlight={data.highlight}
+            highlight={formatHighlight(data.highlight)}
             confidenceScore={data.confidence?.score ?? 0}
             confidenceReason={data.confidence?.begründung}
           />
+
 
           <SectionCard
             icon={Globe}
