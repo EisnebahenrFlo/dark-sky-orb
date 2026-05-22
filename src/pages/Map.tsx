@@ -1,8 +1,11 @@
 import { lazy, Suspense, useEffect, useState } from "react";
-import { Loader2 } from "lucide-react";
+import { Loader2, Map as MapIcon } from "lucide-react";
 import { SectionHeader } from "@/components/SectionHeader";
+import { useWeather } from "@/contexts/WeatherContext";
 const RadarMap = lazy(() => import("@/components/RadarMap"));
 const LightningMap = lazy(() => import("@/components/lightning/LightningMap"));
+
+
 
 type SubTab = "radar" | "lightning";
 
