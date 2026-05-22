@@ -87,6 +87,7 @@ export function AppShell() {
               <Link
                 key={to}
                 to={to}
+                onClick={() => haptic("light")}
                 className={`relative flex items-center gap-2 rounded-full px-5 py-2 text-sm transition-colors ${
                   active ? "text-primary-foreground" : "text-muted-foreground hover:text-foreground"
                 }`}
