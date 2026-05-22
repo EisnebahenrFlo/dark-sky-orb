@@ -281,6 +281,10 @@ export function AnalysePage() {
           </div>
         </div>
       )}
+
+      <div className="mt-6 text-center text-xs text-muted-foreground">
+        Datenquelle: {getWeatherModelLabel(location.country_code)}
+      </div>
     </div>
   );
 }
