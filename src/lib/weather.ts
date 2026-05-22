@@ -127,16 +127,16 @@ function getWeatherModel(countryCode?: string): string {
 
 export function getWeatherModelLabel(countryCode?: string): string {
   switch (countryCode?.toUpperCase()) {
-    case "DE": return "DWD ICON D2 · 2 km";
-    case "AT": return "GeoSphere Austria · 2 km";
-    case "CH": return "MeteoSwiss ICON CH2 · 1 km";
-    case "IT": return "ItaliaMeteo ARPAE · 2 km";
-    default:   return "Open-Meteo Best Match";
+    case "DE": return "Kurzzeit: DWD ICON D2 · 2 km · Vorhersage: Open-Meteo Best Match";
+    case "AT": return "Kurzzeit: GeoSphere Austria · 2 km · Vorhersage: Open-Meteo Best Match";
+    case "CH": return "Kurzzeit: MeteoSwiss ICON CH2 · 1 km · Vorhersage: Open-Meteo Best Match";
+    case "IT": return "Kurzzeit: ItaliaMeteo ARPAE · 2 km · Vorhersage: Open-Meteo Best Match";
+    default:   return "Datenquelle: Open-Meteo Best Match";
   }
 }
 
 export async function fetchWeather(lat: number, lon: number, countryCode?: string): Promise<WeatherData> {
-  const params = new URLSearchParams({
+  const shortParams = new URLSearchParams({
     latitude: String(lat),
     longitude: String(lon),
     current:
@@ -146,18 +146,32 @@ export async function fetchWeather(lat: number, lon: number, countryCode?: strin
     hourly:
       "temperature_2m,apparent_temperature,precipitation,precipitation_probability,weather_code,wind_speed_10m,wind_gusts_10m,wind_direction_10m,cloud_cover,cloud_cover_low,cloud_cover_mid,cloud_cover_high,relative_humidity_2m,uv_index,is_day,lightning_potential,dewpoint_2m,cape,lifted_index,convective_inhibition,temperature_850hPa,temperature_700hPa,temperature_500hPa,temperature_300hPa,geopotential_height_500hPa,geopotential_height_850hPa,wind_speed_850hPa,wind_direction_850hPa,wind_speed_500hPa,wind_direction_500hPa,wind_speed_300hPa,wind_direction_300hPa,relative_humidity_850hPa,relative_humidity_700hPa,vertical_velocity_700hPa",
     forecast_hours: "48",
+    timezone: "auto",
+    models: getWeatherModel(countryCode),
+  });
+
+  const longParams = new URLSearchParams({
+    latitude: String(lat),
+    longitude: String(lon),
     daily:
       "weather_code,temperature_2m_max,temperature_2m_min,apparent_temperature_max,apparent_temperature_min,sunrise,sunset,uv_index_max,precipitation_sum,rain_sum,snowfall_sum,precipitation_hours,precipitation_probability_max,wind_speed_10m_max,wind_gusts_10m_max,wind_direction_10m_dominant",
     forecast_days: "7",
     timezone: "auto",
-    models: getWeatherModel(countryCode),
+    models: "best_match",
   });
-  const url = `https://api.open-meteo.com/v1/forecast?${params.toString()}`;
-  const res = await fetch(url);
-  if (!res.ok) throw new Error("Wetterdaten fehlgeschlagen");
-  const json = (await res.json()) as WeatherData;
+
+  const [shortRes, longRes] = await Promise.all([
+    fetch(`https://api.open-meteo.com/v1/forecast?${shortParams.toString()}`),
+    fetch(`https://api.open-meteo.com/v1/forecast?${longParams.toString()}`),
+  ]);
+  if (!shortRes.ok || !longRes.ok) throw new Error("Wetterdaten fehlgeschlagen");
+  const [shortJson, longJson] = (await Promise.all([shortRes.json(), longRes.json()])) as [
+    WeatherData,
+    WeatherData,
+  ];
+  const json: WeatherData = { ...shortJson, daily: longJson.daily };
   // eslint-disable-next-line no-console
-  console.log("[weather] model=", getWeatherModel(countryCode), {
+  console.log("[weather] models=", { short: getWeatherModel(countryCode), long: "best_match" }, {
     lat,
     lon,
     countryCode,
