@@ -31,7 +31,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   try {
     const upstream = await fetch(url, {
-      headers: { Authorization: `Bearer ${process.env.RAINBOW_API_KEY ?? ''}` },
+      headers: { 'Ocp-Apim-Subscription-Key': process.env.RAINBOW_API_KEY ?? '' },
       signal: controller.signal,
     });
     clearTimeout(timeoutId);
