@@ -18,12 +18,13 @@ export interface UseWeatherDataResult {
   refresh: () => Promise<unknown>;
 }
 
-export function useWeatherData(lat: number, lon: number): UseWeatherDataResult {
+export function useWeatherData(lat: number, lon: number, enabled: boolean = true): UseWeatherDataResult {
   const query = useQuery({
     queryKey: ["weather", lat, lon],
     queryFn: () => fetchWeather(lat, lon),
     staleTime: 60_000,
     refetchOnWindowFocus: false,
+    enabled,
   });
 
   const { refetch, isError, error, data } = query;
