@@ -3,6 +3,7 @@ import { ArrowUp, ArrowDown, Trash2, Loader2 } from "lucide-react";
 import type { Favorite } from "@/lib/favoritesStorage";
 import type { FavoriteCurrent } from "@/hooks/useFavoriteWeather";
 import { EffectiveWeatherIcon } from "@/components/WeatherIcon";
+import { haptic } from "@/lib/utils";
 import {
   AlertDialog,
   AlertDialogAction,
