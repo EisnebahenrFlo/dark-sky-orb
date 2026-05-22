@@ -16,6 +16,9 @@ export interface HourlyRowData {
   code: number;
   isDay: number;
   cloud: number;
+  cloudLow?: number;
+  humidity?: number;
+  overrideHour?: number;
   isCurrent: boolean;
   cape?: number | null;
   li?: number | null;
@@ -23,7 +26,15 @@ export interface HourlyRowData {
 
 export function HourlyRow({ row }: { row: HourlyRowData }) {
   const popHigh = row.pop >= 50;
-  const eff = getEffectiveWeather(row.code, row.precip, row.cloud, row.isDay, undefined, new Date(row.iso).getHours());
+  const eff = getEffectiveWeather(
+    row.code,
+    row.precip,
+    row.cloud,
+    row.isDay,
+    row.humidity,
+    row.overrideHour ?? new Date(row.iso).getHours(),
+    row.cloudLow,
+  );
   const thunder = calculateThunderRisk(row.cape ?? null, row.li ?? null);
   const showThunder = thunder.risk >= 20;
 

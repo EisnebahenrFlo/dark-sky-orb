@@ -22,9 +22,9 @@ export function NowcastPage() {
         {(data) => (
           <div>
             <div className="mb-3 flex items-start justify-between gap-3 px-1">
-              <div className="flex flex-col">
+              <div className="flex flex-col gap-1">
                 <h2 className="font-display text-lg font-medium tracking-tight">Nowcast</h2>
-                <span className="mt-0.5 text-xs uppercase tracking-wider text-muted-foreground">
+                <span className="text-xs uppercase tracking-wider text-muted-foreground">
                   {(range * 15) / 60} h Niederschlagsverlauf
                 </span>
               </div>

@@ -1,6 +1,5 @@
 import { lazy, Suspense, useEffect, useState } from "react";
 import { Loader2, Map as MapIcon } from "lucide-react";
-import { SectionHeader } from "@/components/SectionHeader";
 import { useWeather } from "@/contexts/WeatherContext";
 const RadarMap = lazy(() => import("@/components/RadarMap"));
 const LightningMap = lazy(() => import("@/components/lightning/LightningMap"));
@@ -32,8 +31,13 @@ export function MapPage() {
         </span>
       </div>
 
-      <div className="mb-4 flex items-center justify-between gap-3">
-        <SectionHeader title="Karte" subtitle={tab === "radar" ? "Niederschlagsradar" : "Live-Blitze"} />
+      <div className="mb-4 flex items-start justify-between gap-3 px-1">
+        <div className="flex flex-col gap-1">
+          <h2 className="font-display text-lg font-medium tracking-tight">Karte</h2>
+          <span className="text-xs uppercase tracking-wider text-muted-foreground">
+            {tab === "radar" ? "Niederschlagsradar" : "Live-Blitze"}
+          </span>
+        </div>
         <div className="glass flex gap-0.5 rounded-full p-0.5 text-xs">
           {(["radar", "lightning"] as const).map((t) => (
             <button
