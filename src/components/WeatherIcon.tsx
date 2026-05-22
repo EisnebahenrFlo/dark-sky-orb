@@ -15,22 +15,6 @@ function isPrecipCode(code: number): boolean {
 /** Override the WMO code when "rain" is reported but no precipitation falls. */
 export function getEffectiveCode(
   code: number,
-  cloudCover: number,
-  precipitation: number,
-  humidity?: number,
-  hour?: number,
-  cloudCoverLow?: number,
-): number;
-export function getEffectiveCode(
-  code: number,
-  precipitation: number,
-  cloudCover: number,
-  humidity?: number,
-  hour?: number,
-  cloudCoverLow?: number,
-): number;
-export function getEffectiveCode(
-  code: number,
   precipitation: number,
   cloudCover: number,
   humidity?: number,
