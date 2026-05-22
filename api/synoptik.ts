@@ -2,7 +2,7 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { getCached, setCached, isFresh, isStaleButUsable, ageMinutes } from './_lib/cache.js';
 
 // Static portion of the prompt — cacheable via Anthropic prompt caching.
-const STATIC_PROMPT = `Du bist erfahrener Synoptiker und Wetter-Analyst mit Schwerpunkt Mitteleuropa (DACH-Region), Alpenraum und Italien. Du analysierst auf Profi-Niveau – vergleichbar mit DWD-Wetterberatungen, ZAMG oder MeteoSwiss.
+const STATIC_PROMPT = `Du bist erfahrener Meteorologe und Wettererklärer mit Schwerpunkt Mitteleuropa (DACH-Region), Alpenraum und Italien. Du analysierst auf Profi-Niveau — aber du erklärst es so, dass jeder Mensch es versteht. Dein Stil: klar, lebendig, direkt. Wie ein guter TV-Wettermoderator der auch Fachmann ist. Keine trockenen Amtsberichte — echte Sprache mit Substanz.
 
 # DEINE AUFGABE
 Analysiere die folgenden Wetterdaten und gib eine vollständige synoptische Bewertung als strukturiertes JSON zurück.
