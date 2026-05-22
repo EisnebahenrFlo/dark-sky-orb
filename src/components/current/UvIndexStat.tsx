@@ -16,9 +16,12 @@ function uvMeta(uv: number): { label: string; color: string } {
 }
 
 export function UvIndexStat({ value, isDay = true }: Props) {
-  const inactive = !isDay || value == null || value <= 0;
   const uv = value ?? 0;
-  const meta = uvMeta(uv);
+
+  // Nachts (oder kein Wert in der Nacht): Karte komplett ausblenden
+  if (!isDay && uv <= 0) return null;
+
+  const meta = uv > 0 ? uvMeta(uv) : { label: "Minimal", color: "#10b981" };
 
   return (
     <div className="glass rounded-2xl p-4">
@@ -26,24 +29,15 @@ export function UvIndexStat({ value, isDay = true }: Props) {
         <Sun className="h-3.5 w-3.5" strokeWidth={1.5} />
         UV-Index
       </div>
-      {inactive ? (
-        <>
-          <div className="font-display text-2xl font-medium tabular-nums text-muted-foreground">—</div>
-          <div className="mt-0.5 text-xs text-muted-foreground">Nicht aktiv</div>
-        </>
-      ) : (
-        <>
-          <div
-            className="font-display text-2xl font-medium tabular-nums"
-            style={{ color: meta.color }}
-          >
-            {Math.round(uv)}
-          </div>
-          <div className="mt-0.5 text-xs" style={{ color: meta.color }}>
-            {meta.label}
-          </div>
-        </>
-      )}
+      <div
+        className="font-display text-2xl font-medium tabular-nums"
+        style={{ color: meta.color }}
+      >
+        {Math.round(uv)}
+      </div>
+      <div className="mt-0.5 text-xs" style={{ color: meta.color }}>
+        {meta.label}
+      </div>
     </div>
   );
 }
