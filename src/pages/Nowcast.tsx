@@ -314,13 +314,21 @@ function RainbowChart({ data, minutes }: { data: RainbowNowcastResponse; minutes
         )}
 
         {/* Time axis labels */}
-        <div className="relative mt-1 h-4 w-full">
-          {ticks.map((t) => {
+        <div className="relative mt-1 h-4 w-full overflow-visible px-2">
+          {ticks.map((t, i) => {
             const leftPct = (t / minutes) * 100;
+            const isFirst = i === 0;
+            const isLast = i === ticks.length - 1;
             return (
               <span
                 key={t}
-                className="absolute -translate-x-1/2 text-[10px] text-muted-foreground tabular-nums"
+                className={`absolute text-[10px] text-muted-foreground tabular-nums ${
+                  isFirst
+                    ? "text-left"
+                    : isLast
+                      ? "-translate-x-full text-right"
+                      : "-translate-x-1/2"
+                }`}
                 style={{ left: `${leftPct}%` }}
               >
                 {formatOffset(t)}
