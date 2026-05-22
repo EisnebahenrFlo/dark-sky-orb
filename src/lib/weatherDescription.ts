@@ -27,7 +27,7 @@ export function getEffectiveWeather(
   const effective = getEffectiveCode(weatherCode, precipitation, cloudCover, humidity, hour, cloudCoverLow);
   return {
     icon: getWeatherIcon(effective, dayNum),
-    description: wmoDescription(effective),
+    description: getContextualDescription(effective, hour, humidity, cloudCoverLow),
     wmoCode: effective,
   };
 }
