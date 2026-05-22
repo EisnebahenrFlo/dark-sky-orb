@@ -42,9 +42,19 @@ function Stat({ icon: Icon, label, value, sub }: { icon: typeof Wind; label: str
 
 export function WeatherHero({ location, data, updatedAt }: Props) {
   const effective = getEffectiveWeather(data.weather_code, data.precipitation, data.cloud_cover, data.is_day, data.relative_humidity_2m, new Date(data.time).getHours());
+  const iconStyle = iconAnimationStyle(data.weather_code);
+  const gradient = temperatureGradientClass(data.temperature_2m);
   return (
     <div className="space-y-6">
-      <div className="glass relative overflow-hidden rounded-3xl p-8 sm:p-12">
+      <style>{`
+        @keyframes wh-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        @keyframes wh-drift { from { transform: translateX(-4px); } to { transform: translateX(4px); } }
+        @keyframes wh-pulse { from { opacity: 0.8; } to { opacity: 1; } }
+        @keyframes wh-bob { from { transform: translateY(0); } to { transform: translateY(3px); } }
+        @keyframes wh-sway { from { transform: rotate(-5deg); } to { transform: rotate(5deg); } }
+        @keyframes wh-flicker { 0%, 60%, 100% { opacity: 1; } 70% { opacity: 0.6; } 80% { opacity: 1; } }
+      `}</style>
+      <div className={`glass relative overflow-hidden rounded-3xl bg-gradient-to-br p-8 transition-all duration-1000 sm:p-12 ${gradient}`}>
         <div className="absolute -right-16 -top-16 opacity-[0.07]">
           <EffectiveWeatherIcon code={data.weather_code} precipitation={data.precipitation} cloudCover={data.cloud_cover} isDay={data.is_day} className="h-[28rem] w-[28rem]" />
         </div>
@@ -59,7 +69,14 @@ export function WeatherHero({ location, data, updatedAt }: Props) {
               {Math.round(data.temperature_2m)}°
             </div>
             <div className="flex items-center gap-3">
-              <EffectiveWeatherIcon code={data.weather_code} precipitation={data.precipitation} cloudCover={data.cloud_cover} isDay={data.is_day} className="h-14 w-14 text-primary" />
+              <EffectiveWeatherIcon
+                code={data.weather_code}
+                precipitation={data.precipitation}
+                cloudCover={data.cloud_cover}
+                isDay={data.is_day}
+                className="h-14 w-14 text-primary"
+                style={iconStyle}
+              />
               <div>
                 <div className="text-lg font-medium">{effective.description}</div>
                 <div className="text-sm text-muted-foreground">
