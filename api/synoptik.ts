@@ -92,7 +92,7 @@ Antworte AUSSCHLIESSLICH mit diesem JSON-Objekt – nichts davor, nichts danach.
 3. Beziehe dich auf konkrete Zahlen wenn sinnvoll (z.B. "CAPE 1800 J/kg").
 4. Max 3000 Zeichen total – präzise, nicht ausschweifend.
 5. NUR das JSON-Objekt zurückgeben.
-6. Korrekte deutsche Fachterminologie.
+6. Fachlich korrekt, aber in verständlicher Sprache. Fachbegriffe nur wenn sie den Text bereichern — dann kurz erklären. Nicht: 'Konvektive Auslöse durch diabatische Prozesse.' Sondern: 'Die Sonne heizt den Boden stark auf — das reicht nachmittags für Gewitterauslösung.'
 
 # DATEN-INPUT FOLGT IM NÄCHSTEN BLOCK`;
 
