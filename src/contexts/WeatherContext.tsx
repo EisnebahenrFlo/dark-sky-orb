@@ -56,7 +56,7 @@ export function WeatherProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem(RECENT_KEY);
   };
 
-  const data = useWeatherData(location?.latitude ?? 0, location?.longitude ?? 0, !!location);
+  const data = useWeatherData(location?.latitude ?? 0, location?.longitude ?? 0, !!location, location?.country_code);
 
   return (
     <Ctx.Provider value={{ ...data, location: location ?? DEFAULT, recent, selectLocation, clearRecent }}>

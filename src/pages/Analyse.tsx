@@ -15,6 +15,7 @@ import {
   Zap,
 } from "lucide-react";
 import { useSynoptikAnalysis, type SynoptikErrorCode } from "@/hooks/useSynoptikAnalysis";
+import { getWeatherModelLabel } from "@/lib/weather";
 import { HeroCard } from "@/components/synoptik/HeroCard";
 import { SectionCard } from "@/components/synoptik/SectionCard";
 import { ConvectionBadge } from "@/components/synoptik/ConvectionBadge";
@@ -280,6 +281,10 @@ export function AnalysePage() {
           </div>
         </div>
       )}
+
+      <div className="mt-6 text-center text-xs text-muted-foreground">
+        Datenquelle: {getWeatherModelLabel(location.country_code)}
+      </div>
     </div>
   );
 }

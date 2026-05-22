@@ -21,9 +21,10 @@ export function getEffectiveWeather(
   isDay: number | boolean = 1,
   humidity?: number,
   hour?: number,
+  cloudCoverLow?: number,
 ): WeatherInfo {
   const dayNum = typeof isDay === "boolean" ? (isDay ? 1 : 0) : isDay;
-  const effective = getEffectiveCode(weatherCode, precipitation, cloudCover, humidity, hour);
+  const effective = getEffectiveCode(weatherCode, precipitation, cloudCover, humidity, hour, cloudCoverLow);
   return {
     icon: getWeatherIcon(effective, dayNum),
     description: wmoDescription(effective),

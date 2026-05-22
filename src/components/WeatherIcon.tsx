@@ -19,22 +19,24 @@ export function getEffectiveCode(
   cloudCover: number,
   humidity?: number,
   hour?: number,
+  cloudCoverLow?: number,
 ): number {
+  const effectiveCloud = cloudCoverLow !== undefined && cloudCoverLow !== null ? cloudCoverLow : cloudCover;
   // Bodennebel-Erkennung früh morgens
   if (code === 45 || code === 48) {
     const h = hour ?? -1;
     const isMorning = h >= 4 && h <= 9;
     const hum = humidity ?? 0;
-    if (isMorning && hum >= 85 && cloudCover < 50) {
+    if (isMorning && hum >= 85 && effectiveCloud < 50) {
       // Bodennebel der sich auflöst — als Dunst behandeln
       // Code 1 = "Überwiegend klar" mit leichtem Dunst-Charakter
-      return cloudCover >= 20 ? 1 : 0;
+      return effectiveCloud >= 20 ? 1 : 0;
     }
   }
   if (isPrecipCode(code) && (precipitation ?? 0) < 0.05) {
-    if (cloudCover >= 88) return 3;
-    if (cloudCover >= 50) return 2;
-    if (cloudCover >= 20) return 1;
+    if (effectiveCloud >= 88) return 3;
+    if (effectiveCloud >= 50) return 2;
+    if (effectiveCloud >= 20) return 1;
     return 0;
   }
   return code;
@@ -44,16 +46,18 @@ export function EffectiveWeatherIcon({
   code,
   precipitation,
   cloudCover,
+  cloudCoverLow,
   isDay = 1,
   className,
 }: {
   code: number;
   precipitation: number;
   cloudCover: number;
+  cloudCoverLow?: number;
   isDay?: number;
   className?: string;
 }) {
-  const effective = getEffectiveCode(code, precipitation, cloudCover);
+  const effective = getEffectiveCode(code, precipitation, cloudCover, undefined, undefined, cloudCoverLow);
   const Icon = getWeatherIcon(effective, isDay);
   return <Icon className={className} strokeWidth={1.25} />;
 }
