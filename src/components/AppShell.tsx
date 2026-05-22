@@ -126,6 +126,7 @@ export function AppShell() {
                 <Link
                   key={to}
                   to={to}
+                  onClick={() => haptic("light")}
                   aria-label={label}
                   title={label}
                   className={`flex flex-1 items-center justify-center rounded-xl py-3 transition-colors ${
