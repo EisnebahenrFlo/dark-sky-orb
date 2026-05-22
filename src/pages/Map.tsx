@@ -20,10 +20,18 @@ function MapFallback() {
 export function MapPage() {
   const [tab, setTab] = useState<SubTab>("radar");
   const [mounted, setMounted] = useState(false);
+  const { location } = useWeather();
   useEffect(() => setMounted(true), []);
 
   return (
-    <section>
+    <section className="space-y-4">
+      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+        <MapIcon className="h-4 w-4 text-accent" strokeWidth={1.75} />
+        <span>
+          Wetterradar für <span className="font-medium text-foreground">{location.name}</span>
+        </span>
+      </div>
+
       <div className="mb-4 flex items-center justify-between gap-3">
         <SectionHeader title="Karte" subtitle={tab === "radar" ? "Niederschlagsradar" : "Live-Blitze"} />
         <div className="glass flex gap-0.5 rounded-full p-0.5 text-xs">
