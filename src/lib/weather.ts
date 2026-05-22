@@ -118,8 +118,6 @@ export async function searchCities(query: string): Promise<GeoResult[]> {
 function getWeatherModel(countryCode?: string): string {
   switch (countryCode?.toUpperCase()) {
     case "DE": return "icon_d2";
-    case "AT": return "geosphere_austria";
-    case "CH": return "icon_ch2";
     case "IT": return "italia_meteo_arpae_icon_2i";
     default:   return "best_match";
   }
