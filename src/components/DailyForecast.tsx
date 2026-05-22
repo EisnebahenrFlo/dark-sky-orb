@@ -11,7 +11,7 @@ function timeOnly(iso: string) {
   return new Date(iso).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" });
 }
 
-function DayRow({ daily, i, hourly }: { daily: DailyData; i: number; hourly?: HourlyData }) {
+function DayRow({ daily, i, hourly, current }: { daily: DailyData; i: number; hourly?: HourlyData; current?: CurrentWeather }) {
   const [open, setOpen] = useState(false);
   const min = Math.round(daily.temperature_2m_min[i]);
   const max = Math.round(daily.temperature_2m_max[i]);
