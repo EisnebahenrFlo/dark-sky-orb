@@ -1,5 +1,5 @@
 import { Fragment } from "react";
-import type { DailyData, HourlyData } from "@/lib/weather";
+import type { CurrentData, DailyData, HourlyData } from "@/lib/weather";
 import { HourlyRow, type HourlyRowData } from "./HourlyRow";
 import { SunDivider } from "./SunDivider";
 
@@ -22,7 +22,15 @@ interface SunEvent {
   label: string;
 }
 
-export function HourlyList({ hourly, daily }: { hourly: HourlyData; daily: DailyData }) {
+export function HourlyList({
+  hourly,
+  daily,
+  current,
+}: {
+  hourly: HourlyData;
+  daily: DailyData;
+  current?: CurrentData;
+}) {
   const now = Date.now();
 
   // Build sun events that fall within the displayed window.
@@ -49,6 +57,11 @@ export function HourlyList({ hourly, daily }: { hourly: HourlyData; daily: Daily
       code: hourly.weather_code[i],
       isDay: hourly.is_day[i],
       cloud: hourly.cloud_cover?.[i] ?? 0,
+      cloudLow: isCurrent
+        ? hourly.cloud_cover_low?.[0] ?? hourly.cloud_cover_low?.[i]
+        : hourly.cloud_cover_low?.[i],
+      humidity: isCurrent ? current?.relative_humidity_2m : undefined,
+      overrideHour: isCurrent && current?.time ? new Date(current.time).getHours() : undefined,
       isCurrent,
       cape: hourly.cape?.[i] ?? null,
       li: hourly.lifted_index?.[i] ?? null,
