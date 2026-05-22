@@ -22,7 +22,7 @@ function Stat({ icon: Icon, label, value, sub }: { icon: typeof Wind; label: str
 }
 
 export function WeatherHero({ location, data, updatedAt }: Props) {
-  const effective = getEffectiveWeather(data.weather_code, data.precipitation, data.cloud_cover, data.is_day);
+  const effective = getEffectiveWeather(data.weather_code, data.precipitation, data.cloud_cover, data.is_day, data.relative_humidity_2m, new Date(data.time).getHours());
   return (
     <div className="space-y-6">
       <div className="glass relative overflow-hidden rounded-3xl p-8 sm:p-12">

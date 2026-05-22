@@ -17,7 +17,20 @@ export function getEffectiveCode(
   code: number,
   precipitation: number,
   cloudCover: number,
+  humidity?: number,
+  hour?: number,
 ): number {
+  // Bodennebel-Erkennung früh morgens
+  if (code === 45 || code === 48) {
+    const h = hour ?? -1;
+    const isMorning = h >= 4 && h <= 9;
+    const hum = humidity ?? 0;
+    if (isMorning && hum >= 85 && cloudCover < 50) {
+      // Bodennebel der sich auflöst — als Dunst behandeln
+      // Code 1 = "Überwiegend klar" mit leichtem Dunst-Charakter
+      return cloudCover >= 20 ? 1 : 0;
+    }
+  }
   if (isPrecipCode(code) && (precipitation ?? 0) < 0.05) {
     if (cloudCover >= 88) return 3;
     if (cloudCover >= 50) return 2;
