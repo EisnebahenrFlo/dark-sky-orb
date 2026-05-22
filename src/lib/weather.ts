@@ -240,7 +240,8 @@ export async function fetchWeather(lat: number, lon: number, countryCode?: strin
       longJson.hourly.time,
       longJson.hourly.weather_code,
       dateStr,
-      idx === 0 ? Math.max(9, currentHour + 1) : 9,
+      idx === 0,
+      currentHour,
     ),
   );
   const json: WeatherData = {
