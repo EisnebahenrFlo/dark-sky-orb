@@ -169,8 +169,13 @@ export async function fetchWeather(lat: number, lon: number, countryCode?: strin
     WeatherData,
     WeatherData,
   ];
+  const currentUv = getCurrentUvFromLongTerm(shortJson.current.time, longJson.hourly);
   const json: WeatherData = {
     ...shortJson,
+    current: {
+      ...shortJson.current,
+      uv_index: currentUv,
+    },
     daily: longJson.daily,
     hourly: {
       ...shortJson.hourly,
