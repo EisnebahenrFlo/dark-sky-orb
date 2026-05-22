@@ -1,23 +1,28 @@
-import { Skeleton } from "@/components/ui/skeleton";
-
 export function WeatherSkeleton() {
   return (
     <div className="space-y-6">
+      {/* Hero */}
       <div className="glass rounded-3xl p-8 sm:p-12">
-        <Skeleton className="h-3 w-40" />
-        <Skeleton className="mt-3 h-10 w-64" />
-        <div className="mt-8 flex flex-wrap items-end gap-x-8 gap-y-4">
-          <Skeleton className="h-24 w-40" />
-          <Skeleton className="h-14 w-48" />
-        </div>
-        <Skeleton className="mt-6 h-3 w-48" />
+        <div className="h-16 w-32 animate-pulse rounded-lg bg-muted" />
+        <div className="mt-4 h-5 w-24 animate-pulse rounded-lg bg-muted" />
       </div>
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-        {Array.from({ length: 8 }).map((_, i) => (
-          <div key={i} className="glass rounded-2xl p-5">
-            <Skeleton className="h-3 w-20" />
-            <Skeleton className="mt-3 h-8 w-24" />
-            <Skeleton className="mt-2 h-3 w-28" />
+
+      {/* 2x2 Karten-Grid */}
+      <div className="grid grid-cols-2 gap-3">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div key={i} className="h-24 animate-pulse rounded-lg bg-muted" />
+        ))}
+      </div>
+
+      {/* Stündlich: 5 Zeilen */}
+      <div className="space-y-3">
+        {Array.from({ length: 5 }).map((_, i) => (
+          <div key={i} className="flex items-center gap-3">
+            <div className="h-8 w-8 animate-pulse rounded-lg bg-muted" />
+            <div className="flex-1 space-y-2">
+              <div className="h-4 w-20 animate-pulse rounded-lg bg-muted" />
+              <div className="h-3 w-16 animate-pulse rounded-lg bg-muted" />
+            </div>
           </div>
         ))}
       </div>

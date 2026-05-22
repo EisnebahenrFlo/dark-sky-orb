@@ -18,6 +18,7 @@ import { useRiskWarningsCtx } from "@/contexts/RiskWarningsContext";
 import { useOfficialWarningsCtx } from "@/contexts/OfficialWarningsContext";
 import { APP_VERSION } from "@/lib/constants";
 import { isDevEnvironment } from "@/lib/environment";
+import { haptic } from "@/lib/utils";
 import { WeatherTabTransition } from "@/components/transitions/WeatherTabTransition";
 
 const TABS = [
@@ -86,6 +87,7 @@ export function AppShell() {
               <Link
                 key={to}
                 to={to}
+                onClick={() => haptic("light")}
                 className={`relative flex items-center gap-2 rounded-full px-5 py-2 text-sm transition-colors ${
                   active ? "text-primary-foreground" : "text-muted-foreground hover:text-foreground"
                 }`}
@@ -124,6 +126,7 @@ export function AppShell() {
                 <Link
                   key={to}
                   to={to}
+                  onClick={() => haptic("light")}
                   aria-label={label}
                   title={label}
                   className={`flex flex-1 items-center justify-center rounded-xl py-3 transition-colors ${

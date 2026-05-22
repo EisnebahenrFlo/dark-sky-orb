@@ -2,6 +2,7 @@ import { Star, MapPin } from "lucide-react";
 import { useWeather } from "@/contexts/WeatherContext";
 import { useFavorites } from "@/hooks/useFavorites";
 import { geoToFavorite } from "@/lib/favoritesStorage";
+import { haptic } from "@/lib/utils";
 import { toast } from "sonner";
 
 export function CurrentLocationCard({ onAdded }: { onAdded?: () => void }) {
@@ -13,6 +14,7 @@ export function CurrentLocationCard({ onAdded }: { onAdded?: () => void }) {
   const handleAdd = () => {
     const r = addFavorite(fav);
     if (r.ok) {
+      haptic("medium");
       toast.success(`${fav.name} zu Favoriten hinzugefügt`, { duration: 2000 });
       onAdded?.();
     } else if (r.reason === "max") {

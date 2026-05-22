@@ -1,4 +1,4 @@
-import { AlertTriangle, CheckCircle2, RefreshCw, ShieldCheck } from "lucide-react";
+import { AlertTriangle, RefreshCw, ShieldCheck } from "lucide-react";
 import { useOfficialWarnings } from "@/hooks/useOfficialWarnings";
 import { OfficialWarningCard } from "./OfficialWarningCard";
 
@@ -70,16 +70,9 @@ export function OfficialWarningsSection() {
       )}
 
       {data && sorted.length === 0 && (
-        <div className="flex items-center gap-3 rounded-2xl border border-green-500/30 bg-green-500/5 p-5 sm:p-6">
-          <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-green-500/10 text-green-600 dark:text-green-400">
-            <CheckCircle2 className="h-5 w-5" strokeWidth={1.75} />
-          </div>
-          <div>
-            <p className="font-medium text-foreground">Keine amtlichen Warnungen aktiv</p>
-            <p className="text-sm text-muted-foreground">
-              Für deinen Standort liegen aktuell keine offiziellen Wetterwarnungen vor.
-            </p>
-          </div>
+        <div className="flex flex-col items-center justify-center gap-3 rounded-2xl border border-green-500/30 bg-green-500/5 p-8 text-center">
+          <ShieldCheck className="h-10 w-10 text-green-600 dark:text-green-400" strokeWidth={1.5} />
+          <p className="text-sm text-muted-foreground">Alles ruhig</p>
         </div>
       )}
 

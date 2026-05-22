@@ -3,6 +3,7 @@ import { ArrowUp, ArrowDown, Trash2, Loader2 } from "lucide-react";
 import type { Favorite } from "@/lib/favoritesStorage";
 import type { FavoriteCurrent } from "@/hooks/useFavoriteWeather";
 import { EffectiveWeatherIcon } from "@/components/WeatherIcon";
+import { haptic } from "@/lib/utils";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -126,6 +127,7 @@ export function FavoriteItem({
             <AlertDialogCancel>Abbrechen</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => {
+                haptic("medium");
                 onDelete();
                 setConfirmOpen(false);
               }}
