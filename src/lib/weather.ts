@@ -217,13 +217,25 @@ export async function fetchWeather(lat: number, lon: number, countryCode?: strin
     WeatherData,
   ];
   const currentUv = getCurrentUvFromLongTerm(shortJson.current.time, longJson.hourly);
+  const currentHour = new Date(shortJson.current.time).getHours();
+  const representativeDailyCodes = longJson.daily.time.map((dateStr: string, idx: number) =>
+    getDayRepresentativeCode(
+      longJson.hourly.time,
+      longJson.hourly.weather_code,
+      dateStr,
+      idx === 0 ? Math.max(9, currentHour + 1) : 9,
+    ),
+  );
   const json: WeatherData = {
     ...shortJson,
     current: {
       ...shortJson.current,
       uv_index: currentUv,
     },
-    daily: longJson.daily,
+    daily: {
+      ...longJson.daily,
+      weather_code: representativeDailyCodes,
+    },
     hourly: {
       ...shortJson.hourly,
       uv_index: longJson.hourly?.uv_index ?? shortJson.hourly?.uv_index,
