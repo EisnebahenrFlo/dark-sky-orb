@@ -26,14 +26,21 @@ export function CurrentPage() {
   return (
     <PageState>
       {(data) => {
-        const now = new Date(data.current.time);
-        const currentHour = now.getHours();
-        const idx =
-          data.hourly?.time?.findIndex((t: string) => new Date(t).getHours() === currentHour) ?? -1;
-        const uv =
-          idx >= 0
-            ? (data.hourly?.uv_index?.[idx] ?? 0)
-            : (data.hourly?.uv_index?.[0] ?? 0);
+        const idx = (() => {
+          if (!data.hourly?.time) return -1;
+          const now = new Date(data.current.time).getTime();
+          let best = 0;
+          let bestDiff = Infinity;
+          for (let i = 0; i < data.hourly.time.length; i++) {
+            const diff = Math.abs(new Date(data.hourly.time[i]).getTime() - now);
+            if (diff < bestDiff) {
+              bestDiff = diff;
+              best = i;
+            }
+          }
+          return best;
+        })();
+        const uv = idx >= 0 ? (data.hourly?.uv_index?.[idx] ?? 0) : 0;
         return (
           <div className="space-y-6">
             <WeatherHero location={location} data={data.current} updatedAt={dataUpdatedAt} />
