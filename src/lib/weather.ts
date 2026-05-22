@@ -134,6 +134,21 @@ export function getWeatherModelLabel(countryCode?: string): string {
   }
 }
 
+function getCurrentUvFromLongTerm(
+  currentTime: string,
+  longHourly: { time: string[]; uv_index: number[] },
+): number {
+  if (!longHourly?.time || !longHourly?.uv_index) return 0;
+  const now = new Date(currentTime).getTime();
+  let bestIdx = 0;
+  let bestDiff = Infinity;
+  for (let i = 0; i < longHourly.time.length; i++) {
+    const diff = Math.abs(new Date(longHourly.time[i]).getTime() - now);
+    if (diff < bestDiff) { bestDiff = diff; bestIdx = i; }
+  }
+  return longHourly.uv_index[bestIdx] ?? 0;
+}
+
 export async function fetchWeather(lat: number, lon: number, countryCode?: string): Promise<WeatherData> {
   const shortParams = new URLSearchParams({
     latitude: String(lat),
