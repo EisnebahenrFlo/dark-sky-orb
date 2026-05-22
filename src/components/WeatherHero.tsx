@@ -43,7 +43,7 @@ function Stat({ icon: Icon, label, value, sub }: { icon: typeof Wind; label: str
 export function WeatherHero({ location, data, updatedAt }: Props) {
   const effective = getEffectiveWeather(data.weather_code, data.precipitation, data.cloud_cover, data.is_day, data.relative_humidity_2m, new Date(data.time).getHours());
   const iconStyle = iconAnimationStyle(data.weather_code);
-  const gradient = temperatureGradientClass(data.temperature_2m);
+  const heroBackground = getHeroGradient(data.temperature_2m);
   return (
     <div className="space-y-6">
       <style>{`
@@ -54,7 +54,10 @@ export function WeatherHero({ location, data, updatedAt }: Props) {
         @keyframes wh-sway { from { transform: rotate(-5deg); } to { transform: rotate(5deg); } }
         @keyframes wh-flicker { 0%, 60%, 100% { opacity: 1; } 70% { opacity: 0.6; } 80% { opacity: 1; } }
       `}</style>
-      <div className={`glass relative overflow-hidden rounded-3xl bg-gradient-to-br p-8 transition-all duration-1000 sm:p-12 ${gradient}`}>
+      <div
+        className="glass relative overflow-hidden rounded-3xl p-8 sm:p-12"
+        style={{ background: heroBackground, transition: "background 1s ease" }}
+      >
         <div className="absolute -right-16 -top-16 opacity-[0.07]">
           <EffectiveWeatherIcon code={data.weather_code} precipitation={data.precipitation} cloudCover={data.cloud_cover} isDay={data.is_day} className="h-[28rem] w-[28rem]" />
         </div>
