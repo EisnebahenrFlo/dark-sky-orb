@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { AlertCircle, CheckCircle2, RefreshCw, ShieldAlert } from "lucide-react";
+import { AlertCircle, RefreshCw, ShieldAlert, ShieldCheck } from "lucide-react";
 import { WarningsLoader } from "@/components/loaders/WarningsLoader";
 import { useRiskWarningsCtx } from "@/contexts/RiskWarningsContext";
 import { useOfficialWarningsCtx } from "@/contexts/OfficialWarningsContext";
@@ -60,6 +60,29 @@ export function WarnungenPage() {
   const officialLabel = officialMax >= 4 ? "Extrem" : officialMax === 3 ? "Unwetter" : officialMax === 2 ? "Markant" : "Hinweis";
   const weatherCode = (weather as any)?.current?.weather_code;
   const handleRefresh = () => refresh();
+
+  const ki = data?.warnungen_12h ?? [];
+  const hasActiveWarnings = official.length > 0 || ki.length > 0;
+
+  if (!loading && !error && data && !hasActiveWarnings) {
+    return (
+      <PullToRefresh onRefresh={handleRefresh} isRefreshing={loading} weatherCode={weatherCode}>
+        <div className="space-y-5">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <ShieldAlert className="h-4 w-4 text-accent" strokeWidth={1.75} />
+            <span>
+              Warnungen für <span className="font-medium text-foreground">{location.name}</span>
+            </span>
+          </div>
+          <div className="flex flex-col items-center gap-3 py-12 text-muted-foreground">
+            <ShieldCheck className="w-10 h-10 opacity-40" />
+            <p className="text-sm font-medium">Alles ruhig</p>
+            <p className="text-xs opacity-60">Keine aktiven Warnungen für diesen Standort</p>
+          </div>
+        </div>
+      </PullToRefresh>
+    );
+  }
 
   return (
     <PullToRefresh onRefresh={handleRefresh} isRefreshing={loading} weatherCode={weatherCode}>
@@ -149,23 +172,7 @@ export function WarnungenPage() {
 
         {data && (
           <div className={`relative space-y-3 transition-opacity ${loading ? "opacity-50" : ""}`}>
-            {data.warnungen_12h.length === 0 ? (
-              <div className="flex items-center gap-3 rounded-2xl border border-border bg-muted/30 p-5 sm:p-6">
-                <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-muted text-muted-foreground">
-                  <CheckCircle2 className="h-5 w-5" strokeWidth={1.75} />
-                </div>
-                <div>
-                  <p className="font-medium text-foreground">
-                    Die KI-Auswertung sieht aktuell keine kritischen konvektiven Risiken.
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    Amtliche Warnungen können davon abweichen – diese stehen weiter oben.
-                  </p>
-                </div>
-              </div>
-            ) : (
-              data.warnungen_12h.map((w, i) => <WarningCard key={`${w.id}_${i}`} warning={w} />)
-            )}
+            {data.warnungen_12h.map((w, i) => <WarningCard key={`${w.id}_${i}`} warning={w} />)}
             {data.stale && (
               <div className="rounded-2xl border border-border bg-muted/30 p-3">
                 <StaleBadge ageMinutes={data.ageMinutes} />
@@ -177,14 +184,13 @@ export function WarnungenPage() {
 
       {/* Gesamt-Summary — basiert primär auf amtlichen, ergänzt um KI */}
       {(data || official.length > 0) && (() => {
-        const ki = data?.warnungen_12h ?? [];
         let summaryText: string;
         if (official.length > 0) {
           summaryText = `${official.length} aktive amtliche ${official.length === 1 ? "Warnung" : "Warnungen"} – höchste Stufe: ${officialLabel}.${ki.length > 0 ? ` Zusätzlich ${ki.length} KI-Hinweis${ki.length === 1 ? "" : "e"}.` : ""}`;
         } else if (ki.length > 0 && data?.summary) {
           summaryText = data.summary;
         } else {
-          summaryText = "Keine aktiven Warnungen. Wetterlage ruhig.";
+          return null;
         }
         return (
           <div className="rounded-2xl border border-border bg-card p-6 text-center sm:p-8">
