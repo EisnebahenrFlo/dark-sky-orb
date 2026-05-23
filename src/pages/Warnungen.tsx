@@ -218,5 +218,6 @@ export function WarnungenPage() {
         </div>
       )}
     </div>
+    </PullToRefresh>
   );
 }
