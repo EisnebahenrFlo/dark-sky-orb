@@ -311,5 +311,6 @@ export function AnalysePage() {
         Datenquelle: {getWeatherModelLabel(location.country_code)}
       </div>
     </div>
+    </PullToRefresh>
   );
 }
