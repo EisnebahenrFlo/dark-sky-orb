@@ -172,23 +172,7 @@ export function WarnungenPage() {
 
         {data && (
           <div className={`relative space-y-3 transition-opacity ${loading ? "opacity-50" : ""}`}>
-            {data.warnungen_12h.length === 0 ? (
-              <div className="flex items-center gap-3 rounded-2xl border border-border bg-muted/30 p-5 sm:p-6">
-                <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-muted text-muted-foreground">
-                  <CheckCircle2 className="h-5 w-5" strokeWidth={1.75} />
-                </div>
-                <div>
-                  <p className="font-medium text-foreground">
-                    Die KI-Auswertung sieht aktuell keine kritischen konvektiven Risiken.
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    Amtliche Warnungen können davon abweichen – diese stehen weiter oben.
-                  </p>
-                </div>
-              </div>
-            ) : (
-              data.warnungen_12h.map((w, i) => <WarningCard key={`${w.id}_${i}`} warning={w} />)
-            )}
+            {data.warnungen_12h.map((w, i) => <WarningCard key={`${w.id}_${i}`} warning={w} />)}
             {data.stale && (
               <div className="rounded-2xl border border-border bg-muted/30 p-3">
                 <StaleBadge ageMinutes={data.ageMinutes} />
