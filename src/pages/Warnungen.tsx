@@ -184,14 +184,13 @@ export function WarnungenPage() {
 
       {/* Gesamt-Summary — basiert primär auf amtlichen, ergänzt um KI */}
       {(data || official.length > 0) && (() => {
-        const ki = data?.warnungen_12h ?? [];
         let summaryText: string;
         if (official.length > 0) {
           summaryText = `${official.length} aktive amtliche ${official.length === 1 ? "Warnung" : "Warnungen"} – höchste Stufe: ${officialLabel}.${ki.length > 0 ? ` Zusätzlich ${ki.length} KI-Hinweis${ki.length === 1 ? "" : "e"}.` : ""}`;
         } else if (ki.length > 0 && data?.summary) {
           summaryText = data.summary;
         } else {
-          summaryText = "Keine aktiven Warnungen. Wetterlage ruhig.";
+          return null;
         }
         return (
           <div className="rounded-2xl border border-border bg-card p-6 text-center sm:p-8">
