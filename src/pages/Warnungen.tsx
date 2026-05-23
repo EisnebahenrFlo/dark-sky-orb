@@ -61,6 +61,29 @@ export function WarnungenPage() {
   const weatherCode = (weather as any)?.current?.weather_code;
   const handleRefresh = () => refresh();
 
+  const ki = data?.warnungen_12h ?? [];
+  const hasActiveWarnings = official.length > 0 || ki.length > 0;
+
+  if (!loading && !error && data && !hasActiveWarnings) {
+    return (
+      <PullToRefresh onRefresh={handleRefresh} isRefreshing={loading} weatherCode={weatherCode}>
+        <div className="space-y-5">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <ShieldAlert className="h-4 w-4 text-accent" strokeWidth={1.75} />
+            <span>
+              Warnungen für <span className="font-medium text-foreground">{location.name}</span>
+            </span>
+          </div>
+          <div className="flex flex-col items-center gap-3 py-12 text-muted-foreground">
+            <ShieldCheck className="w-10 h-10 opacity-40" />
+            <p className="text-sm font-medium">Alles ruhig</p>
+            <p className="text-xs opacity-60">Keine aktiven Warnungen für diesen Standort</p>
+          </div>
+        </div>
+      </PullToRefresh>
+    );
+  }
+
   return (
     <PullToRefresh onRefresh={handleRefresh} isRefreshing={loading} weatherCode={weatherCode}>
     <div className="space-y-5">
