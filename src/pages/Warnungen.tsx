@@ -14,6 +14,8 @@ import { WeatherLoader } from "@/components/loaders/WeatherLoader";
 import { OfficialWarningsSection } from "@/components/warnings/OfficialWarningsSection";
 import { StaleBadge } from "@/components/StaleBadge";
 import type { RiskWarningsErrorCode } from "@/hooks/useRiskWarnings";
+import { formatTimestamp } from "@/utils/formatTimestamp";
+import { PullToRefresh } from "@/components/PullToRefreshIndicator";
 
 function relMin(ts: number) {
   const m = Math.max(0, Math.round((Date.now() - ts) / 60000));
@@ -56,8 +58,11 @@ export function WarnungenPage() {
   const official = officialData?.warnings ?? [];
   const officialMax = official.reduce((m, w) => Math.max(m, w.level ?? 1), 0);
   const officialLabel = officialMax >= 4 ? "Extrem" : officialMax === 3 ? "Unwetter" : officialMax === 2 ? "Markant" : "Hinweis";
+  const weatherCode = (weather as any)?.current?.weather_code;
+  const handleRefresh = () => refresh();
 
   return (
+    <PullToRefresh onRefresh={handleRefresh} isRefreshing={loading} weatherCode={weatherCode}>
     <div className="space-y-5">
       <div className="flex items-center gap-2 text-sm text-muted-foreground">
         <ShieldAlert className="h-4 w-4 text-accent" strokeWidth={1.75} />
@@ -65,6 +70,21 @@ export function WarnungenPage() {
           Warnungen für <span className="font-medium text-foreground">{location.name}</span>
         </span>
       </div>
+
+      <div className="sticky top-0 z-10 -mx-4 flex items-center justify-between border-b border-border/40 bg-background/80 px-4 py-2 backdrop-blur-md">
+        <span className="text-xs text-muted-foreground">
+          {lastUpdated ? formatTimestamp(new Date(lastUpdated)) : "—"}
+        </span>
+        <button
+          onClick={handleRefresh}
+          disabled={loading}
+          className="flex items-center gap-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground disabled:opacity-50"
+        >
+          <RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} />
+          <span>Aktualisieren</span>
+        </button>
+      </div>
+
 
       {/* Sticky compact risk indicator */}
       {data && stickyColor && scrolled && (
@@ -198,5 +218,6 @@ export function WarnungenPage() {
         </div>
       )}
     </div>
+    </PullToRefresh>
   );
 }

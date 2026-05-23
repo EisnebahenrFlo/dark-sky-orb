@@ -25,6 +25,8 @@ import { AnalysisLoader } from "@/components/loaders/AnalysisLoader";
 import { WeatherLoader } from "@/components/loaders/WeatherLoader";
 import { AnalysisDisclaimer } from "@/components/analysis/AnalysisDisclaimer";
 import { StaleBadge } from "@/components/StaleBadge";
+import { formatTimestamp } from "@/utils/formatTimestamp";
+import { PullToRefresh } from "@/components/PullToRefreshIndicator";
 
 const formatHighlight = (text: string) => text.replaceAll(";", " ·");
 
@@ -121,7 +123,11 @@ export function AnalysePage() {
 
   const copy = ERROR_COPY[errorCode ?? "UNKNOWN"];
 
+  const weatherCode = (weather as any)?.current?.weather_code;
+  const handleRefresh = () => refreshAction.trigger();
+
   return (
+    <PullToRefresh onRefresh={handleRefresh} isRefreshing={loading} weatherCode={weatherCode}>
     <div className="space-y-5">
       <div className="flex items-center gap-2 text-sm text-muted-foreground">
         <Brain className="h-4 w-4 text-accent" strokeWidth={1.75} />
@@ -130,6 +136,21 @@ export function AnalysePage() {
           <span className="font-medium text-foreground">{location.name}</span>
         </span>
       </div>
+
+      <div className="sticky top-0 z-10 -mx-4 flex items-center justify-between border-b border-border/40 bg-background/80 px-4 py-2 backdrop-blur-md">
+        <span className="text-xs text-muted-foreground">
+          {lastUpdated ? formatTimestamp(new Date(lastUpdated)) : "—"}
+        </span>
+        <button
+          onClick={handleRefresh}
+          disabled={loading || refreshAction.disabled}
+          className="flex items-center gap-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground disabled:opacity-50"
+        >
+          <RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} />
+          <span>Aktualisieren</span>
+        </button>
+      </div>
+
 
       {/* Initial loading: show as long as we have neither data nor error */}
       {!data && !error && <AnalysisLoader />}
@@ -290,5 +311,6 @@ export function AnalysePage() {
         Datenquelle: {getWeatherModelLabel(location.country_code)}
       </div>
     </div>
+    </PullToRefresh>
   );
 }
