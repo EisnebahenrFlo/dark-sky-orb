@@ -193,7 +193,7 @@ export function HourlyForecastChart({
               <Area type="monotone" dataKey="diffWarm" stroke="none" fill="#EF4444" fillOpacity={0.18} isAnimationActive={false} connectNulls={false} baseValue={0} activeDot={false} />
               <Area type="monotone" dataKey="temp" stroke={accent} strokeOpacity={0.6} strokeWidth={2} fill={accent} fillOpacity={0.08} dot={false} activeDot={{ r: 3 }} />
               <Line type="monotone" dataKey="feels" stroke={accent} strokeOpacity={0.4} strokeDasharray="3 3" strokeWidth={1.5} dot={false} activeDot={false} />
-              {nowLabel && <ReferenceLine x={nowLabel} stroke={accent} strokeDasharray="2 3" strokeOpacity={0.6} />}
+              {nowLabel && <ReferenceLine x={nowLabel} stroke={accent} strokeWidth={1.5} strokeDasharray="4 4" strokeOpacity={0.8} />}
             </ComposedChart>
           </ResponsiveContainer>
         </div>
@@ -229,7 +229,7 @@ export function HourlyForecastChart({
               <Tooltip content={<UnifiedTooltip />} cursor={{ fill: "oklch(1 0 0 / 0.04)" }} />
               <Bar yAxisId="pop" dataKey="pop" radius={[3, 3, 0, 0]} fill="#60A5FA" fillOpacity={0.7} isAnimationActive={false} />
               <Bar yAxisId="mm" dataKey="precip" radius={[3, 3, 0, 0]} fill="#1D4ED8" fillOpacity={0.85} isAnimationActive={false} />
-              {nowLabel && <ReferenceLine yAxisId="pop" x={nowLabel} stroke={accent} strokeDasharray="2 3" strokeOpacity={0.6} />}
+              {nowLabel && <ReferenceLine yAxisId="pop" x={nowLabel} stroke={accent} strokeWidth={1.5} strokeDasharray="4 4" strokeOpacity={0.8} />}
             </ComposedChart>
           </ResponsiveContainer>
         </div>
@@ -264,7 +264,7 @@ export function HourlyForecastChart({
               <ReferenceLine y={50} stroke={muted} strokeDasharray="2 3" strokeOpacity={0.4} label={{ value: "starker Wind", position: "insideTopRight", fill: muted, fontSize: 8 }} />
               <Line type="monotone" dataKey="gust" stroke={accent} strokeOpacity={0.6} strokeDasharray="4 3" strokeWidth={1} dot={false} activeDot={false} />
               <Line type="monotone" dataKey="wind" stroke={accent} strokeWidth={2} dot={false} activeDot={{ r: 3 }} />
-              {nowLabel && <ReferenceLine x={nowLabel} stroke={accent} strokeDasharray="2 3" strokeOpacity={0.6} />}
+              {nowLabel && <ReferenceLine x={nowLabel} stroke={accent} strokeWidth={1.5} strokeDasharray="4 4" strokeOpacity={0.8} />}
             </ComposedChart>
           </ResponsiveContainer>
         </div>
@@ -295,7 +295,22 @@ export function HourlyForecastChart({
               <CartesianGrid stroke={grid} vertical={false} />
               <XAxis
                 dataKey="time"
-                tick={{ fill: muted, fontSize: 10 }}
+                tick={(props: any) => {
+                  const { x, y, payload } = props;
+                  const isNow = payload.value === nowLabel;
+                  if (isNow) {
+                    return (
+                      <text x={x} y={y + 10} textAnchor="middle" fill={accent} fontSize={10} fontWeight={700}>
+                        Jetzt
+                      </text>
+                    );
+                  }
+                  return (
+                    <text x={x} y={y + 10} textAnchor="middle" fill={muted} fontSize={10}>
+                      {payload.value}
+                    </text>
+                  );
+                }}
                 tickLine={false}
                 axisLine={false}
                 interval={2}
@@ -315,7 +330,7 @@ export function HourlyForecastChart({
                   <Cell key={i} fill={r.uv > 0 ? uvColor(r.uv) : "transparent"} />
                 ))}
               </Bar>
-              {nowLabel && <ReferenceLine x={nowLabel} stroke={accent} strokeDasharray="2 3" strokeOpacity={0.7} />}
+              {nowLabel && <ReferenceLine x={nowLabel} stroke={accent} strokeWidth={1.5} strokeDasharray="4 4" strokeOpacity={0.8} />}
               {sunrise && (
                 <ReferenceLine x={sunrise.at} stroke={muted} strokeDasharray="2 3" strokeOpacity={0.5}
                   label={{ value: `↑ ${sunrise.label}`, position: "top", fill: muted, fontSize: 9 }} />
