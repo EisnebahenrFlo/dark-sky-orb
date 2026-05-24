@@ -282,7 +282,7 @@ export async function fetchWeather(lat: number, lon: number, countryCode?: strin
     longitude: String(lon),
     daily:
       "weather_code,temperature_2m_max,temperature_2m_min,apparent_temperature_max,apparent_temperature_min,sunrise,sunset,uv_index_max,precipitation_sum,rain_sum,snowfall_sum,precipitation_hours,precipitation_probability_max,wind_speed_10m_max,wind_gusts_10m_max,wind_direction_10m_dominant",
-    hourly: "uv_index,is_day,weather_code",
+    hourly: "uv_index,precipitation_probability,is_day,weather_code",
     forecast_days: "7",
     timezone: "auto",
     models: "best_match",
@@ -308,6 +308,25 @@ export async function fetchWeather(lat: number, lon: number, countryCode?: strin
       currentHour,
     ),
   );
+
+  // Map long-term hourly arrays (uv_index, precipitation_probability) onto the
+  // short hourly time grid by matching ISO timestamps (both are timezone=auto local).
+  const longIdxByTime = new Map<string, number>();
+  (longJson.hourly?.time ?? []).forEach((t, i) => longIdxByTime.set(t, i));
+  const alignedUv = shortJson.hourly.time.map((t, i) => {
+    const j = longIdxByTime.get(t);
+    return j != null ? longJson.hourly.uv_index?.[j] ?? 0 : shortJson.hourly.uv_index?.[i] ?? 0;
+  });
+  const longPop = (longJson.hourly as any)?.precipitation_probability as number[] | undefined;
+  const shortPop = shortJson.hourly.precipitation_probability;
+  const hasShortPop = Array.isArray(shortPop) && shortPop.some((v) => v != null && v > 0);
+  const alignedPop = hasShortPop
+    ? shortPop
+    : shortJson.hourly.time.map((t, i) => {
+        const j = longIdxByTime.get(t);
+        return j != null ? longPop?.[j] ?? 0 : shortPop?.[i] ?? 0;
+      });
+
   const json: WeatherData = {
     ...shortJson,
     current: {
@@ -320,9 +339,11 @@ export async function fetchWeather(lat: number, lon: number, countryCode?: strin
     },
     hourly: {
       ...shortJson.hourly,
-      uv_index: longJson.hourly?.uv_index ?? shortJson.hourly?.uv_index,
+      uv_index: alignedUv,
+      precipitation_probability: alignedPop,
     },
   };
+
   // eslint-disable-next-line no-console
   console.log("[weather] models=", { short: getWeatherModel(countryCode), long: "best_match" }, {
     lat,
