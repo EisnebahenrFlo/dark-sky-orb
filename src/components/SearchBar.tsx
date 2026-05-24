@@ -58,8 +58,12 @@ export function SearchBar({ onSelect, recent, onClearRecent }: Props) {
         <Search className="h-5 w-5 text-muted-foreground" strokeWidth={1.5} />
         <input
           value={q}
-          onChange={(e) => setQ(e.target.value)}
+          onChange={(e) => {
+            setQ(e.target.value);
+            setOpen(true);
+          }}
           onFocus={() => setOpen(true)}
+          inputMode="search"
           placeholder="Stadt oder Postleitzahl…"
           className="flex-1 bg-transparent text-base outline-none placeholder:text-muted-foreground"
         />
