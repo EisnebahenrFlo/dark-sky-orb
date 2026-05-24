@@ -51,21 +51,25 @@ function UnifiedTooltip({ active, payload, label }: any) {
   const p = payload[0]?.payload as Row | undefined;
   if (!p) return null;
   return (
-    <div className="rounded-lg border border-border/60 bg-popover/95 px-2.5 py-1.5 text-[11px] shadow-xl backdrop-blur">
+    <div
+      className="pointer-events-none absolute right-2 top-2 z-10 rounded-lg border border-border/40 bg-popover/95 px-2 py-1.5 text-xs shadow-xl backdrop-blur dark:border-white/5"
+      style={{ maxWidth: 160 }}
+    >
       <div className="mb-1 font-medium tabular-nums">{label}</div>
-      <div className="grid grid-cols-[auto_auto] gap-x-3 gap-y-0.5 tabular-nums">
+      <div className="grid grid-cols-[auto_auto] gap-x-2 gap-y-0.5 tabular-nums">
         <span className="text-muted-foreground">Temp</span>
-        <span>{p.temp}° <span className="text-muted-foreground">(gef. {p.feels}°)</span></span>
+        <span>{p.temp}° <span className="text-muted-foreground">({p.feels}°)</span></span>
         <span className="text-muted-foreground">Regen</span>
-        <span>{p.pop}% · {p.precip.toFixed(1)} mm</span>
+        <span>{p.pop}% · {p.precip.toFixed(1)}mm</span>
         <span className="text-muted-foreground">Wind</span>
-        <span>{p.wind} <span className="text-muted-foreground">/ Böen {p.gust}</span> km/h</span>
+        <span>{p.wind}/{p.gust} km/h</span>
         <span className="text-muted-foreground">UV</span>
         <span>{p.uv.toFixed(1)}</span>
       </div>
     </div>
   );
 }
+
 
 function Legend({ items }: { items: Array<{ kind: "dot" | "dash" | "bar"; color: string; label: string }> }) {
   return (
