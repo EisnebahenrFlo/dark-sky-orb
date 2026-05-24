@@ -107,20 +107,77 @@ export interface WeatherData {
 
 const ALLOWED_COUNTRIES = new Set(["DE", "AT", "CH", "IT"]);
 
+async function searchByPostalCode(plz: string): Promise<GeoResult[]> {
+  const countries: Array<{ code: "DE" | "AT" | "CH" | "IT"; name: string }> = [
+    { code: "DE", name: "Deutschland" },
+    { code: "AT", name: "Österreich" },
+    { code: "CH", name: "Schweiz" },
+    { code: "IT", name: "Italien" },
+  ];
+  const responses = await Promise.all(
+    countries.map(({ code }) =>
+      fetch(`https://api.zippopotam.us/${code.toLowerCase()}/${encodeURIComponent(plz)}`)
+        .then((r) => (r.ok ? r.json() : null))
+        .catch(() => null),
+    ),
+  );
+  const out: GeoResult[] = [];
+  responses.forEach((data, i) => {
+    if (!data || !Array.isArray(data.places)) return;
+    const { code, name } = countries[i];
+    data.places.forEach((p: any, idx: number) => {
+      out.push({
+        id: Number(`${Date.now() % 1_000_000}${i}${idx}`),
+        name: p["place name"],
+        latitude: Number(p.latitude),
+        longitude: Number(p.longitude),
+        country: name,
+        country_code: code,
+        admin1: p.state || undefined,
+        postcodes: [plz],
+      });
+    });
+  });
+  return out;
+}
+
 export async function searchCities(query: string): Promise<GeoResult[]> {
   const trimmed = query.trim();
   if (trimmed.length < 2) return [];
   if (/^\d{1,3}$/.test(trimmed)) return [];
+
+  // PLZ: Open-Meteo + Zippopotam (DACH+IT) parallel, dedupliziert
+  if (/^\d{4,5}$/.test(trimmed)) {
+    const [omRes, zipRes] = await Promise.all([
+      fetch(
+        `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(trimmed)}&count=10&language=de`,
+      )
+        .then((r) => (r.ok ? r.json() : { results: [] }))
+        .catch(() => ({ results: [] })),
+      searchByPostalCode(trimmed),
+    ]);
+    const omFiltered: GeoResult[] = (omRes.results ?? []).filter((r: GeoResult) =>
+      ALLOWED_COUNTRIES.has(r.country_code?.toUpperCase() ?? ""),
+    );
+    const merged = [...omFiltered, ...zipRes];
+    const seen = new Set<string>();
+    const deduped = merged.filter((r) => {
+      const k = `${r.country_code}-${r.name}-${r.latitude.toFixed(2)}-${r.longitude.toFixed(2)}`;
+      if (seen.has(k)) return false;
+      seen.add(k);
+      return true;
+    });
+    deduped.sort((a, b) => (b.population ?? 0) - (a.population ?? 0));
+    return deduped;
+  }
+
+  // Stadtname-Suche (unverändert)
   const url = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(trimmed)}&count=10&language=de`;
   const res = await fetch(url);
   if (!res.ok) throw new Error("Suche fehlgeschlagen");
   const data = await res.json();
   const results: GeoResult[] = data.results ?? [];
-  const filtered = results.filter((r) => ALLOWED_COUNTRIES.has(r.country_code));
-  if (/^\d{4,5}$/.test(trimmed)) {
-    filtered.sort((a, b) => (b.population ?? 0) - (a.population ?? 0));
-  }
-  return filtered;
+  return results.filter((r) => ALLOWED_COUNTRIES.has(r.country_code?.toUpperCase() ?? ""));
 }
 
 function getWeatherModel(countryCode?: string): string {
