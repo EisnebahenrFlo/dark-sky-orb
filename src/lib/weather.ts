@@ -7,6 +7,8 @@ export interface GeoResult {
   country_code: string;
   admin1?: string;
   admin2?: string;
+  population?: number;
+  postcodes?: string[];
 }
 
 export interface CurrentWeather {
@@ -107,13 +109,18 @@ const ALLOWED_COUNTRIES = new Set(["DE", "AT", "CH", "IT"]);
 
 export async function searchCities(query: string): Promise<GeoResult[]> {
   const trimmed = query.trim();
-  if (!trimmed) return [];
+  if (trimmed.length < 2) return [];
+  if (/^\d{1,3}$/.test(trimmed)) return [];
   const url = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(trimmed)}&count=10&language=de`;
   const res = await fetch(url);
   if (!res.ok) throw new Error("Suche fehlgeschlagen");
   const data = await res.json();
   const results: GeoResult[] = data.results ?? [];
-  return results.filter((r) => ALLOWED_COUNTRIES.has(r.country_code));
+  const filtered = results.filter((r) => ALLOWED_COUNTRIES.has(r.country_code));
+  if (/^\d{4,5}$/.test(trimmed)) {
+    filtered.sort((a, b) => (b.population ?? 0) - (a.population ?? 0));
+  }
+  return filtered;
 }
 
 function getWeatherModel(countryCode?: string): string {
