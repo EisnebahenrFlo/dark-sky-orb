@@ -7,6 +7,8 @@ export interface GeoResult {
   country_code: string;
   admin1?: string;
   admin2?: string;
+  population?: number;
+  postcodes?: string[];
 }
 
 export interface CurrentWeather {
