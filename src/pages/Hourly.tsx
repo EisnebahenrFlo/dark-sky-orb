@@ -2,7 +2,7 @@ import { Clock } from "lucide-react";
 import { PageState } from "@/components/PageState";
 import { SectionHeader } from "@/components/SectionHeader";
 import { HourlyList } from "@/components/hourly/HourlyList";
-import { HourlyChart } from "@/components/hourly/HourlyChart";
+import { HourlyForecastChart } from "@/components/hourly/HourlyForecastChart";
 import { useWeather } from "@/contexts/WeatherContext";
 
 export function HourlyPage() {
@@ -20,7 +20,7 @@ export function HourlyPage() {
           <section className="space-y-5">
             <SectionHeader title="Stündlich" subtitle="Nächste 24 Stunden" />
             <HourlyList hourly={data.hourly} daily={data.daily} current={data.current} />
-            <HourlyChart hourly={data.hourly} />
+            <HourlyForecastChart hourly={data.hourly} daily={data.daily} currentTime={data.current.time} />
           </section>
         )}
       </PageState>
