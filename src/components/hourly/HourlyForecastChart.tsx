@@ -51,21 +51,25 @@ function UnifiedTooltip({ active, payload, label }: any) {
   const p = payload[0]?.payload as Row | undefined;
   if (!p) return null;
   return (
-    <div className="rounded-lg border border-border/60 bg-popover/95 px-2.5 py-1.5 text-[11px] shadow-xl backdrop-blur">
+    <div
+      className="pointer-events-none absolute right-2 top-2 z-10 rounded-lg border border-border/40 bg-popover/95 px-2 py-1.5 text-xs shadow-xl backdrop-blur dark:border-white/5"
+      style={{ maxWidth: 160 }}
+    >
       <div className="mb-1 font-medium tabular-nums">{label}</div>
-      <div className="grid grid-cols-[auto_auto] gap-x-3 gap-y-0.5 tabular-nums">
+      <div className="grid grid-cols-[auto_auto] gap-x-2 gap-y-0.5 tabular-nums">
         <span className="text-muted-foreground">Temp</span>
-        <span>{p.temp}° <span className="text-muted-foreground">(gef. {p.feels}°)</span></span>
+        <span>{p.temp}° <span className="text-muted-foreground">({p.feels}°)</span></span>
         <span className="text-muted-foreground">Regen</span>
-        <span>{p.pop}% · {p.precip.toFixed(1)} mm</span>
+        <span>{p.pop}% · {p.precip.toFixed(1)}mm</span>
         <span className="text-muted-foreground">Wind</span>
-        <span>{p.wind} <span className="text-muted-foreground">/ Böen {p.gust}</span> km/h</span>
+        <span>{p.wind}/{p.gust} km/h</span>
         <span className="text-muted-foreground">UV</span>
         <span>{p.uv.toFixed(1)}</span>
       </div>
     </div>
   );
 }
+
 
 function Legend({ items }: { items: Array<{ kind: "dot" | "dash" | "bar"; color: string; label: string }> }) {
   return (
@@ -188,7 +192,7 @@ export function HourlyForecastChart({
                 unit="°"
                 domain={["dataMin - 1", "dataMax + 1"]}
               />
-              <Tooltip content={<UnifiedTooltip />} cursor={{ stroke: "oklch(1 0 0 / 0.15)" }} />
+              <Tooltip content={<UnifiedTooltip />} cursor={false} wrapperStyle={{ pointerEvents: "none" }} position={{ x: 0, y: 0 }} />
               <Area type="monotone" dataKey="diffCold" stroke="none" fill="#3B82F6" fillOpacity={0.18} isAnimationActive={false} connectNulls={false} baseValue={0} activeDot={false} />
               <Area type="monotone" dataKey="diffWarm" stroke="none" fill="#EF4444" fillOpacity={0.18} isAnimationActive={false} connectNulls={false} baseValue={0} activeDot={false} />
               <Area type="monotone" dataKey="temp" stroke={accent} strokeOpacity={0.6} strokeWidth={2} fill={accent} fillOpacity={0.08} dot={false} activeDot={{ r: 3 }} />
@@ -226,7 +230,7 @@ export function HourlyForecastChart({
                 unit="%"
               />
               <YAxis yAxisId="mm" orientation="right" hide domain={[0, (max: number) => Math.max(max, 2)]} />
-              <Tooltip content={<UnifiedTooltip />} cursor={{ fill: "oklch(1 0 0 / 0.04)" }} />
+              <Tooltip content={<UnifiedTooltip />} cursor={false} wrapperStyle={{ pointerEvents: "none" }} position={{ x: 0, y: 0 }} />
               <Bar yAxisId="pop" dataKey="pop" radius={[3, 3, 0, 0]} fill="#60A5FA" fillOpacity={0.7} isAnimationActive={false} />
               <Bar yAxisId="mm" dataKey="precip" radius={[3, 3, 0, 0]} fill="#1D4ED8" fillOpacity={0.85} isAnimationActive={false} />
               {nowLabel && <ReferenceLine yAxisId="pop" x={nowLabel} stroke={accent} strokeWidth={1.5} strokeDasharray="4 4" strokeOpacity={0.8} />}
@@ -257,7 +261,7 @@ export function HourlyForecastChart({
                 domain={[0, (max: number) => Math.max(max, 30)]}
                 allowDecimals={false}
               />
-              <Tooltip content={<UnifiedTooltip />} cursor={{ stroke: "oklch(1 0 0 / 0.15)" }} />
+              <Tooltip content={<UnifiedTooltip />} cursor={false} wrapperStyle={{ pointerEvents: "none" }} position={{ x: 0, y: 0 }} />
               <Area type="monotone" dataKey="wind" stackId="band" stroke="none" fill="transparent" isAnimationActive={false} activeDot={false} />
               <Area type="monotone" dataKey="gustBand" stackId="band" stroke="none" fill={accent} fillOpacity={0.06} isAnimationActive={false} activeDot={false} />
               <ReferenceLine y={20} stroke={muted} strokeDasharray="2 3" strokeOpacity={0.4} label={{ value: "leichte Brise", position: "insideTopRight", fill: muted, fontSize: 8 }} />
@@ -324,7 +328,7 @@ export function HourlyForecastChart({
                 tickLine={false}
                 axisLine={false}
               />
-              <Tooltip content={<UnifiedTooltip />} cursor={{ fill: "oklch(1 0 0 / 0.04)" }} />
+              <Tooltip content={<UnifiedTooltip />} cursor={false} wrapperStyle={{ pointerEvents: "none" }} position={{ x: 0, y: 0 }} />
               <Bar dataKey="uv" radius={[3, 3, 0, 0]} isAnimationActive={false}>
                 {rows.map((r, i) => (
                   <Cell key={i} fill={r.uv > 0 ? uvColor(r.uv) : "transparent"} />
