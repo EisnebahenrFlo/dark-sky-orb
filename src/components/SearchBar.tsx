@@ -75,7 +75,7 @@ export function SearchBar({ onSelect, recent, onClearRecent }: Props) {
         )}
       </div>
 
-      {open && (showRecent || list.length > 0) && (
+      {open && (showRecent || q.trim().length >= 2) && (
         <div className="glass absolute z-20 mt-2 w-full overflow-hidden rounded-2xl shadow-2xl">
           {showRecent && (
             <div className="flex items-center justify-between px-5 py-2 text-xs uppercase tracking-wider text-muted-foreground">
