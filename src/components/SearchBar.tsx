@@ -60,7 +60,7 @@ export function SearchBar({ onSelect, recent, onClearRecent }: Props) {
           value={q}
           onChange={(e) => setQ(e.target.value)}
           onFocus={() => setOpen(true)}
-          placeholder="Stadt in DACH oder Italien suchen…"
+          placeholder="Stadt oder Postleitzahl…"
           className="flex-1 bg-transparent text-base outline-none placeholder:text-muted-foreground"
         />
         {loading && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
