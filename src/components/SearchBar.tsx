@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Search, Loader2, MapPin, Clock, X } from "lucide-react";
 import { searchCities, type GeoResult } from "@/lib/weather";
+import { isPostalCode } from "@/utils/postalCode";
 
 interface Props {
   onSelect: (loc: GeoResult) => void;
