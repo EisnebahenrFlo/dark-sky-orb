@@ -1,8 +1,6 @@
 import {
   ComposedChart,
-  AreaChart,
   BarChart,
-  LineChart,
   Area,
   Bar,
   Line,
@@ -35,13 +33,13 @@ interface Row {
   iso: string;
   temp: number;
   feels: number;
-  diffWarm: number | null; // feels > temp band
-  diffCold: number | null; // feels < temp band
+  diffWarm: number | null;
+  diffCold: number | null;
   pop: number;
   precip: number;
   wind: number;
   gust: number;
-  gustBand: number; // gust - wind for stacked fill
+  gustBand: number;
   uv: number;
 }
 
@@ -69,6 +67,26 @@ function UnifiedTooltip({ active, payload, label }: any) {
   );
 }
 
+function Legend({ items }: { items: Array<{ kind: "dot" | "dash" | "bar"; color: string; label: string }> }) {
+  return (
+    <div className="flex flex-wrap items-center gap-x-[10px] gap-y-1 px-1 pb-1 text-xs opacity-60">
+      {items.map((it, i) => (
+        <span key={i} className="inline-flex items-center gap-1.5">
+          {it.kind === "dot" && <span className="inline-block h-1.5 w-1.5 rounded-full" style={{ background: it.color }} />}
+          {it.kind === "bar" && <span className="inline-block h-2 w-1.5 rounded-sm" style={{ background: it.color }} />}
+          {it.kind === "dash" && (
+            <span
+              className="inline-block h-0 w-3"
+              style={{ borderTop: `1.5px dashed ${it.color}` }}
+            />
+          )}
+          <span>{it.label}</span>
+        </span>
+      ))}
+    </div>
+  );
+}
+
 export function HourlyForecastChart({
   hourly,
   daily,
@@ -78,91 +96,90 @@ export function HourlyForecastChart({
   daily?: DailyData;
   currentTime?: string;
 }) {
-  const rows: Row[] = hourly.time.slice(0, HOURS).map((t, i) => {
+  // Find starting index = current hour (or closest)
+  const now = currentTime ? new Date(currentTime).getTime() : Date.now();
+  let startIdx = 0;
+  let bestStart = Infinity;
+  for (let i = 0; i < hourly.time.length; i++) {
+    const d = Math.abs(new Date(hourly.time[i]).getTime() - now);
+    if (d < bestStart) { bestStart = d; startIdx = i; }
+  }
+  const endIdx = Math.min(startIdx + HOURS, hourly.time.length);
+
+  const rows: Row[] = [];
+  for (let i = startIdx; i < endIdx; i++) {
+    const t = hourly.time[i];
     const temp = Math.round(hourly.temperature_2m[i]);
     const feels = Math.round(hourly.apparent_temperature?.[i] ?? hourly.temperature_2m[i]);
     const delta = feels - temp;
     const wind = Math.round(hourly.wind_speed_10m[i] ?? 0);
     const gust = Math.round(hourly.wind_gusts_10m?.[i] ?? wind);
-    return {
+    rows.push({
       time: fmtHour(t),
       iso: t,
       temp,
       feels,
       diffWarm: delta > 3 ? delta : null,
       diffCold: delta < -3 ? delta : null,
-      pop: hourly.precipitation_probability?.[i] ?? 0,
+      pop: Math.round(hourly.precipitation_probability?.[i] ?? 0),
       precip: hourly.precipitation?.[i] ?? 0,
       wind,
       gust,
       gustBand: Math.max(0, gust - wind),
       uv: hourly.uv_index?.[i] ?? 0,
-    };
-  });
-
-  // Find current-time tick label (closest hour)
-  const now = currentTime ? new Date(currentTime).getTime() : Date.now();
-  let nowLabel: string | undefined;
-  let bestDiff = Infinity;
-  for (const r of rows) {
-    const d = Math.abs(new Date(r.iso).getTime() - now);
-    if (d < bestDiff) { bestDiff = d; nowLabel = r.time; }
+    });
   }
 
-  // Sunrise/sunset labels within the 24h window
-  const firstIso = rows[0]?.iso;
-  const lastIso = rows[rows.length - 1]?.iso;
-  const startMs = firstIso ? new Date(firstIso).getTime() : 0;
-  const endMs = lastIso ? new Date(lastIso).getTime() : 0;
-  function pickEvent(times?: string[]): string | undefined {
+  const nowLabel = rows[0]?.time;
+
+  // Sunrise/sunset within the window
+  const startMs = rows[0] ? new Date(rows[0].iso).getTime() : 0;
+  const endMs = rows[rows.length - 1] ? new Date(rows[rows.length - 1].iso).getTime() : 0;
+  function pickEvent(times?: string[]): { at: string; label: string } | undefined {
     if (!times) return undefined;
     for (const ts of times) {
       const ms = new Date(ts).getTime();
       if (ms >= startMs && ms <= endMs) {
         const label = new Date(ts).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" });
-        // map to the closest row's time label
         let best: string | undefined;
         let bd = Infinity;
         for (const r of rows) {
           const d = Math.abs(new Date(r.iso).getTime() - ms);
           if (d < bd) { bd = d; best = r.time; }
         }
-        return best ? `${best}|${label}` : undefined;
+        if (best) return { at: best, label };
       }
     }
     return undefined;
   }
-  const sunriseTick = pickEvent(daily?.sunrise);
-  const sunsetTick = pickEvent(daily?.sunset);
-  const sunriseLabel = sunriseTick?.split("|")[1];
-  const sunsetLabel = sunsetTick?.split("|")[1];
-  const sunriseAt = sunriseTick?.split("|")[0];
-  const sunsetAt = sunsetTick?.split("|")[0];
+  const sunrise = pickEvent(daily?.sunrise);
+  const sunset = pickEvent(daily?.sunset);
 
   const uvPeak = rows.reduce((m, r) => (r.uv > m ? r.uv : m), 0);
-  const uvPeakLabel = uvPeak > 0 ? `UV-Peak: ${uvPeak.toFixed(1)}` : null;
 
   const accent = "var(--accent)";
   const muted = "var(--muted-foreground)";
   const grid = "oklch(1 0 0 / 0.04)";
   const sep = "oklch(1 0 0 / 0.08)";
 
-  const commonX = (
-    <XAxis dataKey="time" hide tickLine={false} axisLine={false} />
-  );
+  const hiddenX = <XAxis dataKey="time" hide tickLine={false} axisLine={false} />;
 
   return (
     <div className="glass overflow-hidden rounded-3xl">
       {/* Panel 1: Temp & Gefühlt */}
       <div className="px-3 pt-3">
-        <div className="px-1 text-[10px] uppercase tracking-wider text-muted-foreground/70">
+        <div className="px-1 pb-1 text-[10px] uppercase tracking-wider text-muted-foreground/70">
           Temperatur & Gefühlt
         </div>
-        <div className="h-[80px] w-full sm:h-[88px]">
+        <Legend items={[
+          { kind: "dot", color: "var(--accent)", label: "Temperatur" },
+          { kind: "dash", color: "var(--accent)", label: "Gefühlt" },
+        ]} />
+        <div className="h-[120px] w-full pt-2 pb-1 sm:h-[160px]">
           <ResponsiveContainer width="100%" height="100%">
             <ComposedChart data={rows} margin={MARGIN}>
               <CartesianGrid stroke={grid} vertical={false} />
-              {commonX}
+              {hiddenX}
               <YAxis
                 width={Y_WIDTH}
                 tick={{ fill: muted, fontSize: 9 }}
@@ -172,50 +189,10 @@ export function HourlyForecastChart({
                 domain={["dataMin - 1", "dataMax + 1"]}
               />
               <Tooltip content={<UnifiedTooltip />} cursor={{ stroke: "oklch(1 0 0 / 0.15)" }} />
-              {/* Diff bands (between temp and feels) */}
-              <Area
-                type="monotone"
-                dataKey="diffCold"
-                stroke="none"
-                fill="#3B82F6"
-                fillOpacity={0.18}
-                isAnimationActive={false}
-                connectNulls={false}
-                baseValue={0}
-                activeDot={false}
-              />
-              <Area
-                type="monotone"
-                dataKey="diffWarm"
-                stroke="none"
-                fill="#EF4444"
-                fillOpacity={0.18}
-                isAnimationActive={false}
-                connectNulls={false}
-                baseValue={0}
-                activeDot={false}
-              />
-              <Area
-                type="monotone"
-                dataKey="temp"
-                stroke={accent}
-                strokeOpacity={0.6}
-                strokeWidth={2}
-                fill={accent}
-                fillOpacity={0.08}
-                dot={false}
-                activeDot={{ r: 3 }}
-              />
-              <Line
-                type="monotone"
-                dataKey="feels"
-                stroke={accent}
-                strokeOpacity={0.4}
-                strokeDasharray="3 3"
-                strokeWidth={1.5}
-                dot={false}
-                activeDot={false}
-              />
+              <Area type="monotone" dataKey="diffCold" stroke="none" fill="#3B82F6" fillOpacity={0.18} isAnimationActive={false} connectNulls={false} baseValue={0} activeDot={false} />
+              <Area type="monotone" dataKey="diffWarm" stroke="none" fill="#EF4444" fillOpacity={0.18} isAnimationActive={false} connectNulls={false} baseValue={0} activeDot={false} />
+              <Area type="monotone" dataKey="temp" stroke={accent} strokeOpacity={0.6} strokeWidth={2} fill={accent} fillOpacity={0.08} dot={false} activeDot={{ r: 3 }} />
+              <Line type="monotone" dataKey="feels" stroke={accent} strokeOpacity={0.4} strokeDasharray="3 3" strokeWidth={1.5} dot={false} activeDot={false} />
               {nowLabel && <ReferenceLine x={nowLabel} stroke={accent} strokeDasharray="2 3" strokeOpacity={0.6} />}
             </ComposedChart>
           </ResponsiveContainer>
@@ -226,15 +203,20 @@ export function HourlyForecastChart({
 
       {/* Panel 2: Niederschlag */}
       <div className="px-3 pt-2">
-        <div className="px-1 text-[10px] uppercase tracking-wider text-muted-foreground/70">
+        <div className="px-1 pb-1 text-[10px] uppercase tracking-wider text-muted-foreground/70">
           Niederschlag
         </div>
-        <div className="h-[80px] w-full sm:h-[88px]">
+        <Legend items={[
+          { kind: "bar", color: "#60A5FA", label: "Regenwahrsch. %" },
+          { kind: "bar", color: "#1D4ED8", label: "Regen mm" },
+        ]} />
+        <div className="h-[100px] w-full pt-2 pb-1 sm:h-[130px]">
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={rows} margin={MARGIN}>
+            <ComposedChart data={rows} margin={MARGIN}>
               <CartesianGrid stroke={grid} vertical={false} />
-              {commonX}
+              {hiddenX}
               <YAxis
+                yAxisId="pop"
                 width={Y_WIDTH}
                 domain={[0, 100]}
                 ticks={[0, 100]}
@@ -243,14 +225,12 @@ export function HourlyForecastChart({
                 axisLine={false}
                 unit="%"
               />
+              <YAxis yAxisId="mm" orientation="right" hide domain={[0, (max: number) => Math.max(max, 2)]} />
               <Tooltip content={<UnifiedTooltip />} cursor={{ fill: "oklch(1 0 0 / 0.04)" }} />
-              <Bar dataKey="pop" radius={[3, 3, 0, 0]} isAnimationActive={false}>
-                {rows.map((r, i) => (
-                  <Cell key={i} fill="#3B82F6" fillOpacity={r.precip > 0.1 ? 0.85 : 0.5} />
-                ))}
-              </Bar>
-              {nowLabel && <ReferenceLine x={nowLabel} stroke={accent} strokeDasharray="2 3" strokeOpacity={0.6} />}
-            </BarChart>
+              <Bar yAxisId="pop" dataKey="pop" radius={[3, 3, 0, 0]} fill="#60A5FA" fillOpacity={0.7} isAnimationActive={false} />
+              <Bar yAxisId="mm" dataKey="precip" radius={[3, 3, 0, 0]} fill="#1D4ED8" fillOpacity={0.85} isAnimationActive={false} />
+              {nowLabel && <ReferenceLine yAxisId="pop" x={nowLabel} stroke={accent} strokeDasharray="2 3" strokeOpacity={0.6} />}
+            </ComposedChart>
           </ResponsiveContainer>
         </div>
       </div>
@@ -259,12 +239,16 @@ export function HourlyForecastChart({
 
       {/* Panel 3: Wind & Böen */}
       <div className="px-3 pt-2">
-        <div className="px-1 text-[11px] font-medium text-foreground/90">Wind & Böen</div>
-        <div className="h-[110px] w-full sm:h-[120px]">
+        <div className="px-1 pb-1 text-[11px] font-medium text-foreground/90">Wind & Böen</div>
+        <Legend items={[
+          { kind: "dot", color: "var(--accent)", label: "Windgeschw." },
+          { kind: "dash", color: "var(--accent)", label: "Böen" },
+        ]} />
+        <div className="h-[120px] w-full pt-2 pb-1 sm:h-[160px]">
           <ResponsiveContainer width="100%" height="100%">
             <ComposedChart data={rows} margin={MARGIN}>
               <CartesianGrid stroke={grid} vertical={false} />
-              {commonX}
+              {hiddenX}
               <YAxis
                 width={Y_WIDTH}
                 tick={{ fill: muted, fontSize: 9 }}
@@ -274,58 +258,12 @@ export function HourlyForecastChart({
                 allowDecimals={false}
               />
               <Tooltip content={<UnifiedTooltip />} cursor={{ stroke: "oklch(1 0 0 / 0.15)" }} />
-              {/* Stacked invisible base + band to show wind→gust spread */}
-              <Area
-                type="monotone"
-                dataKey="wind"
-                stackId="band"
-                stroke="none"
-                fill="transparent"
-                isAnimationActive={false}
-                activeDot={false}
-              />
-              <Area
-                type="monotone"
-                dataKey="gustBand"
-                stackId="band"
-                stroke="none"
-                fill={accent}
-                fillOpacity={0.1}
-                isAnimationActive={false}
-                activeDot={false}
-              />
-              <ReferenceLine
-                y={20}
-                stroke={muted}
-                strokeDasharray="2 3"
-                strokeOpacity={0.4}
-                label={{ value: "leichte Brise", position: "insideTopRight", fill: muted, fontSize: 8 }}
-              />
-              <ReferenceLine
-                y={50}
-                stroke={muted}
-                strokeDasharray="2 3"
-                strokeOpacity={0.4}
-                label={{ value: "starker Wind", position: "insideTopRight", fill: muted, fontSize: 8 }}
-              />
-              <Line
-                type="monotone"
-                dataKey="gust"
-                stroke={accent}
-                strokeOpacity={0.6}
-                strokeDasharray="4 3"
-                strokeWidth={1.5}
-                dot={false}
-                activeDot={false}
-              />
-              <Line
-                type="monotone"
-                dataKey="wind"
-                stroke={accent}
-                strokeWidth={2}
-                dot={false}
-                activeDot={{ r: 3 }}
-              />
+              <Area type="monotone" dataKey="wind" stackId="band" stroke="none" fill="transparent" isAnimationActive={false} activeDot={false} />
+              <Area type="monotone" dataKey="gustBand" stackId="band" stroke="none" fill={accent} fillOpacity={0.06} isAnimationActive={false} activeDot={false} />
+              <ReferenceLine y={20} stroke={muted} strokeDasharray="2 3" strokeOpacity={0.4} label={{ value: "leichte Brise", position: "insideTopRight", fill: muted, fontSize: 8 }} />
+              <ReferenceLine y={50} stroke={muted} strokeDasharray="2 3" strokeOpacity={0.4} label={{ value: "starker Wind", position: "insideTopRight", fill: muted, fontSize: 8 }} />
+              <Line type="monotone" dataKey="gust" stroke={accent} strokeOpacity={0.6} strokeDasharray="4 3" strokeWidth={1} dot={false} activeDot={false} />
+              <Line type="monotone" dataKey="wind" stroke={accent} strokeWidth={2} dot={false} activeDot={{ r: 3 }} />
               {nowLabel && <ReferenceLine x={nowLabel} stroke={accent} strokeDasharray="2 3" strokeOpacity={0.6} />}
             </ComposedChart>
           </ResponsiveContainer>
@@ -334,15 +272,24 @@ export function HourlyForecastChart({
 
       <div style={{ height: 1, background: sep }} />
 
-      {/* Panel 4: UV-Index (with bottom X axis) */}
+      {/* Panel 4: UV-Index */}
       <div className="px-3 pb-3 pt-2">
-        <div className="flex items-baseline justify-between px-1">
+        <div className="flex items-center justify-between px-1 pb-1">
           <div className="text-[11px] font-medium text-foreground/90">UV-Index</div>
-          {uvPeakLabel && (
-            <div className="text-[10px] tabular-nums text-muted-foreground">{uvPeakLabel}</div>
+          {uvPeak > 0 && (
+            <span className="rounded-full bg-orange-100 px-2 py-0.5 text-xs text-orange-700 dark:bg-orange-900 dark:text-orange-300">
+              Peak: {uvPeak.toFixed(1)}
+            </span>
           )}
         </div>
-        <div className="h-[120px] w-full sm:h-[132px]">
+        <Legend items={[
+          { kind: "dot", color: "#22C55E", label: "Gering" },
+          { kind: "dot", color: "#EAB308", label: "Mittel" },
+          { kind: "dot", color: "#F97316", label: "Hoch" },
+          { kind: "dot", color: "#EF4444", label: "Sehr hoch" },
+          { kind: "dot", color: "#A855F7", label: "Extrem" },
+        ]} />
+        <div className="h-[110px] w-full pt-2 pb-1 sm:h-[140px]">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={rows} margin={{ ...MARGIN, bottom: 4 }}>
               <CartesianGrid stroke={grid} vertical={false} />
@@ -368,26 +315,14 @@ export function HourlyForecastChart({
                   <Cell key={i} fill={r.uv > 0 ? uvColor(r.uv) : "transparent"} />
                 ))}
               </Bar>
-              {nowLabel && (
-                <ReferenceLine x={nowLabel} stroke={accent} strokeDasharray="2 3" strokeOpacity={0.7} />
+              {nowLabel && <ReferenceLine x={nowLabel} stroke={accent} strokeDasharray="2 3" strokeOpacity={0.7} />}
+              {sunrise && (
+                <ReferenceLine x={sunrise.at} stroke={muted} strokeDasharray="2 3" strokeOpacity={0.5}
+                  label={{ value: `↑ ${sunrise.label}`, position: "top", fill: muted, fontSize: 9 }} />
               )}
-              {sunriseAt && sunriseLabel && (
-                <ReferenceLine
-                  x={sunriseAt}
-                  stroke={muted}
-                  strokeDasharray="2 3"
-                  strokeOpacity={0.5}
-                  label={{ value: `↑ ${sunriseLabel}`, position: "top", fill: muted, fontSize: 9 }}
-                />
-              )}
-              {sunsetAt && sunsetLabel && (
-                <ReferenceLine
-                  x={sunsetAt}
-                  stroke={muted}
-                  strokeDasharray="2 3"
-                  strokeOpacity={0.5}
-                  label={{ value: `↓ ${sunsetLabel}`, position: "top", fill: muted, fontSize: 9 }}
-                />
+              {sunset && (
+                <ReferenceLine x={sunset.at} stroke={muted} strokeDasharray="2 3" strokeOpacity={0.5}
+                  label={{ value: `↓ ${sunset.label}`, position: "top", fill: muted, fontSize: 9 }} />
               )}
             </BarChart>
           </ResponsiveContainer>
