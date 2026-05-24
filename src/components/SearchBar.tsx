@@ -86,10 +86,18 @@ export function SearchBar({ onSelect, recent, onClearRecent }: Props) {
                   onClick={() => select(r)}
                   className="flex w-full items-center gap-3 px-5 py-3 text-left transition hover:bg-white/5"
                 >
-                  <MapPin className="h-4 w-4 text-primary" strokeWidth={1.5} />
-                  <div className="flex-1">
-                    <div className="font-medium">{r.name}</div>
-                    <div className="text-xs text-muted-foreground">
+                  <MapPin className="h-4 w-4 shrink-0 text-primary" strokeWidth={1.5} />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-1.5">
+                      <span className="truncate font-medium">{r.name}</span>
+                      {isPostalCode(q) && (
+                        <span className="rounded bg-blue-500/10 px-1.5 py-0.5 text-[10px] font-medium text-blue-600 dark:text-blue-400">
+                          PLZ
+                        </span>
+                      )}
+                    </div>
+                    <div className="truncate text-xs text-muted-foreground">
+                      {r.postcodes?.[0] && `${r.postcodes[0]} · `}
                       {[r.admin1, r.country].filter(Boolean).join(", ")}
                     </div>
                   </div>
