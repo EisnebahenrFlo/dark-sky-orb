@@ -291,7 +291,7 @@ export function HourlyForecastChart({
         ]} />
         <div className="h-[110px] w-full pt-2 pb-1 sm:h-[140px]">
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={rows} margin={{ ...MARGIN, bottom: 4 }}>
+            <BarChart data={rows} margin={{ ...MARGIN, top: 18, bottom: 4 }}>
               <CartesianGrid stroke={grid} vertical={false} />
               <XAxis
                 dataKey="time"
