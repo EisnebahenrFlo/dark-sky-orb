@@ -106,9 +106,10 @@ export function HourlyList({
   return (
     <div className="glass overflow-hidden rounded-3xl">
       <div className="divide-y divide-border/50">
+        {(() => null)()}
         {items.map((item, idx) => {
           if (item.kind === "row") {
-            return <HourlyRow key={`row-${item.row.iso}`} row={item.row} />;
+            return <HourlyRow key={`row-${item.row.iso}`} row={item.row} showPrecipColumn={showPrecipColumn} />;
           }
           if (item.kind === "sun") {
             return <SunDivider key={item.key} kind={item.event.kind} time={item.event.label} />;
