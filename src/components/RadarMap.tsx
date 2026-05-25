@@ -118,8 +118,8 @@ export default function RadarMap({ refreshKey = 0 }: { refreshKey?: number }) {
             {data &&
               frames.map((f, i) => (
                 <TileLayer
-                  key={f.time}
-                  url={frameTileUrl(data.snapshot, f)}
+                  key={`${f.time}_${refreshKey}`}
+                  url={`${frameTileUrl(data.snapshot, f)}&_v=${refreshKey}`}
                   opacity={i === index ? 0.85 : 0}
                   maxZoom={12}
                   zIndex={10 + i}
@@ -127,6 +127,7 @@ export default function RadarMap({ refreshKey = 0 }: { refreshKey?: number }) {
               ))}
             <Marker position={[location.latitude, location.longitude]} />
             <Recenter lat={location.latitude} lon={location.longitude} />
+            <InvalidateOnRefresh refreshKey={refreshKey} />
           </MapContainer>
         </div>
       </div>
