@@ -125,19 +125,8 @@ export function WarnungenPage() {
         </span>
       </div>
 
-      <div className="sticky top-0 z-10 -mx-4 flex items-center justify-between border-b border-border/40 bg-background/80 px-4 py-2 backdrop-blur-md">
-        <span className="text-xs text-muted-foreground">
-          {lastUpdated ? formatTimestamp(new Date(lastUpdated)) : "—"}
-        </span>
-        <button
-          onClick={handleRefresh}
-          disabled={loading}
-          className="flex items-center gap-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground disabled:opacity-50"
-        >
-          <RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} />
-          <span>Aktualisieren</span>
-        </button>
-      </div>
+
+
 
 
       {/* Sticky compact risk indicator */}
