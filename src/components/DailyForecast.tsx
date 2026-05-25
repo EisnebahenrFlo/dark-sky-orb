@@ -24,7 +24,7 @@ function DayRow({ daily, i, hourly, current }: { daily: DailyData; i: number; ho
   const thunder = hourly
     ? dailyThunderRiskFromHourly(hourly.time, hourly.cape, hourly.lifted_index, daily.time[i])
     : { risk: 0, label: "Kein", color: "transparent" };
-  const showThunder = thunder.risk >= 20;
+  
 
   return (
     <div className="glass overflow-hidden rounded-2xl">
