@@ -34,21 +34,35 @@ function Recenter({ lat, lon }: { lat: number; lon: number }) {
   return null;
 }
 
+function InvalidateOnRefresh({ refreshKey }: { refreshKey: number }) {
+  const map = useMap();
+  useEffect(() => {
+    if (refreshKey === 0) return;
+    map.invalidateSize();
+  }, [refreshKey, map]);
+  return null;
+}
+
 const FRAME_MS_FAST = 400;
 const FRAME_MS_NEAR_NOW = 700;
 const LOOP_RESET_PAUSE_MS = 1000;
 
-export default function RadarMap() {
+export default function RadarMap({ refreshKey = 0 }: { refreshKey?: number }) {
   const { location } = useWeather();
   const { resolved } = useTheme();
   const isDev = isDevEnvironment();
 
-  const { data } = useQuery({
+  const { data, refetch } = useQuery({
     queryKey: ["rainbow"],
     queryFn: fetchRainbow,
     refetchInterval: 5 * 60 * 1000,
     staleTime: 60_000,
   });
+
+  useEffect(() => {
+    if (refreshKey === 0) return;
+    refetch();
+  }, [refreshKey, refetch]);
 
   const frames = useMemo(
     () => (data ? [...data.past, ...data.nowcast] : []),
@@ -104,8 +118,8 @@ export default function RadarMap() {
             {data &&
               frames.map((f, i) => (
                 <TileLayer
-                  key={f.time}
-                  url={frameTileUrl(data.snapshot, f)}
+                  key={`${f.time}_${refreshKey}`}
+                  url={`${frameTileUrl(data.snapshot, f)}&_v=${refreshKey}`}
                   opacity={i === index ? 0.85 : 0}
                   maxZoom={12}
                   zIndex={10 + i}
@@ -113,6 +127,7 @@ export default function RadarMap() {
               ))}
             <Marker position={[location.latitude, location.longitude]} />
             <Recenter lat={location.latitude} lon={location.longitude} />
+            <InvalidateOnRefresh refreshKey={refreshKey} />
           </MapContainer>
         </div>
       </div>

@@ -9,6 +9,7 @@ import { ThemeProvider, useTheme } from "@/hooks/useTheme";
 import { WeatherProvider } from "@/contexts/WeatherContext";
 import { RiskWarningsProvider } from "@/contexts/RiskWarningsContext";
 import { OfficialWarningsProvider } from "@/contexts/OfficialWarningsContext";
+import { SynoptikAnalysisProvider } from "@/contexts/SynoptikAnalysisContext";
 import { AppShell } from "@/components/AppShell";
 import { SplashScreen } from "@/components/SplashScreen";
 import { AppErrorBoundary } from "@/components/errors/AppErrorBoundary";
@@ -61,9 +62,11 @@ function RootComponent() {
           <WeatherProvider>
             <RiskWarningsProvider>
               <OfficialWarningsProvider>
-                <SplashScreen />
-                <AppShell />
-                <ThemedToaster />
+                <SynoptikAnalysisProvider>
+                  <SplashScreen />
+                  <AppShell />
+                  <ThemedToaster />
+                </SynoptikAnalysisProvider>
               </OfficialWarningsProvider>
             </RiskWarningsProvider>
           </WeatherProvider>

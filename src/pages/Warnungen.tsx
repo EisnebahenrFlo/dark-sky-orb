@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { AlertCircle, RefreshCw, ShieldAlert } from "lucide-react";
+import { AlertCircle, ShieldAlert } from "lucide-react";
 import { WarningsLoader } from "@/components/loaders/WarningsLoader";
 import { useRiskWarningsCtx } from "@/contexts/RiskWarningsContext";
 import { useOfficialWarningsCtx } from "@/contexts/OfficialWarningsContext";
@@ -125,19 +125,8 @@ export function WarnungenPage() {
         </span>
       </div>
 
-      <div className="sticky top-0 z-10 -mx-4 flex items-center justify-between border-b border-border/40 bg-background/80 px-4 py-2 backdrop-blur-md">
-        <span className="text-xs text-muted-foreground">
-          {lastUpdated ? formatTimestamp(new Date(lastUpdated)) : "—"}
-        </span>
-        <button
-          onClick={handleRefresh}
-          disabled={loading}
-          className="flex items-center gap-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground disabled:opacity-50"
-        >
-          <RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} />
-          <span>Aktualisieren</span>
-        </button>
-      </div>
+
+
 
 
       {/* Sticky compact risk indicator */}
@@ -195,7 +184,6 @@ export function WarnungenPage() {
               disabled={loading}
               className="inline-flex items-center gap-2 rounded-2xl bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground shadow-sm transition-opacity hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
               Erneut versuchen
             </button>
           </div>
@@ -244,14 +232,6 @@ export function WarnungenPage() {
             {lastUpdated ? `Letzte Prüfung: ${relMin(lastUpdated)}` : "—"}
             {data.cached && <span className="ml-2 not-italic">(aus Cache, max. 15 Min alt)</span>}
           </div>
-          <button
-            onClick={() => refresh()}
-            disabled={loading}
-            className="inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-foreground transition-colors hover:bg-foreground/5 disabled:opacity-50"
-          >
-            <RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} />
-            Neu prüfen
-          </button>
         </div>
       )}
     </div>

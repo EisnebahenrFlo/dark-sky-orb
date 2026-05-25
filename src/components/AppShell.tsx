@@ -4,7 +4,6 @@ import {
   Calendar,
   Map,
   Loader2,
-  RefreshCw,
   HelpCircle,
   AlertTriangle,
 } from "lucide-react";
@@ -34,7 +33,7 @@ const STATIC_TABS: TabDef[] = [
 ];
 
 export function AppShell() {
-  const { selectLocation, recent, clearRecent, isFetching, refresh } = useWeather();
+  const { selectLocation, recent, clearRecent, isFetching } = useWeather();
   const { data: riskData } = useRiskWarningsCtx();
   const { data: officialData } = useOfficialWarningsCtx();
   const { pathname } = useLocation();
@@ -85,14 +84,6 @@ export function AppShell() {
           {isFetching && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
           <FavoritesButton />
           <ThemeToggle />
-          <button
-            onClick={() => refresh()}
-            disabled={isFetching}
-            aria-label="Aktualisieren"
-            className="grid h-9 w-9 place-items-center rounded-full border border-border text-muted-foreground transition-colors hover:bg-foreground/5 hover:text-foreground disabled:opacity-50"
-          >
-            <RefreshCw className={`h-4 w-4 ${isFetching ? "animate-spin" : ""}`} strokeWidth={1.75} />
-          </button>
         </div>
       </header>
 

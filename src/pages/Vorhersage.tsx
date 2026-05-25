@@ -1,15 +1,26 @@
 import { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { HourlyPage } from "@/pages/Hourly";
 import { DailyPage } from "@/pages/Daily";
+import { RefreshButton } from "@/components/RefreshButton";
 
 type View = "hourly" | "daily";
 
 export function VorhersagePage() {
   const [view, setView] = useState<View>("hourly");
+  const queryClient = useQueryClient();
+
+  const handleRefresh = async () => {
+    await queryClient.invalidateQueries({ queryKey: ["weather"] });
+  };
+
   return (
-    <div className="space-y-4">
+    <div className="relative space-y-4">
+      <div className="absolute right-0 top-0 z-20">
+        <RefreshButton onRefresh={handleRefresh} />
+      </div>
       <div
-        className="flex w-full rounded-[10px] p-[3px]"
+        className="flex w-full rounded-[10px] p-[3px] pr-14"
         style={{ background: "#f0f4f8" }}
       >
         {[

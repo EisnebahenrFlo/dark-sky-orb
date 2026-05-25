@@ -1,4 +1,4 @@
-import { AlertTriangle, RefreshCw, ShieldCheck } from "lucide-react";
+import { AlertTriangle, ShieldCheck } from "lucide-react";
 import { useOfficialWarnings } from "@/hooks/useOfficialWarnings";
 import { OfficialWarningCard } from "./OfficialWarningCard";
 
@@ -18,7 +18,7 @@ function SkeletonCard() {
 }
 
 export function OfficialWarningsSection() {
-  const { data, loading, error, refresh } = useOfficialWarnings();
+  const { data, loading, error } = useOfficialWarnings();
 
   const sorted = data?.warnings ? [...data.warnings].sort((a, b) => b.level - a.level) : [];
 
@@ -53,19 +53,11 @@ export function OfficialWarningsSection() {
       )}
 
       {error && !data && (
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border bg-muted/40 p-4 text-sm">
+        <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-border bg-muted/40 p-4 text-sm">
           <div className="flex items-center gap-2 text-muted-foreground">
             <AlertTriangle className="h-4 w-4 text-yellow-500" />
             <span>Amtliche Quellen gerade nicht erreichbar – KI-Auswertung unten.</span>
           </div>
-          <button
-            type="button"
-            onClick={() => refresh()}
-            aria-label="Erneut versuchen"
-            className="grid h-8 w-8 place-items-center rounded-full border border-border text-muted-foreground hover:bg-foreground/5 hover:text-foreground"
-          >
-            <RefreshCw className="h-3.5 w-3.5" />
-          </button>
         </div>
       )}
 
