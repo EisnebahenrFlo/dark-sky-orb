@@ -95,7 +95,7 @@ export default function RadarMap() {
         <div className="h-[420px] w-full sm:h-[520px]">
           <MapContainer
             center={[location.latitude, location.longitude]}
-            zoom={7}
+            zoom={9}
             maxZoom={12}
             scrollWheelZoom
             style={{ height: "100%", width: "100%", background: "var(--muted)" }}
