@@ -151,7 +151,7 @@ export function WarnungenPage() {
       )}
 
       {/* RiskHero requires data; render only when available */}
-      {data && <RiskHero risk={data.gewitter_risiko_6h} />}
+      {data && <RiskHero risk={{ ...data.gewitter_risiko_6h, score: unifiedScore }} />}
 
       {/* SEKTION 1: Amtliche Warnungen — IMMER sichtbar, unabhängig vom KI-Status */}
       <OfficialWarningsSection />
