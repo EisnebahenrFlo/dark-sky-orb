@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Radio } from "lucide-react";
+import { Info, Radio } from "lucide-react";
+import type { HourlyData } from "@/lib/weather";
 import { Nowcast } from "@/components/Nowcast";
 import { PageState } from "@/components/PageState";
 import { useWeather } from "@/contexts/WeatherContext";
