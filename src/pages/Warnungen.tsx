@@ -232,14 +232,6 @@ export function WarnungenPage() {
             {lastUpdated ? `Letzte Prüfung: ${relMin(lastUpdated)}` : "—"}
             {data.cached && <span className="ml-2 not-italic">(aus Cache, max. 15 Min alt)</span>}
           </div>
-          <button
-            onClick={() => refresh()}
-            disabled={loading}
-            className="inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-foreground transition-colors hover:bg-foreground/5 disabled:opacity-50"
-          >
-            <RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} />
-            Neu prüfen
-          </button>
         </div>
       )}
     </div>
