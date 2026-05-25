@@ -33,7 +33,7 @@ const STATIC_TABS: TabDef[] = [
 ];
 
 export function AppShell() {
-  const { selectLocation, recent, clearRecent, isFetching, refresh } = useWeather();
+  const { selectLocation, recent, clearRecent, isFetching } = useWeather();
   const { data: riskData } = useRiskWarningsCtx();
   const { data: officialData } = useOfficialWarningsCtx();
   const { pathname } = useLocation();
