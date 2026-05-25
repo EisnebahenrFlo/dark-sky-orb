@@ -75,23 +75,25 @@ export function HourlyRow({ row, showPrecipColumn = true }: { row: HourlyRowData
       </div>
 
       {/* Precipitation prob + mobile thunder dot */}
-      <div className="flex w-16 shrink-0 items-center justify-end gap-1 text-xs tabular-nums sm:w-20">
-        {showThunder && (
-          <span
-            className="mr-0.5 inline-block h-1.5 w-1.5 rounded-full sm:hidden"
-            style={{ backgroundColor: thunder.color }}
-            title={`Gewitter: ${thunder.label}`}
-            aria-label={`Gewitter: ${thunder.label}`}
+      {showPrecipColumn && (
+        <div className="flex w-16 shrink-0 items-center justify-end gap-1 text-xs tabular-nums sm:w-20">
+          {showThunder && (
+            <span
+              className="mr-0.5 inline-block h-1.5 w-1.5 rounded-full sm:hidden"
+              style={{ backgroundColor: thunder.color }}
+              title={`Gewitter: ${thunder.label}`}
+              aria-label={`Gewitter: ${thunder.label}`}
+            />
+          )}
+          <Droplets
+            className={`h-3.5 w-3.5 ${popHigh ? "text-primary" : "text-muted-foreground/60"}`}
+            strokeWidth={1.75}
           />
-        )}
-        <Droplets
-          className={`h-3.5 w-3.5 ${popHigh ? "text-primary" : "text-muted-foreground/60"}`}
-          strokeWidth={1.75}
-        />
-        <span className={popHigh ? "text-foreground" : "text-muted-foreground"}>
-          {row.pop}%
-        </span>
-      </div>
+          <span className={popHigh ? "text-foreground" : "text-muted-foreground"}>
+            {row.pop > 0 ? `${row.pop}%` : "—"}
+          </span>
+        </div>
+      )}
 
       {/* Precipitation amount (only when > 0) */}
       <div className="hidden w-16 shrink-0 text-right text-xs tabular-nums text-muted-foreground sm:block">
