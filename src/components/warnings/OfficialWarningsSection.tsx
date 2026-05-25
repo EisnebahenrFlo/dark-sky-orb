@@ -1,4 +1,4 @@
-import { AlertTriangle, RefreshCw, ShieldCheck } from "lucide-react";
+import { AlertTriangle, ShieldCheck } from "lucide-react";
 import { useOfficialWarnings } from "@/hooks/useOfficialWarnings";
 import { OfficialWarningCard } from "./OfficialWarningCard";
 
