@@ -3,7 +3,7 @@ import { useState } from "react";
 import { ChevronDown, Sunrise, Sunset, Wind, Navigation, Droplets, CloudRain, Snowflake, Sun, Zap } from "lucide-react";
 import type { CurrentWeather, DailyData, HourlyData } from "@/lib/weather";
 import { weekdayLabel, windDirectionLabel } from "@/lib/weather";
-import { EffectiveWeatherIcon } from "./WeatherIcon";
+import { RealisticWeatherIcon } from "./RealisticWeatherIcon";
 import { SectionHeader } from "./SectionHeader";
 import { dailyThunderRiskFromHourly } from "@/lib/thunderRisk";
 
