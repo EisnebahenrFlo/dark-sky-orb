@@ -2,6 +2,7 @@ import { Fragment } from "react";
 import type { CurrentWeather, DailyData, HourlyData } from "@/lib/weather";
 import { HourlyRow, type HourlyRowData } from "./HourlyRow";
 import { SunDivider } from "./SunDivider";
+import { computeThunderstormRiskSeries } from "@/hooks/useThunderstormRisk";
 
 const HOURS = 24;
 
