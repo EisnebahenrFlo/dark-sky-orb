@@ -241,9 +241,11 @@ function RainbowChart({ data, minutes }: { data: RainbowNowcastResponse; minutes
               y1={VB_H}
               x2={VB_W}
               y2={VB_H}
-              stroke="var(--border)"
-              strokeWidth={0.5}
+              stroke="#e0e8f0"
+              strokeWidth={1.5}
+              strokeLinecap="round"
             />
+
 
             {/* "Jetzt" dashed vertical */}
             <line
