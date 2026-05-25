@@ -87,7 +87,7 @@ export function HourlyRow({ row, showPrecipColumn = true }: { row: HourlyRowData
           {showThunder && (
             <span
               className="mr-0.5 inline-block h-1.5 w-1.5 rounded-full sm:hidden"
-              style={{ backgroundColor: thunder.color }}
+              style={{ backgroundColor: thunderColor }}
               title={`Gewitter: ${thunder.label}`}
               aria-label={`Gewitter: ${thunder.label}`}
             />
@@ -114,9 +114,9 @@ export function HourlyRow({ row, showPrecipColumn = true }: { row: HourlyRowData
             <Zap
               className="h-3.5 w-3.5"
               strokeWidth={1.75}
-              style={{ color: thunder.color }}
+              style={{ color: thunderColor }}
             />
-            <span style={{ color: thunder.color }}>{thunder.label}</span>
+            <span style={{ color: thunderColor }}>{thunder.label}</span>
           </>
         ) : (
           <span className="text-muted-foreground/40">—</span>
