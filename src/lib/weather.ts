@@ -87,6 +87,7 @@ export interface DailyData {
   uv_index_max: number[];
   precipitation_sum: number[];
   rain_sum: number[];
+  showers_sum: number[];
   snowfall_sum: number[];
   precipitation_hours: number[];
   precipitation_probability_max: number[];
@@ -281,7 +282,7 @@ export async function fetchWeather(lat: number, lon: number, countryCode?: strin
     latitude: String(lat),
     longitude: String(lon),
     daily:
-      "weather_code,temperature_2m_max,temperature_2m_min,apparent_temperature_max,apparent_temperature_min,sunrise,sunset,uv_index_max,precipitation_sum,rain_sum,snowfall_sum,precipitation_hours,precipitation_probability_max,wind_speed_10m_max,wind_gusts_10m_max,wind_direction_10m_dominant",
+      "weather_code,temperature_2m_max,temperature_2m_min,apparent_temperature_max,apparent_temperature_min,sunrise,sunset,uv_index_max,precipitation_sum,rain_sum,showers_sum,snowfall_sum,precipitation_hours,precipitation_probability_max,wind_speed_10m_max,wind_gusts_10m_max,wind_direction_10m_dominant",
     hourly: "uv_index,precipitation_probability,is_day,weather_code",
     forecast_days: "7",
     timezone: "auto",
