@@ -277,3 +277,20 @@
 @media (prefers-reduced-motion: reduce) {
   .lightning-strike-pulse { animation: none; }
 }
+
+/* Radar time slider thumb */
+.radar-range { -webkit-appearance: none; appearance: none; background: transparent; }
+.radar-range::-webkit-slider-runnable-track { height: 4px; border-radius: 2px; background: #e0e8f0; }
+.radar-range::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none;
+  width: 24px; height: 24px; border-radius: 50%;
+  background: #2a6dd9; border: 2px solid white;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+  margin-top: -10px;
+}
+.radar-range::-moz-range-track { height: 4px; border-radius: 2px; background: #e0e8f0; }
+.radar-range::-moz-range-thumb {
+  width: 24px; height: 24px; border-radius: 50%;
+  background: #2a6dd9; border: 2px solid white;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+}
