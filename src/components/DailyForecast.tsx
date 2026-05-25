@@ -45,7 +45,7 @@ function DayRow({ daily, i, hourly, current }: { daily: DailyData; i: number; ho
           size={28}
           className="shrink-0"
         />
-        {void iconPrecip}
+        
 
         {/* Indicators column: rain % + thunder level */}
         <div className="flex w-[52px] shrink-0 flex-col items-end gap-px leading-tight">
