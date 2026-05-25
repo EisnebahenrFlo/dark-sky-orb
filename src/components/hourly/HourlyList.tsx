@@ -103,10 +103,11 @@ export function HourlyList({
     }
   }
 
+  const showPrecipColumn = rows.some((r) => r.pop > 20);
+
   return (
     <div className="glass overflow-hidden rounded-3xl">
       <div className="divide-y divide-border/50">
-        {(() => null)()}
         {items.map((item, idx) => {
           if (item.kind === "row") {
             return <HourlyRow key={`row-${item.row.iso}`} row={item.row} showPrecipColumn={showPrecipColumn} />;
