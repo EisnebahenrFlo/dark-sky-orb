@@ -87,6 +87,7 @@ export interface DailyData {
   uv_index_max: number[];
   precipitation_sum: number[];
   rain_sum: number[];
+  showers_sum: number[];
   snowfall_sum: number[];
   precipitation_hours: number[];
   precipitation_probability_max: number[];
