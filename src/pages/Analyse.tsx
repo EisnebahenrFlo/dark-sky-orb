@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   AlertCircle,
-  AlertTriangle,
   Brain,
   CalendarClock,
   Gauge,
@@ -9,12 +8,12 @@ import {
   Layers,
   MapPin,
   Plane,
-  RefreshCw,
   Split,
   Wind,
   Zap,
 } from "lucide-react";
-import { useSynoptikAnalysis, type SynoptikErrorCode } from "@/hooks/useSynoptikAnalysis";
+import { useSynoptikAnalysisCtx } from "@/contexts/SynoptikAnalysisContext";
+import type { SynoptikErrorCode } from "@/hooks/useSynoptikAnalysis";
 import { getWeatherModelLabel } from "@/lib/weather";
 import { HeroCard } from "@/components/synoptik/HeroCard";
 import { SectionCard } from "@/components/synoptik/SectionCard";
@@ -25,8 +24,6 @@ import { AnalysisLoader } from "@/components/loaders/AnalysisLoader";
 import { WeatherLoader } from "@/components/loaders/WeatherLoader";
 import { AnalysisDisclaimer } from "@/components/analysis/AnalysisDisclaimer";
 import { StaleBadge } from "@/components/StaleBadge";
-import { formatTimestamp } from "@/utils/formatTimestamp";
-import { PullToRefresh } from "@/components/PullToRefreshIndicator";
 
 const formatHighlight = (text: string) => text.replaceAll(";", " ·");
 
