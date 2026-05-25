@@ -1,22 +1,22 @@
 import { cn } from "@/lib/utils";
 
+function getConfidenceLabel(score: number) {
+  if (score >= 65) return { label: "✓ Zuverlässige Analyse", color: "#1a6a1a", bg: "#e8f4e8" };
+  if (score >= 40) return { label: "~ Eingeschränkte Datenlage", color: "#7a5800", bg: "#fef9e6" };
+  return { label: "⚠ Unsichere Vorhersage", color: "#7a3000", bg: "#fef0e6" };
+}
+
 export function ConfidenceBadge({ score, reason }: { score: number; reason?: string }) {
-  const tone =
-    score >= 70
-      ? "bg-emerald-500/15 text-emerald-500 border-emerald-500/30"
-      : score >= 40
-        ? "bg-amber-500/15 text-amber-500 border-amber-500/30"
-        : "bg-red-500/15 text-red-500 border-red-500/30";
+  const { label, color, bg } = getConfidenceLabel(score);
   return (
     <span
       title={reason}
       className={cn(
         "inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium",
-        tone,
       )}
+      style={{ color, background: bg, borderColor: color + "33" }}
     >
-      <span className="h-1.5 w-1.5 rounded-full bg-current" />
-      Confidence {score}%
+      {label}
     </span>
   );
 }
