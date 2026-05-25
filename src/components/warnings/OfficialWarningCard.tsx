@@ -188,11 +188,8 @@ export function OfficialWarningCard({ warning }: { warning: OfficialWarning }) {
             )}
           </div>
 
-          <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-border/60 pt-3 text-xs">
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-muted/40 px-2 py-0.5 font-medium text-foreground">
-              Quelle: {warning.source}
-            </span>
-            {warning.url && (
+          {warning.url && (
+            <div className="mt-3 flex justify-end text-xs">
               <a
                 href={warning.url}
                 target="_blank"
@@ -201,8 +198,8 @@ export function OfficialWarningCard({ warning }: { warning: OfficialWarning }) {
               >
                 Details <ExternalLink className="h-3 w-3" />
               </a>
-            )}
-          </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
