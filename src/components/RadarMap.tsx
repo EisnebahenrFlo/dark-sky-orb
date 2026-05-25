@@ -34,6 +34,15 @@ function Recenter({ lat, lon }: { lat: number; lon: number }) {
   return null;
 }
 
+function InvalidateOnRefresh({ refreshKey }: { refreshKey: number }) {
+  const map = useMap();
+  useEffect(() => {
+    if (refreshKey === 0) return;
+    map.invalidateSize();
+  }, [refreshKey, map]);
+  return null;
+}
+
 const FRAME_MS_FAST = 400;
 const FRAME_MS_NEAR_NOW = 700;
 const LOOP_RESET_PAUSE_MS = 1000;
