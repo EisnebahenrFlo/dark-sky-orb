@@ -33,7 +33,7 @@ export function CurrentPage() {
             <WarningIndicatorCard />
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
               <UvIndexStat value={uv} isDay={!!data.current.is_day} />
-              {data.hourly && <LightningPotentialStat hourly={data.hourly} />}
+              {data.hourly && <LightningPotentialStat />}
             </div>
             {data.daily?.sunrise?.[0] && data.daily?.sunset?.[0] && (
               <SunPositionCard
