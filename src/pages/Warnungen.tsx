@@ -10,6 +10,7 @@ import { WarningCard } from "@/components/warnings/WarningCard";
 import { DisclaimerBanner } from "@/components/warnings/DisclaimerBanner";
 import { colorClasses } from "@/components/warnings/colors";
 import { scoreMeta } from "@/components/warnings/RiskHero";
+import { useThunderstormRisk } from "@/hooks/useThunderstormRisk";
 import { WeatherLoader } from "@/components/loaders/WeatherLoader";
 import { OfficialWarningsSection } from "@/components/warnings/OfficialWarningsSection";
 import { StaleBadge } from "@/components/StaleBadge";
