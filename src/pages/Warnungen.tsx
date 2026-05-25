@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { AlertCircle, RefreshCw, ShieldAlert } from "lucide-react";
+import { AlertCircle, ShieldAlert } from "lucide-react";
 import { WarningsLoader } from "@/components/loaders/WarningsLoader";
 import { useRiskWarningsCtx } from "@/contexts/RiskWarningsContext";
 import { useOfficialWarningsCtx } from "@/contexts/OfficialWarningsContext";
