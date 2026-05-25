@@ -135,6 +135,7 @@ export function HourlyForecastChart({
   }
 
   const nowLabel = rows[0]?.time;
+  const showPrecipChart = rows.some((r) => r.pop > 20 || r.precip > 0);
 
   // Sunrise/sunset within the window
   const startMs = rows[0] ? new Date(rows[0].iso).getTime() : 0;
