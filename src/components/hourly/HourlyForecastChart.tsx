@@ -135,6 +135,7 @@ export function HourlyForecastChart({
   }
 
   const nowLabel = rows[0]?.time;
+  const showPrecipChart = rows.some((r) => r.pop > 20 || r.precip > 0);
 
   // Sunrise/sunset within the window
   const startMs = rows[0] ? new Date(rows[0].iso).getTime() : 0;
@@ -203,9 +204,10 @@ export function HourlyForecastChart({
         </div>
       </div>
 
-      <div style={{ height: 1, background: sep }} />
+      {showPrecipChart && <div style={{ height: 1, background: sep }} />}
 
       {/* Panel 2: Niederschlag */}
+      {showPrecipChart && (
       <div className="px-3 pt-2">
         <div className="px-1 pb-1 text-[10px] uppercase tracking-wider text-muted-foreground/70">
           Niederschlag
@@ -238,8 +240,11 @@ export function HourlyForecastChart({
           </ResponsiveContainer>
         </div>
       </div>
+      )}
 
       <div style={{ height: 1, background: sep }} />
+
+
 
       {/* Panel 3: Wind & Böen */}
       <div className="px-3 pt-2">

@@ -1,5 +1,5 @@
 import { safeFixed } from "@/lib/safeFormat";
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, ReferenceLine } from "recharts";
 import { precipKind, formatTime, type MinutelyData } from "@/lib/weather";
 import { EffectiveWeatherIcon } from "./WeatherIcon";
 import { SectionHeader } from "./SectionHeader";
@@ -79,6 +79,7 @@ export function Nowcast({
                     }}
                     formatter={(v: number) => [`${safeFixed(v, 2)} mm`, "Niederschlag"]}
                   />
+                  <ReferenceLine y={0} stroke="#e0e8f0" strokeWidth={1.5} strokeLinecap="round" />
                   <Bar dataKey="precip" radius={[6, 6, 2, 2]}>
                     {points.map((p, i) => (
                       <Cell key={i} fill={KIND_COLOR[p.kind]} />

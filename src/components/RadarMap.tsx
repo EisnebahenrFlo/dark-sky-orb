@@ -29,7 +29,7 @@ L.Marker.prototype.options.icon = L.icon({
 function Recenter({ lat, lon }: { lat: number; lon: number }) {
   const map = useMap();
   useEffect(() => {
-    map.setView([lat, lon], map.getZoom());
+    map.setView([lat, lon], 9);
   }, [lat, lon, map]);
   return null;
 }
@@ -95,7 +95,7 @@ export default function RadarMap() {
         <div className="h-[420px] w-full sm:h-[520px]">
           <MapContainer
             center={[location.latitude, location.longitude]}
-            zoom={7}
+            zoom={9}
             maxZoom={12}
             scrollWheelZoom
             style={{ height: "100%", width: "100%", background: "var(--muted)" }}

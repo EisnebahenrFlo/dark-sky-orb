@@ -40,7 +40,7 @@ export function RadarControls({ frames, pastCount, index, isPlaying, onToggle, o
           max={frames.length - 1}
           value={index}
           onChange={(e) => onSeek(Number(e.target.value))}
-          className="h-1.5 w-full cursor-pointer appearance-none rounded-full bg-muted accent-primary"
+          className="radar-range h-1.5 w-full cursor-pointer appearance-none rounded-full bg-muted accent-primary"
         />
         {pastCount > 0 && pastCount < frames.length && (
           <div

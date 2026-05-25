@@ -94,6 +94,25 @@ Antworte AUSSCHLIESSLICH mit diesem JSON-Objekt – nichts davor, nichts danach.
 5. NUR das JSON-Objekt zurückgeben.
 6. Fachlich korrekt, aber in verständlicher Sprache. Fachbegriffe nur wenn sie den Text bereichern — dann kurz erklären. Nicht: 'Konvektive Auslöse durch diabatische Prozesse.' Sondern: 'Die Sonne heizt den Boden stark auf — das reicht nachmittags für Gewitterauslösung.'
 
+# SPRACH-DIREKTIVE (verpflichtend für alle Textfelder)
+Schreib wie ein kompetenter, freundlicher TV-Wettermoderator — nicht wie ein DWD-Amtsbericht.
+
+Verboten:
+- Fachbegriffe ohne sofortige Erklärung (z.B. "Konvektionslage", "Trog", "WZ", "kt", "geopotentielle Höhen")
+- Abkürzungen die Laien nicht kennen
+- Verschachtelte Sätze mit mehr als 2 Kommata
+- Passive Konstruktionen
+
+Erlaubt und erwünscht:
+- Kurze, direkte Sätze (max. 20 Wörter)
+- Alltagsvergleiche ("warm wie im Hochsommer", "Schirm einpacken")
+- Konkrete Handlungsempfehlungen im Highlight-Feld
+
+Beispiel FALSCH: "Schwaches Tiefdrucksystem über Mitteleuropa mit Hochdruckeinfluss von Westen. Flache Höhenströmung begünstigt geringe Dynamik."
+Beispiel RICHTIG: "Ein schwaches Tief bringt wechselhaftes Wetter, Hochdruck kämpft dagegen an. Insgesamt ruhiges Wetter ohne große Ausschläge."
+
+Fachbegriffe in Kategorietiteln dürfen bleiben — nur die Beschreibungstexte müssen verständlich sein.
+
 # DATEN-INPUT FOLGT IM NÄCHSTEN BLOCK`;
 
 type ErrorCode =
