@@ -1,6 +1,6 @@
 import { Droplets, Wind, Zap } from "lucide-react";
 import { safeFixed } from "@/lib/safeFormat";
-import { EffectiveWeatherIcon } from "@/components/WeatherIcon";
+import { RealisticWeatherIcon } from "@/components/RealisticWeatherIcon";
 import { getEffectiveWeather } from "@/lib/weatherDescription";
 import { calculateThunderRisk } from "@/lib/thunderRisk";
 
@@ -57,12 +57,11 @@ export function HourlyRow({ row, showPrecipColumn = true }: { row: HourlyRowData
 
       {/* Icon + description */}
       <div className="flex min-w-0 flex-1 items-center gap-2.5">
-        <EffectiveWeatherIcon
+        <RealisticWeatherIcon
           code={row.code}
-          precipitation={row.precip}
-          cloudCover={row.cloud}
-          isDay={row.isDay}
-          className="h-6 w-6 shrink-0 text-primary"
+          isDay={(row.isDay ? 1 : 0) as 0 | 1}
+          size={26}
+          className="shrink-0"
         />
         <span className="hidden truncate text-xs text-muted-foreground sm:inline">
           {eff.description}

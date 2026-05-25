@@ -3,29 +3,10 @@ import { Wind, Droplets, Gauge, CloudRain, Eye, Thermometer, Cloud, Navigation }
 import type { CurrentWeather, GeoResult } from "@/lib/weather";
 import { windDirectionLabel } from "@/lib/weather";
 import { getEffectiveWeather } from "@/lib/weatherDescription";
-import { EffectiveWeatherIcon } from "./WeatherIcon";
 import { RelativeTime } from "./RelativeTime";
+import { WeatherHeroCanvas, getWeatherGroup, getHeroPalette } from "./WeatherHeroCanvas";
 
 interface Props { location: GeoResult; data: CurrentWeather; updatedAt: number }
-
-function iconAnimationStyle(code: number): React.CSSProperties {
-  if (code === 0 || code === 1) return { animation: "wh-sun 3s ease-in-out infinite", transformOrigin: "50% 50%" };
-  if (code === 2) return { animation: "wh-bob 4s ease-in-out infinite" };
-  if (code === 3) return { animation: "wh-fade 5s ease-in-out infinite alternate" };
-  if (code >= 71 && code <= 77) return { animation: "wh-snow 3s ease-in-out infinite alternate" };
-  if (code >= 61 && code <= 82) return { animation: "wh-rain 2s ease-in-out infinite" };
-  if (code >= 95 && code <= 99) return { animation: "wh-flash 1.5s ease-in-out infinite" };
-  if (code === 45 || code === 48) return { opacity: 0.85 };
-  return {};
-}
-
-function getHeroGradient(temp: number): string {
-  if (temp < 0) return "linear-gradient(180deg, rgba(219,234,254,0.3) 0%, transparent 60%)";
-  if (temp < 10) return "linear-gradient(180deg, rgba(224,242,254,0.25) 0%, transparent 60%)";
-  if (temp < 18) return "linear-gradient(180deg, rgba(220,252,231,0.2) 0%, transparent 60%)";
-  if (temp < 25) return "linear-gradient(180deg, rgba(254,249,195,0.25) 0%, transparent 60%)";
-  return "linear-gradient(180deg, rgba(254,215,170,0.25) 0%, transparent 60%)";
-}
 
 function Stat({ icon: Icon, label, value, sub }: { icon: typeof Wind; label: string; value: string; sub?: string }) {
   return (
@@ -42,55 +23,42 @@ function Stat({ icon: Icon, label, value, sub }: { icon: typeof Wind; label: str
 
 export function WeatherHero({ location, data, updatedAt }: Props) {
   const effective = getEffectiveWeather(data.weather_code, data.precipitation, data.cloud_cover, data.is_day, data.relative_humidity_2m, new Date(data.time).getHours());
-  const iconStyle = iconAnimationStyle(data.weather_code);
-  const heroBackground = getHeroGradient(data.temperature_2m);
+  const group = getWeatherGroup(data.weather_code, (data.is_day ? 1 : 0) as 0 | 1);
+  const palette = getHeroPalette(group);
+
   return (
     <div className="space-y-6">
-      <style>{`
-        @keyframes wh-sun { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.05); } }
-        @keyframes wh-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
-        @keyframes wh-fade { from { opacity: 0.7; } to { opacity: 1; } }
-        @keyframes wh-rain { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(2px); } }
-        @keyframes wh-flash { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
-        @keyframes wh-snow { from { transform: translateX(-2px); } to { transform: translateX(2px); } }
-      `}</style>
       <div
-        className="glass relative overflow-hidden rounded-3xl p-8 sm:p-12"
-        style={{ background: heroBackground, transition: "background 1s ease" }}
+        className="relative overflow-hidden rounded-3xl p-8 sm:p-12"
+        style={{
+          background: palette.background,
+          color: palette.text,
+          transition: "background 1s ease, color 0.6s ease",
+          minHeight: 260,
+        }}
       >
-        <div className="absolute -right-16 -top-16 opacity-[0.07]">
-          <EffectiveWeatherIcon code={data.weather_code} precipitation={data.precipitation} cloudCover={data.cloud_cover} isDay={data.is_day} className="h-[28rem] w-[28rem]" />
-        </div>
-        <div className="relative">
-          <div className="text-sm uppercase tracking-[0.2em] text-muted-foreground">
+        <WeatherHeroCanvas weatherCode={data.weather_code} isDay={(data.is_day ? 1 : 0) as 0 | 1} />
+        <div style={{ position: "relative", zIndex: 10 }}>
+          <div className="text-sm uppercase tracking-[0.2em]" style={{ color: palette.subtext }}>
             {[location.admin1, location.country].filter(Boolean).join(" · ")}
           </div>
-          <h1 className="mt-1 font-display text-4xl font-semibold sm:text-5xl">{location.name}</h1>
+          <h1 className="mt-1 font-display text-4xl font-semibold sm:text-5xl" style={{ color: palette.text }}>
+            {location.name}
+          </h1>
 
           <div className="mt-8 flex flex-wrap items-end gap-x-8 gap-y-4">
-            <div className="font-display text-7xl font-light tabular-nums sm:text-8xl">
+            <div className="font-display text-7xl font-light tabular-nums sm:text-8xl" style={{ color: palette.text }}>
               {Math.round(data.temperature_2m)}°
             </div>
-            <div className="flex items-center gap-3">
-              <span className="inline-flex" style={iconStyle}>
-                <EffectiveWeatherIcon
-                  code={data.weather_code}
-                  precipitation={data.precipitation}
-                  cloudCover={data.cloud_cover}
-                  isDay={data.is_day}
-                  className="h-14 w-14 text-primary"
-                />
-              </span>
-              <div>
-                <div className="text-lg font-medium">{effective.description}</div>
-                <div className="text-sm text-muted-foreground">
-                  Gefühlt {Math.round(data.apparent_temperature)}°
-                </div>
+            <div>
+              <div className="text-lg font-medium" style={{ color: palette.text }}>{effective.description}</div>
+              <div className="text-sm" style={{ color: palette.subtext }}>
+                Gefühlt {Math.round(data.apparent_temperature)}°
               </div>
             </div>
           </div>
 
-          <div className="mt-6 text-xs text-muted-foreground">
+          <div className="mt-6 text-xs" style={{ color: palette.subtext }}>
             <RelativeTime timestamp={updatedAt} />
           </div>
         </div>

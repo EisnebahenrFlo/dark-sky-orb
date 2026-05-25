@@ -3,7 +3,7 @@ import { useState } from "react";
 import { ChevronDown, Sunrise, Sunset, Wind, Navigation, Droplets, CloudRain, Snowflake, Sun, Zap } from "lucide-react";
 import type { CurrentWeather, DailyData, HourlyData } from "@/lib/weather";
 import { weekdayLabel, windDirectionLabel } from "@/lib/weather";
-import { EffectiveWeatherIcon } from "./WeatherIcon";
+import { RealisticWeatherIcon } from "./RealisticWeatherIcon";
 import { SectionHeader } from "./SectionHeader";
 import { dailyThunderRiskFromHourly } from "@/lib/thunderRisk";
 
@@ -18,7 +18,7 @@ function DayRow({ daily, i, hourly, current }: { daily: DailyData; i: number; ho
   const code = daily.weather_code[i];
   const pop = daily.precipitation_probability_max[i] ?? 0;
   const precip = daily.precipitation_sum[i] ?? 0;
-  const iconPrecip = precip > 0 ? precip : pop >= 20 ? 0.1 : 0;
+  
   const wind = daily.wind_speed_10m_max[i] != null ? Math.round(daily.wind_speed_10m_max[i]) : null;
   const dir = daily.wind_direction_10m_dominant[i];
   const thunder = hourly
@@ -39,16 +39,13 @@ function DayRow({ daily, i, hourly, current }: { daily: DailyData; i: number; ho
           </div>
         </div>
 
-        <EffectiveWeatherIcon
+        <RealisticWeatherIcon
           code={code}
-          precipitation={iconPrecip}
-          cloudCover={iconPrecip > 0 ? 100 : 50}
-          cloudCoverLow={i === 0 ? hourly?.cloud_cover_low?.[0] : undefined}
-          humidity={i === 0 ? current?.relative_humidity_2m : undefined}
-          hour={i === 0 && current?.time ? new Date(current.time).getHours() : undefined}
           isDay={1}
-          className="h-8 w-8 shrink-0 text-primary"
+          size={28}
+          className="shrink-0"
         />
+        
 
         {/* Indicators column: rain % + thunder level */}
         <div className="flex w-[52px] shrink-0 flex-col items-end gap-px leading-tight">
