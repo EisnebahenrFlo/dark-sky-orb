@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { AnalysePage } from "@/pages/Analyse";
+import { AnalyseTabPage } from "@/pages/AnalyseTab";
 
 export const Route = createFileRoute("/analyse")({
   head: () => ({
@@ -7,9 +7,9 @@ export const Route = createFileRoute("/analyse")({
       { title: "Analyse · MeteoFlo" },
       {
         name: "description",
-        content: "Synoptische KI-Wetteranalyse: Großwetterlage, Höhenstruktur, Konvektion und Trend.",
+        content: "Amtliche Warnungen und synoptische KI-Wetteranalyse in einer Ansicht.",
       },
     ],
   }),
-  component: AnalysePage,
+  component: AnalyseTabPage,
 });
