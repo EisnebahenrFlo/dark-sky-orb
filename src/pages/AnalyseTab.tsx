@@ -56,13 +56,26 @@ function CalmShield() {
 }
 
 export function AnalyseTabPage() {
-  const { data: officialData } = useOfficialWarningsCtx();
+  const { data: officialData, refresh: refreshOfficial } = useOfficialWarningsCtx();
+  const { refresh: refreshSynoptik } = useSynoptikAnalysisCtx();
+  const queryClient = useQueryClient();
   const official = officialData?.warnings ?? [];
   const sorted = [...official].sort((a, b) => (b.level ?? 0) - (a.level ?? 0));
   const hasOfficial = sorted.length > 0;
 
+  const handleRefresh = async () => {
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ["weather"] }),
+      Promise.resolve(refreshOfficial()),
+      Promise.resolve(refreshSynoptik()),
+    ]);
+  };
+
   return (
-    <div className="space-y-8">
+    <div className="relative space-y-8">
+      <div className="absolute right-0 top-0 z-20">
+        <RefreshButton onRefresh={handleRefresh} />
+      </div>
       <section>
         <SectionHeaderDot title="Amtliche Warnungen" active={hasOfficial} />
         {hasOfficial ? (
