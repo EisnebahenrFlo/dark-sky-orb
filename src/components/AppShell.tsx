@@ -1,15 +1,14 @@
 import { Link, Outlet, useLocation } from "@tanstack/react-router";
 import {
   Sun,
-  CloudRain,
-  Clock,
-  CalendarDays,
+  Calendar,
   Map,
-  Brain,
   Loader2,
   RefreshCw,
+  HelpCircle,
   AlertTriangle,
 } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { SearchBar } from "@/components/SearchBar";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { FavoritesButton } from "@/components/favorites/FavoritesButton";
@@ -21,34 +20,57 @@ import { isDevEnvironment } from "@/lib/environment";
 import { haptic } from "@/lib/utils";
 import { WeatherTabTransition } from "@/components/transitions/WeatherTabTransition";
 
-const TABS = [
-  { to: "/", icon: Sun, label: "Aktuell" },
-  { to: "/nowcast", icon: CloudRain, label: "Nowcast" },
-  { to: "/hourly", icon: Clock, label: "Stündlich" },
-  { to: "/daily", icon: CalendarDays, label: "7 Tage" },
-  { to: "/analyse", icon: Brain, label: "Analyse" },
-  { to: "/warnungen", icon: AlertTriangle, label: "Warnungen" },
+interface TabDef {
+  to: "/" | "/vorhersage" | "/analyse" | "/map";
+  icon: LucideIcon;
+  label: string;
+}
+
+const STATIC_TABS: TabDef[] = [
+  { to: "/", icon: Sun, label: "Heute" },
+  { to: "/vorhersage", icon: Calendar, label: "Vorhersage" },
+  { to: "/analyse", icon: HelpCircle, label: "Analyse" },
   { to: "/map", icon: Map, label: "Karte" },
-] as const;
+];
 
 export function AppShell() {
   const { selectLocation, recent, clearRecent, isFetching, refresh } = useWeather();
   const { data: riskData } = useRiskWarningsCtx();
   const { data: officialData } = useOfficialWarningsCtx();
-  const warnCount =
-    (riskData?.warnungen_12h?.length ?? 0) + (officialData?.warnings?.length ?? 0);
-  let maxLevel = 0;
-  for (const w of riskData?.warnungen_12h ?? []) {
-    const r = w.stufe === "extrem" ? 4 : w.stufe === "unwetter" ? 3 : w.stufe === "markant" ? 2 : 1;
-    if (r > maxLevel) maxLevel = r;
-  }
-  for (const w of officialData?.warnings ?? []) {
-    if ((w.level ?? 1) > maxLevel) maxLevel = w.level ?? 1;
-  }
-  const badgeColor =
-    maxLevel >= 4 ? "bg-red-500" : maxLevel === 3 ? "bg-orange-500" : maxLevel === 2 ? "bg-yellow-500" : "bg-blue-500";
-  const badgePulse = maxLevel >= 3 ? "animate-pulse" : "";
   const { pathname } = useLocation();
+
+  // Only DWD/MeteoAlarm count as "official". The OfficialWarnings hook already
+  // restricts to those, but we filter defensively in case sources broaden.
+  const officialWarningCount = (officialData?.warnings ?? []).filter(
+    (w) => w.source === "DWD" || (typeof w.source === "string" && w.source.startsWith("MeteoAlarm")),
+  ).length;
+  const aiWarningCount = riskData?.warnungen_12h?.length ?? 0;
+
+  // Analyse tab visual state
+  let analyseBg: string | null = null;
+  let analyseIcon: LucideIcon = HelpCircle;
+  let analyseBadge: number | null = null;
+  if (officialWarningCount >= 2) {
+    analyseBg = "#ff3b30";
+    analyseIcon = AlertTriangle;
+    analyseBadge = officialWarningCount;
+  } else if (officialWarningCount === 1) {
+    analyseBg = "#ff9500";
+    analyseIcon = AlertTriangle;
+  } else if (aiWarningCount > 0) {
+    analyseBg = "#ff9500";
+    analyseIcon = AlertTriangle;
+  }
+
+  const tabs: TabDef[] = STATIC_TABS.map((t) =>
+    t.to === "/analyse" ? { ...t, icon: analyseIcon } : t,
+  );
+
+  const tabBgFor = (to: TabDef["to"], active: boolean): string | undefined => {
+    if (to === "/analyse" && analyseBg) return analyseBg;
+    if (active) return undefined; // handled by primary bg class
+    return undefined;
+  };
 
   return (
     <div className="mx-auto min-h-screen w-full max-w-6xl px-4 pb-28 pt-6 transition-colors duration-200 sm:px-6 sm:pb-12 sm:pt-10">
@@ -81,25 +103,33 @@ export function AppShell() {
       {/* Desktop tabs */}
       <nav className="mb-8 hidden justify-center md:flex">
         <div className="glass flex gap-1 rounded-full p-1">
-          {TABS.map(({ to, icon: Icon, label }) => {
+          {tabs.map(({ to, icon: Icon, label }) => {
             const active = pathname === to;
+            const customBg = tabBgFor(to, active);
+            const showBadge = to === "/analyse" && analyseBadge != null;
             return (
               <Link
                 key={to}
                 to={to}
                 onClick={() => haptic("light")}
                 className={`relative flex items-center gap-2 rounded-full px-5 py-2 text-sm transition-colors ${
-                  active ? "text-primary-foreground" : "text-muted-foreground hover:text-foreground"
+                  active || customBg ? "text-primary-foreground" : "text-muted-foreground hover:text-foreground"
                 }`}
               >
-                {active && (
+                {customBg ? (
+                  <span
+                    className="absolute inset-0 -z-0 rounded-full"
+                    style={{ background: customBg }}
+                    aria-hidden
+                  />
+                ) : active ? (
                   <span className="absolute inset-0 -z-0 rounded-full bg-primary" aria-hidden />
-                )}
+                ) : null}
                 <span className="relative z-10 inline-flex">
                   <Icon className="h-4 w-4" strokeWidth={1.75} />
-                  {to === "/warnungen" && warnCount > 0 && (
-                    <span className={`absolute -right-1.5 -top-1.5 grid h-4 min-w-4 place-items-center rounded-full ${badgeColor} ${badgePulse} px-1 text-[9px] font-bold text-white shadow ring-2 ring-background`}>
-                      {warnCount}
+                  {showBadge && (
+                    <span className="absolute -right-1.5 -top-1.5 grid h-4 min-w-4 place-items-center rounded-full bg-red-500 px-1 text-[9px] font-bold text-white shadow ring-2 ring-background">
+                      {analyseBadge}
                     </span>
                   )}
                 </span>
@@ -120,8 +150,13 @@ export function AppShell() {
       <nav className="fixed inset-x-0 bottom-0 z-30 md:hidden">
         <div className="mx-auto max-w-md px-3 pb-3">
           <div className="glass flex items-center justify-around rounded-2xl p-1.5 shadow-2xl">
-            {TABS.map(({ to, icon: Icon, label }) => {
+            {tabs.map(({ to, icon: Icon, label }) => {
               const active = pathname === to;
+              const customBg = tabBgFor(to, active);
+              const showBadge = to === "/analyse" && analyseBadge != null;
+              const bgStyle = customBg
+                ? { background: customBg, color: "#fff" }
+                : undefined;
               return (
                 <Link
                   key={to}
@@ -129,17 +164,20 @@ export function AppShell() {
                   onClick={() => haptic("light")}
                   aria-label={label}
                   title={label}
+                  style={bgStyle}
                   className={`flex flex-1 items-center justify-center rounded-xl py-3 transition-colors ${
-                    active
-                      ? "bg-primary text-primary-foreground"
-                      : "text-muted-foreground hover:text-foreground"
+                    customBg
+                      ? ""
+                      : active
+                        ? "bg-primary text-primary-foreground"
+                        : "text-muted-foreground hover:text-foreground"
                   }`}
                 >
                   <span className="relative inline-flex">
                     <Icon className="h-6 w-6" strokeWidth={1.75} />
-                    {to === "/warnungen" && warnCount > 0 && (
-                      <span className={`absolute -right-2 -top-1.5 grid h-4 min-w-4 place-items-center rounded-full ${badgeColor} ${badgePulse} px-1 text-[9px] font-bold text-white shadow ring-2 ring-background`}>
-                        {warnCount}
+                    {showBadge && (
+                      <span className="absolute -right-2 -top-1.5 grid h-4 min-w-4 place-items-center rounded-full bg-red-500 px-1 text-[9px] font-bold text-white shadow ring-2 ring-background">
+                        {analyseBadge}
                       </span>
                     )}
                   </span>

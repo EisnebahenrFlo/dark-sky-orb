@@ -47,7 +47,7 @@ export function WarningIndicatorCard() {
 
   return (
     <Link
-      to="/warnungen"
+      to="/analyse"
       className={`group flex items-center gap-4 rounded-2xl border border-border ${tone.border} border-l-4 bg-card p-4 shadow-sm transition-colors hover:border-foreground/20 sm:p-5`}
     >
       <div className={`grid h-11 w-11 shrink-0 place-items-center rounded-xl ${tone.bg} ${tone.text}`}>

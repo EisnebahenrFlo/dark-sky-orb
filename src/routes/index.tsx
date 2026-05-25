@@ -1,4 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { CurrentPage } from "@/pages/Current";
+import { HeutePage } from "@/pages/Heute";
 
-export const Route = createFileRoute("/")({ component: CurrentPage });
+export const Route = createFileRoute("/")({
+  head: () => ({
+    meta: [
+      { title: "Heute · MeteoFlo" },
+      { name: "description", content: "Aktuelles Wetter und Nowcast für deinen Standort." },
+    ],
+  }),
+  component: HeutePage,
+});
