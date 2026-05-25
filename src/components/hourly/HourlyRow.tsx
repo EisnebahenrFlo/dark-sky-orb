@@ -24,7 +24,7 @@ export interface HourlyRowData {
   li?: number | null;
 }
 
-export function HourlyRow({ row }: { row: HourlyRowData }) {
+export function HourlyRow({ row, showPrecipColumn = true }: { row: HourlyRowData; showPrecipColumn?: boolean }) {
   const popHigh = row.pop >= 50;
   const eff = getEffectiveWeather(
     row.code,
