@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from "react";
-import { Search, Loader2, MapPin, Clock, X } from "lucide-react";
+import { Search, Loader2, MapPin, Clock, X, Navigation, AlertCircle } from "lucide-react";
 import { searchCities, type GeoResult } from "@/lib/weather";
 import { isPostalCode } from "@/utils/postalCode";
+import { useGeolocation } from "@/hooks/useGeolocation";
+import { haptic } from "@/lib/utils";
 
 interface Props {
   onSelect: (loc: GeoResult) => void;
@@ -15,6 +17,33 @@ export function SearchBar({ onSelect, recent, onClearRecent }: Props) {
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+
+  const {
+    status: gpsStatus,
+    coords,
+    cityName,
+    countryCode,
+    error: gpsError,
+    requestLocation,
+  } = useGeolocation();
+
+  // When GPS resolves, feed it into the same onSelect pipeline.
+  const consumedRef = useRef(false);
+  useEffect(() => {
+    if (gpsStatus === "success" && coords && cityName && !consumedRef.current) {
+      consumedRef.current = true;
+      onSelect({
+        id: Math.floor(coords.latitude * 1e4) * 1000 + Math.floor(coords.longitude * 1e4),
+        name: cityName,
+        latitude: coords.latitude,
+        longitude: coords.longitude,
+        country: "",
+        country_code: countryCode || "",
+      });
+      setOpen(false);
+    }
+    if (gpsStatus !== "success") consumedRef.current = false;
+  }, [gpsStatus, coords, cityName, countryCode, onSelect]);
 
   useEffect(() => {
     if (!q.trim()) {
@@ -54,7 +83,24 @@ export function SearchBar({ onSelect, recent, onClearRecent }: Props) {
 
   return (
     <div ref={ref} className="relative w-full">
-      <div className="glass flex items-center gap-3 rounded-2xl px-5 py-4">
+      <div className="glass flex items-center gap-3 rounded-2xl px-4 py-4 sm:px-5">
+        <button
+          type="button"
+          onClick={() => {
+            haptic("light");
+            requestLocation();
+          }}
+          disabled={gpsStatus === "loading"}
+          aria-label="Aktuellen Standort verwenden"
+          title="Aktuellen Standort verwenden"
+          className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-primary transition hover:bg-primary/10 disabled:opacity-60"
+        >
+          {gpsStatus === "loading" ? (
+            <Loader2 className="h-5 w-5 animate-spin" strokeWidth={1.75} />
+          ) : (
+            <Navigation className="h-5 w-5" strokeWidth={1.75} />
+          )}
+        </button>
         <Search className="h-5 w-5 text-muted-foreground" strokeWidth={1.5} />
         <input
           value={q}
@@ -74,6 +120,16 @@ export function SearchBar({ onSelect, recent, onClearRecent }: Props) {
           </button>
         )}
       </div>
+
+      {gpsStatus === "error" && gpsError && (
+        <div
+          role="alert"
+          className="mt-2 flex items-start gap-2 rounded-xl bg-destructive/10 px-4 py-2.5 text-sm text-destructive"
+        >
+          <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" strokeWidth={1.75} />
+          <span>{gpsError}</span>
+        </div>
+      )}
 
       {open && (showRecent || q.trim().length >= 2) && (
         <div className="glass absolute z-20 mt-2 w-full overflow-hidden rounded-2xl shadow-2xl">
