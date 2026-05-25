@@ -147,7 +147,6 @@ export function AnalysePage() {
             disabled={retry.disabled || loading}
             className="inline-flex items-center gap-2 rounded-2xl bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground shadow-sm transition-opacity hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
             Erneut versuchen
           </button>
         </div>
@@ -155,14 +154,6 @@ export function AnalysePage() {
 
       {data && (
         <div className={`relative space-y-5 transition-opacity ${loading ? "opacity-50" : ""}`}>
-          {loading && (
-            <div className="pointer-events-none sticky top-2 z-30 -mx-1 flex justify-end">
-              <div className="glass inline-flex items-center gap-2 rounded-full border border-border bg-background/80 px-3 py-1.5 text-xs font-medium text-foreground shadow-lg backdrop-blur">
-                <RefreshCw className="h-3.5 w-3.5 animate-spin" />
-                Wird neu analysiert…
-              </div>
-            </div>
-          )}
           <HeroCard
             highlight={formatHighlight(data.highlight)}
             confidenceScore={data.confidence?.score ?? 0}
