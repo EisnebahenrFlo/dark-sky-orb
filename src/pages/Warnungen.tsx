@@ -141,7 +141,7 @@ export function WarnungenPage() {
           <div className={`glass flex items-center justify-between gap-3 rounded-full border ${stickyColor.border} bg-background/80 px-4 py-2 shadow-lg backdrop-blur`}>
             <div className="flex items-center gap-2 text-sm">
               <span className="text-muted-foreground">Gewitter-Risiko 6h:</span>
-              <span className={`font-display text-base font-semibold ${stickyColor.text}`}>{data.gewitter_risiko_6h.score}</span>
+              <span className={`font-display text-base font-semibold ${stickyColor.text}`}>{unifiedScore}</span>
               <span className={`rounded-full ${stickyColor.bg} ${stickyColor.text} px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider`}>
                 {stickyMeta!.label}
               </span>
