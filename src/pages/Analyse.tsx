@@ -255,7 +255,6 @@ export function AnalysePage() {
             </div>
           )}
 
-
           <div className="flex flex-wrap items-center justify-between gap-3 pt-2 text-xs text-muted-foreground">
             <div className="italic">
               {lastUpdated ? `Letzte Analyse: ${relMin(lastUpdated)}` : "—"}
@@ -263,14 +262,6 @@ export function AnalysePage() {
                 <span className="ml-2 not-italic">(aus Cache, max. 30 Min alt)</span>
               )}
             </div>
-            <button
-              onClick={refreshAction.trigger}
-              disabled={loading || refreshAction.disabled}
-              className="inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-foreground transition-colors hover:bg-foreground/5 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              <RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} />
-              Neu analysieren
-            </button>
           </div>
         </div>
       )}
@@ -279,6 +270,5 @@ export function AnalysePage() {
         Datenquelle: {getWeatherModelLabel(location.country_code)}
       </div>
     </div>
-    </PullToRefresh>
   );
 }
