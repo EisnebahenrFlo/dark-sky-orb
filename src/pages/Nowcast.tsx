@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Radio } from "lucide-react";
+import { Info, Radio } from "lucide-react";
+import type { HourlyData } from "@/lib/weather";
 import { Nowcast } from "@/components/Nowcast";
 import { PageState } from "@/components/PageState";
 import { useWeather } from "@/contexts/WeatherContext";
@@ -340,6 +341,18 @@ function RainbowChart({ data, minutes }: { data: RainbowNowcastResponse; minutes
         </div>
       </div>
 
+      {!noPrecip && (
+        <div
+          className="mt-3 rounded-lg px-2.5 py-2"
+          style={{ background: "#f8fafc" }}
+        >
+          <span className="text-[9.5px] leading-snug" style={{ color: "#3a5a7a" }}>
+            {summary.text}
+          </span>
+        </div>
+      )}
+
+
       {presentTypes.length > 1 && (
         <div className="mt-3 flex justify-center gap-3 text-xs text-muted-foreground">
           {presentTypes.map((t) => (
@@ -357,6 +370,53 @@ function RainbowChart({ data, minutes }: { data: RainbowNowcastResponse; minutes
   );
 }
 
+function formatHourLabel(iso: string): string {
+  const d = new Date(iso);
+  return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+}
+
+function getNowcastContext(hourly: HourlyData): string {
+  const n = Math.min(12, hourly.time.length);
+  let rainIndex = -1;
+  let thunderIndex = -1;
+  for (let i = 0; i < n; i++) {
+    const pop = hourly.precipitation_probability?.[i] ?? 0;
+    const cape = hourly.cape?.[i] ?? 0;
+    const lp = hourly.lightning_potential?.[i] ?? 0;
+    if (rainIndex === -1 && pop > 30) rainIndex = i;
+    if (thunderIndex === -1 && (cape > 500 || lp > 0.3)) thunderIndex = i;
+  }
+  if (rainIndex === -1 && thunderIndex === -1) return "Heute bleibt es den ganzen Tag trocken.";
+  if (thunderIndex !== -1 && (thunderIndex < rainIndex || rainIndex === -1)) {
+    return `Trocken bis mindestens ${formatHourLabel(hourly.time[thunderIndex])} Uhr — danach steigt die Gewittergefahr an.`;
+  }
+  return `Trocken bis mindestens ${formatHourLabel(hourly.time[rainIndex])} Uhr — danach Regen möglich.`;
+}
+
+function NowcastContextBox({ hourly }: { hourly: HourlyData }) {
+  const text = getNowcastContext(hourly);
+  return (
+    <div
+      className="mt-3 flex items-center gap-3 rounded-[10px] px-3 py-2.5"
+      style={{ background: "#f0f6ff" }}
+    >
+      <div
+        className="grid h-[22px] w-[22px] shrink-0 place-items-center rounded-[6px]"
+        style={{ background: "#2a6dd9" }}
+      >
+        <Info className="h-3 w-3 text-white" strokeWidth={2.25} />
+      </div>
+      <span className="text-[10px] font-medium leading-snug" style={{ color: "#1a3a6a" }}>
+        {text}
+      </span>
+    </div>
+  );
+}
+
+function nowcastHasPrecip(data: RainbowNowcastResponse): boolean {
+  return (data.forecast ?? []).some((f) => (f.precipRate ?? 0) > 0 && f.precipType !== "no_precipitation" && f.precipType !== "none");
+}
+
 export function NowcastPage() {
   const [range, setRange] = useState<Range>(8);
   const { location } = useWeather();
@@ -372,48 +432,68 @@ export function NowcastPage() {
         </span>
       </div>
       <PageState>
-        {(data) => (
-          <div>
-            <div className="mb-3 flex items-start justify-between gap-3 px-1">
-              <div className="flex flex-col gap-1">
+        {(data) => {
+          const hasRain = rainbow.data ? nowcastHasPrecip(rainbow.data) : false;
+          return (
+            <div>
+              <div className="mb-2 px-1">
                 <h2 className="font-display text-lg font-medium tracking-tight">Nowcast</h2>
                 <span className="text-xs uppercase tracking-wider text-muted-foreground">
-                  {(range * 15) / 60} h Niederschlagsverlauf
+                  Niederschlagsverlauf
                 </span>
               </div>
-              <div className="glass flex gap-0.5 rounded-full p-0.5 text-xs">
-                {[8, 24].map((r) => (
-                  <button
-                    key={r}
-                    onClick={() => setRange(r as Range)}
-                    className={`rounded-full px-3 py-1 transition-colors ${
-                      range === r
-                        ? "bg-primary text-primary-foreground"
-                        : "text-muted-foreground hover:text-foreground"
-                    }`}
-                  >
-                    {(r * 15) / 60}h
-                  </button>
-                ))}
+
+              {/* Full-width segmented control */}
+              <div
+                className="mb-3.5 flex w-full rounded-[10px] p-[3px]"
+                style={{ background: "#f0f4f8" }}
+              >
+                {[
+                  { r: 8 as Range, label: "2 Stunden" },
+                  { r: 24 as Range, label: "6 Stunden" },
+                ].map(({ r, label }) => {
+                  const active = range === r;
+                  return (
+                    <button
+                      key={r}
+                      onClick={() => setRange(r)}
+                      className="flex-1 rounded-lg border-0 px-0 py-[7px] text-[12px] font-semibold transition-all"
+                      style={{
+                        background: active ? "white" : "transparent",
+                        color: active ? "#1a2a3a" : "#8a9ab0",
+                        boxShadow: active ? "0 1px 4px rgba(0,0,0,0.12)" : "none",
+                        cursor: "pointer",
+                      }}
+                    >
+                      {label}
+                    </button>
+                  );
+                })}
               </div>
+
+              {rainbow.data && !rainbow.isError ? (
+                <>
+                  <RainbowChart data={rainbow.data} minutes={minutes} />
+                  {!hasRain && <NowcastContextBox hourly={data.hourly} />}
+                </>
+              ) : rainbow.isLoading ? (
+                <div className="glass h-56 animate-pulse rounded-3xl" />
+              ) : (
+                <div className="space-y-2">
+                  {rainbow.isError && (
+                    <div className="text-xs text-muted-foreground">
+                      Echtzeit-Nowcast nicht verfügbar – Fallback auf Open-Meteo.
+                    </div>
+                  )}
+                  <Nowcast minutely={data.minutely_15} count={range} showHeader={false} />
+                  <NowcastContextBox hourly={data.hourly} />
+                </div>
+              )}
             </div>
-            {rainbow.data && !rainbow.isError ? (
-              <RainbowChart data={rainbow.data} minutes={minutes} />
-            ) : rainbow.isLoading ? (
-              <div className="glass h-56 animate-pulse rounded-3xl" />
-            ) : (
-              <div className="space-y-2">
-                {rainbow.isError && (
-                  <div className="text-xs text-muted-foreground">
-                    Echtzeit-Nowcast nicht verfügbar – Fallback auf Open-Meteo.
-                  </div>
-                )}
-                <Nowcast minutely={data.minutely_15} count={range} showHeader={false} />
-              </div>
-            )}
-          </div>
-        )}
+          );
+        }}
       </PageState>
     </div>
   );
 }
+

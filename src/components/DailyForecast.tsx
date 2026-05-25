@@ -24,7 +24,7 @@ function DayRow({ daily, i, hourly, current }: { daily: DailyData; i: number; ho
   const thunder = hourly
     ? dailyThunderRiskFromHourly(hourly.time, hourly.cape, hourly.lifted_index, daily.time[i])
     : { risk: 0, label: "Kein", color: "transparent" };
-  const showThunder = thunder.risk >= 20;
+  
 
   return (
     <div className="glass overflow-hidden rounded-2xl">
@@ -50,6 +50,31 @@ function DayRow({ daily, i, hourly, current }: { daily: DailyData; i: number; ho
           className="h-8 w-8 shrink-0 text-primary"
         />
 
+        {/* Indicators column: rain % + thunder level */}
+        <div className="flex w-[52px] shrink-0 flex-col items-end gap-px leading-tight">
+          {pop > 20 && (
+            <span
+              className="text-[9.5px] tabular-nums"
+              style={{
+                fontWeight: pop > 70 ? 700 : 600,
+                color: pop > 70 ? "#1d4ed8" : "#3b82f6",
+              }}
+            >
+              {pop}%
+            </span>
+          )}
+          {thunder.risk >= 20 && (
+            <div
+              className="flex items-center gap-[2px] text-[8.5px] font-semibold"
+              style={{ color: thunder.risk >= 60 ? "#b45309" : "#d97706" }}
+              title={`Gewitter-Risiko: ${thunder.label}`}
+            >
+              <Zap size={9} strokeWidth={2} />
+              <span>{thunder.risk >= 60 ? "Unwetter" : "Gew. mögl."}</span>
+            </div>
+          )}
+        </div>
+
         <div className="flex flex-1 flex-wrap items-center gap-x-3 gap-y-1 text-sm">
           <div className="hidden items-center gap-1 text-muted-foreground sm:flex">
             <Droplets className="h-3.5 w-3.5" strokeWidth={1.5} />
@@ -60,16 +85,6 @@ function DayRow({ daily, i, hourly, current }: { daily: DailyData; i: number; ho
             <Wind className="h-3.5 w-3.5" strokeWidth={1.5} />
             <span className="tabular-nums">{wind != null ? `${wind} km/h` : "—"}</span>
           </div>
-          {showThunder && (
-            <div
-              className="flex items-center gap-1 text-xs font-medium"
-              style={{ color: thunder.color }}
-              title={`Gewitter-Risiko: ${thunder.label}`}
-            >
-              <Zap className="h-3.5 w-3.5" strokeWidth={1.75} />
-              <span>Gewitter: {thunder.label}</span>
-            </div>
-          )}
         </div>
 
         <div className="flex items-baseline gap-3 font-display tabular-nums">

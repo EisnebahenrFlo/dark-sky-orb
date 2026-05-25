@@ -109,26 +109,40 @@ export function OfficialWarningCard({ warning }: { warning: OfficialWarning }) {
 
   return (
     <div
-      className={`relative animate-fade-in overflow-hidden rounded-2xl border-y border-r border-border border-l-4 ${level.border} bg-card p-5 shadow-sm transition-colors hover:border-foreground/20 sm:p-6`}
+      className="relative animate-fade-in overflow-hidden rounded-2xl border p-5 shadow-sm transition-colors sm:p-6"
+      style={{ background: "#fff5e6", borderColor: "#ffd080" }}
     >
-      <div className="flex items-start gap-4">
-        <div className={`grid h-11 w-11 shrink-0 place-items-center rounded-xl ${level.iconBg}`}>
-          <Icon className="h-6 w-6" strokeWidth={1.75} />
+      <div className="flex items-start gap-3">
+        <div
+          className="grid h-7 w-7 shrink-0 place-items-center rounded-lg text-white"
+          style={{ background: "#ff9500" }}
+        >
+          <AlertTriangle className="h-4 w-4" strokeWidth={2} />
         </div>
         <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-start justify-between gap-2">
-            <h3 className="font-display text-base font-semibold tracking-tight text-foreground sm:text-lg">
+          <div
+            className="text-[7.5px] font-semibold uppercase tracking-wider"
+            style={{ color: "#d97706" }}
+          >
+            {warning.source} · Amtlich
+          </div>
+          <div className="mt-1 flex flex-wrap items-start justify-between gap-2">
+            <h3
+              className="text-[11px] font-bold tracking-tight"
+              style={{ color: "#1a2a3a" }}
+            >
+              <Icon className="mr-1 inline h-3 w-3" strokeWidth={2} />
               {warning.title}
             </h3>
             <span
-              className={`shrink-0 rounded-full ${level.bg} ${level.text} px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wider`}
+              className={`shrink-0 rounded-full ${level.bg} ${level.text} px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wider`}
             >
               {level.label}
             </span>
           </div>
           {warning.description && (
             <>
-              <p className="mt-2 whitespace-pre-line text-sm leading-relaxed text-foreground/85">
+              <p className="mt-1 whitespace-pre-line text-[9px] leading-relaxed" style={{ color: "#5a6a7a" }}>
                 {desc}
               </p>
               {longDesc && (
@@ -174,11 +188,8 @@ export function OfficialWarningCard({ warning }: { warning: OfficialWarning }) {
             )}
           </div>
 
-          <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-border/60 pt-3 text-xs">
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-muted/40 px-2 py-0.5 font-medium text-foreground">
-              Quelle: {warning.source}
-            </span>
-            {warning.url && (
+          {warning.url && (
+            <div className="mt-3 flex justify-end text-xs">
               <a
                 href={warning.url}
                 target="_blank"
@@ -187,8 +198,8 @@ export function OfficialWarningCard({ warning }: { warning: OfficialWarning }) {
               >
                 Details <ExternalLink className="h-3 w-3" />
               </a>
-            )}
-          </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

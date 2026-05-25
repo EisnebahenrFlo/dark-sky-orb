@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { AlertCircle, RefreshCw, ShieldAlert, ShieldCheck } from "lucide-react";
+import { AlertCircle, RefreshCw, ShieldAlert } from "lucide-react";
 import { WarningsLoader } from "@/components/loaders/WarningsLoader";
 import { useRiskWarningsCtx } from "@/contexts/RiskWarningsContext";
 import { useOfficialWarningsCtx } from "@/contexts/OfficialWarningsContext";
@@ -74,10 +74,41 @@ export function WarnungenPage() {
               Warnungen für <span className="font-medium text-foreground">{location.name}</span>
             </span>
           </div>
-          <div className="flex flex-col items-center gap-3 py-12 text-muted-foreground">
-            <ShieldCheck className="w-10 h-10 opacity-40" />
-            <p className="text-sm font-medium">Alles ruhig</p>
-            <p className="text-xs opacity-60">Keine aktiven Warnungen für diesen Standort</p>
+          <div
+            className="flex items-center gap-3 rounded-xl bg-white px-3.5 py-3 dark:bg-card"
+            style={{ marginBottom: "6px" }}
+          >
+            <svg width="36" height="36" viewBox="0 0 52 52" aria-hidden>
+              <defs>
+                <linearGradient id="shieldGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                  <stop offset="0%" stopColor="#4ade80" />
+                  <stop offset="100%" stopColor="#16a34a" />
+                </linearGradient>
+              </defs>
+              <path
+                d="M26 6 L42 12.5 L42 26 C42 36 35 43.5 26 46.5 C17 43.5 10 36 10 26 L10 12.5 Z"
+                fill="none"
+                stroke="url(#shieldGrad)"
+                strokeWidth="2.5"
+                strokeLinejoin="round"
+              />
+              <polyline
+                points="18,26 23,31 34,20"
+                fill="none"
+                stroke="url(#shieldGrad)"
+                strokeWidth="3"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+            <div>
+              <div className="text-xs font-bold text-[#1a2a3a] dark:text-foreground">
+                Alles ruhig
+              </div>
+              <div className="mt-px text-[9.5px] leading-snug text-[#8a9ab0] dark:text-muted-foreground">
+                Keine aktiven Warnungen · Die nächsten 48h bleiben warnungsfrei
+              </div>
+            </div>
           </div>
         </div>
       </PullToRefresh>
