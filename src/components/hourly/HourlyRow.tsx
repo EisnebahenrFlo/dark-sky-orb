@@ -1,6 +1,6 @@
 import { Droplets, Wind, Zap } from "lucide-react";
 import { safeFixed } from "@/lib/safeFormat";
-import { EffectiveWeatherIcon } from "@/components/WeatherIcon";
+import { RealisticWeatherIcon } from "@/components/RealisticWeatherIcon";
 import { getEffectiveWeather } from "@/lib/weatherDescription";
 import { calculateThunderRisk } from "@/lib/thunderRisk";
 
