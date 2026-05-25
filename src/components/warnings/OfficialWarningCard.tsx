@@ -142,7 +142,7 @@ export function OfficialWarningCard({ warning }: { warning: OfficialWarning }) {
           </div>
           {warning.description && (
             <>
-              <p className="mt-2 whitespace-pre-line text-sm leading-relaxed text-foreground/85">
+              <p className="mt-1 whitespace-pre-line text-[9px] leading-relaxed" style={{ color: "#5a6a7a" }}>
                 {desc}
               </p>
               {longDesc && (
