@@ -62,9 +62,11 @@ function RootComponent() {
           <WeatherProvider>
             <RiskWarningsProvider>
               <OfficialWarningsProvider>
-                <SplashScreen />
-                <AppShell />
-                <ThemedToaster />
+                <SynoptikAnalysisProvider>
+                  <SplashScreen />
+                  <AppShell />
+                  <ThemedToaster />
+                </SynoptikAnalysisProvider>
               </OfficialWarningsProvider>
             </RiskWarningsProvider>
           </WeatherProvider>
