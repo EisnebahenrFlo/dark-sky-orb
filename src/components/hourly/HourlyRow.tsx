@@ -2,7 +2,15 @@ import { Droplets, Wind, Zap } from "lucide-react";
 import { safeFixed } from "@/lib/safeFormat";
 import { RealisticWeatherIcon } from "@/components/RealisticWeatherIcon";
 import { getEffectiveWeather } from "@/lib/weatherDescription";
-import { calculateThunderRisk } from "@/lib/thunderRisk";
+import type { ThunderstormRisk } from "@/hooks/useThunderstormRisk";
+
+const THUNDER_COLOR: Record<ThunderstormRisk["level"], string> = {
+  none: "#10b981",
+  low: "#fbbf24",
+  moderate: "#f97316",
+  high: "#ef4444",
+  extreme: "#7f1d1d",
+};
 
 export interface HourlyRowData {
   iso: string;
@@ -20,8 +28,7 @@ export interface HourlyRowData {
   humidity?: number;
   overrideHour?: number;
   isCurrent: boolean;
-  cape?: number | null;
-  li?: number | null;
+  thunder: ThunderstormRisk;
 }
 
 export function HourlyRow({ row, showPrecipColumn = true }: { row: HourlyRowData; showPrecipColumn?: boolean }) {
@@ -35,8 +42,9 @@ export function HourlyRow({ row, showPrecipColumn = true }: { row: HourlyRowData
     row.overrideHour ?? new Date(row.iso).getHours(),
     row.cloudLow,
   );
-  const thunder = calculateThunderRisk(row.cape ?? null, row.li ?? null);
-  const showThunder = thunder.risk >= 20;
+  const thunder = row.thunder;
+  const thunderColor = THUNDER_COLOR[thunder.level];
+  const showThunder = thunder.score >= 11;
 
   return (
     <div
@@ -79,7 +87,7 @@ export function HourlyRow({ row, showPrecipColumn = true }: { row: HourlyRowData
           {showThunder && (
             <span
               className="mr-0.5 inline-block h-1.5 w-1.5 rounded-full sm:hidden"
-              style={{ backgroundColor: thunder.color }}
+              style={{ backgroundColor: thunderColor }}
               title={`Gewitter: ${thunder.label}`}
               aria-label={`Gewitter: ${thunder.label}`}
             />
@@ -106,9 +114,9 @@ export function HourlyRow({ row, showPrecipColumn = true }: { row: HourlyRowData
             <Zap
               className="h-3.5 w-3.5"
               strokeWidth={1.75}
-              style={{ color: thunder.color }}
+              style={{ color: thunderColor }}
             />
-            <span style={{ color: thunder.color }}>{thunder.label}</span>
+            <span style={{ color: thunderColor }}>{thunder.label}</span>
           </>
         ) : (
           <span className="text-muted-foreground/40">—</span>

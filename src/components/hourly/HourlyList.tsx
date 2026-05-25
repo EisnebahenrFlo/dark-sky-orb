@@ -2,6 +2,7 @@ import { Fragment } from "react";
 import type { CurrentWeather, DailyData, HourlyData } from "@/lib/weather";
 import { HourlyRow, type HourlyRowData } from "./HourlyRow";
 import { SunDivider } from "./SunDivider";
+import { computeThunderstormRiskSeries } from "@/hooks/useThunderstormRisk";
 
 const HOURS = 24;
 
@@ -42,6 +43,8 @@ export function HourlyList({
     events.push({ kind: "sunset", iso: s, label: formatHour(s) }),
   );
 
+  const riskSeries = computeThunderstormRiskSeries(hourly);
+
   const rows: HourlyRowData[] = hourly.time.slice(0, HOURS).map((t, i) => {
     const ts = new Date(t).getTime();
     const isCurrent = ts <= now && now < ts + 60 * 60 * 1000;
@@ -63,8 +66,7 @@ export function HourlyList({
       humidity: isCurrent ? current?.relative_humidity_2m : undefined,
       overrideHour: isCurrent && current?.time ? new Date(current.time).getHours() : undefined,
       isCurrent,
-      cape: hourly.cape?.[i] ?? null,
-      li: hourly.lifted_index?.[i] ?? null,
+      thunder: riskSeries.hourly[i] ?? { score: 0, level: "none", label: "Kein Risiko", source: "lpi" },
     };
   });
 

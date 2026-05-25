@@ -10,6 +10,7 @@ import { WarningCard } from "@/components/warnings/WarningCard";
 import { DisclaimerBanner } from "@/components/warnings/DisclaimerBanner";
 import { colorClasses } from "@/components/warnings/colors";
 import { scoreMeta } from "@/components/warnings/RiskHero";
+import { useThunderstormRisk } from "@/hooks/useThunderstormRisk";
 import { WeatherLoader } from "@/components/loaders/WeatherLoader";
 import { OfficialWarningsSection } from "@/components/warnings/OfficialWarningsSection";
 import { StaleBadge } from "@/components/StaleBadge";
@@ -41,6 +42,7 @@ export function WarnungenPage() {
   const { data, loading, error, errorCode: kiErrorCode, refresh, lastUpdated } = useRiskWarningsCtx();
   const { data: officialData } = useOfficialWarningsCtx();
   const [scrolled, setScrolled] = useState(false);
+  const unifiedRisk = useThunderstormRisk();
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 280);
@@ -51,7 +53,11 @@ export function WarnungenPage() {
   if (errorCode === "unsupported_location") return <UnsupportedLocationNotice />;
   if (!weather) return <WeatherLoader city={location.name} />;
 
-  const stickyMeta = data ? scoreMeta(data.gewitter_risiko_6h.score) : null;
+  // Unified thunderstorm score (single source of truth across all tabs).
+  // The AI provides zeitfenster/konvektionstyp/begründung; the numeric score
+  // is overridden with the deterministic, location-wide unified value.
+  const unifiedScore = unifiedRisk.current.score;
+  const stickyMeta = data ? scoreMeta(unifiedScore) : null;
   const stickyColor = stickyMeta ? colorClasses[stickyMeta.color] : null;
   const kiCopy = KI_ERROR_COPY[kiErrorCode ?? "UNKNOWN"];
 
@@ -135,7 +141,7 @@ export function WarnungenPage() {
           <div className={`glass flex items-center justify-between gap-3 rounded-full border ${stickyColor.border} bg-background/80 px-4 py-2 shadow-lg backdrop-blur`}>
             <div className="flex items-center gap-2 text-sm">
               <span className="text-muted-foreground">Gewitter-Risiko 6h:</span>
-              <span className={`font-display text-base font-semibold ${stickyColor.text}`}>{data.gewitter_risiko_6h.score}</span>
+              <span className={`font-display text-base font-semibold ${stickyColor.text}`}>{unifiedScore}</span>
               <span className={`rounded-full ${stickyColor.bg} ${stickyColor.text} px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider`}>
                 {stickyMeta!.label}
               </span>
@@ -145,7 +151,7 @@ export function WarnungenPage() {
       )}
 
       {/* RiskHero requires data; render only when available */}
-      {data && <RiskHero risk={data.gewitter_risiko_6h} />}
+      {data && <RiskHero risk={{ ...data.gewitter_risiko_6h, score: unifiedScore }} />}
 
       {/* SEKTION 1: Amtliche Warnungen — IMMER sichtbar, unabhängig vom KI-Status */}
       <OfficialWarningsSection />

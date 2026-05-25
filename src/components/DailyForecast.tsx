@@ -5,7 +5,7 @@ import type { CurrentWeather, DailyData, HourlyData } from "@/lib/weather";
 import { weekdayLabel, windDirectionLabel } from "@/lib/weather";
 import { RealisticWeatherIcon } from "./RealisticWeatherIcon";
 import { SectionHeader } from "./SectionHeader";
-import { dailyThunderRiskFromHourly } from "@/lib/thunderRisk";
+import { computeThunderstormRiskSeries } from "@/hooks/useThunderstormRisk";
 
 function timeOnly(iso: string) {
   return new Date(iso).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" });
@@ -21,9 +21,13 @@ function DayRow({ daily, i, hourly, current }: { daily: DailyData; i: number; ho
   
   const wind = daily.wind_speed_10m_max[i] != null ? Math.round(daily.wind_speed_10m_max[i]) : null;
   const dir = daily.wind_direction_10m_dominant[i];
-  const thunder = hourly
-    ? dailyThunderRiskFromHourly(hourly.time, hourly.cape, hourly.lifted_index, daily.time[i])
-    : { risk: 0, label: "Kein", color: "transparent" };
+  const thunderSeries = hourly ? computeThunderstormRiskSeries(hourly) : null;
+  const dayKey = daily.time[i].slice(0, 10);
+  const dayRisk = thunderSeries?.byDay[dayKey];
+  const thunder = {
+    risk: dayRisk?.score ?? 0,
+    label: dayRisk?.label ?? "Kein Risiko",
+  };
   
 
   return (
