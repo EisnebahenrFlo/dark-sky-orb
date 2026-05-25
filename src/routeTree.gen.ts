@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as WarnungenRouteImport } from './routes/warnungen'
+import { Route as VorhersageRouteImport } from './routes/vorhersage'
 import { Route as NowcastRouteImport } from './routes/nowcast'
 import { Route as MapRouteImport } from './routes/map'
 import { Route as HourlyRouteImport } from './routes/hourly'
@@ -20,6 +21,11 @@ import { Route as IndexRouteImport } from './routes/index'
 const WarnungenRoute = WarnungenRouteImport.update({
   id: '/warnungen',
   path: '/warnungen',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const VorhersageRoute = VorhersageRouteImport.update({
+  id: '/vorhersage',
+  path: '/vorhersage',
   getParentRoute: () => rootRouteImport,
 } as any)
 const NowcastRoute = NowcastRouteImport.update({
@@ -60,6 +66,7 @@ export interface FileRoutesByFullPath {
   '/hourly': typeof HourlyRoute
   '/map': typeof MapRoute
   '/nowcast': typeof NowcastRoute
+  '/vorhersage': typeof VorhersageRoute
   '/warnungen': typeof WarnungenRoute
 }
 export interface FileRoutesByTo {
@@ -69,6 +76,7 @@ export interface FileRoutesByTo {
   '/hourly': typeof HourlyRoute
   '/map': typeof MapRoute
   '/nowcast': typeof NowcastRoute
+  '/vorhersage': typeof VorhersageRoute
   '/warnungen': typeof WarnungenRoute
 }
 export interface FileRoutesById {
@@ -79,6 +87,7 @@ export interface FileRoutesById {
   '/hourly': typeof HourlyRoute
   '/map': typeof MapRoute
   '/nowcast': typeof NowcastRoute
+  '/vorhersage': typeof VorhersageRoute
   '/warnungen': typeof WarnungenRoute
 }
 export interface FileRouteTypes {
@@ -90,6 +99,7 @@ export interface FileRouteTypes {
     | '/hourly'
     | '/map'
     | '/nowcast'
+    | '/vorhersage'
     | '/warnungen'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -99,6 +109,7 @@ export interface FileRouteTypes {
     | '/hourly'
     | '/map'
     | '/nowcast'
+    | '/vorhersage'
     | '/warnungen'
   id:
     | '__root__'
@@ -108,6 +119,7 @@ export interface FileRouteTypes {
     | '/hourly'
     | '/map'
     | '/nowcast'
+    | '/vorhersage'
     | '/warnungen'
   fileRoutesById: FileRoutesById
 }
@@ -118,6 +130,7 @@ export interface RootRouteChildren {
   HourlyRoute: typeof HourlyRoute
   MapRoute: typeof MapRoute
   NowcastRoute: typeof NowcastRoute
+  VorhersageRoute: typeof VorhersageRoute
   WarnungenRoute: typeof WarnungenRoute
 }
 
@@ -128,6 +141,13 @@ declare module '@tanstack/react-router' {
       path: '/warnungen'
       fullPath: '/warnungen'
       preLoaderRoute: typeof WarnungenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/vorhersage': {
+      id: '/vorhersage'
+      path: '/vorhersage'
+      fullPath: '/vorhersage'
+      preLoaderRoute: typeof VorhersageRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/nowcast': {
@@ -182,6 +202,7 @@ const rootRouteChildren: RootRouteChildren = {
   HourlyRoute: HourlyRoute,
   MapRoute: MapRoute,
   NowcastRoute: NowcastRoute,
+  VorhersageRoute: VorhersageRoute,
   WarnungenRoute: WarnungenRoute,
 }
 export const routeTree = rootRouteImport
