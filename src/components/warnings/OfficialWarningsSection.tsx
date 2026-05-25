@@ -18,7 +18,7 @@ function SkeletonCard() {
 }
 
 export function OfficialWarningsSection() {
-  const { data, loading, error, refresh } = useOfficialWarnings();
+  const { data, loading, error } = useOfficialWarnings();
 
   const sorted = data?.warnings ? [...data.warnings].sort((a, b) => b.level - a.level) : [];
 
