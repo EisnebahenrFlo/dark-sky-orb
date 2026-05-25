@@ -29,7 +29,7 @@ L.Marker.prototype.options.icon = L.icon({
 function Recenter({ lat, lon }: { lat: number; lon: number }) {
   const map = useMap();
   useEffect(() => {
-    map.setView([lat, lon], map.getZoom());
+    map.setView([lat, lon], 9);
   }, [lat, lon, map]);
   return null;
 }
