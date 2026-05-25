@@ -8,7 +8,6 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import type { RiskWarning } from "@/hooks/useRiskWarnings";
-import { colorClasses, type RiskColorKey } from "./colors";
 
 const ICONS: Record<string, LucideIcon> = {
   Wind,
