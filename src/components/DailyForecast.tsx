@@ -18,7 +18,7 @@ function DayRow({ daily, i, hourly, current }: { daily: DailyData; i: number; ho
   const code = daily.weather_code[i];
   const pop = daily.precipitation_probability_max[i] ?? 0;
   const precip = daily.precipitation_sum[i] ?? 0;
-  const iconPrecip = precip > 0 ? precip : pop >= 20 ? 0.1 : 0;
+  
   const wind = daily.wind_speed_10m_max[i] != null ? Math.round(daily.wind_speed_10m_max[i]) : null;
   const dir = daily.wind_direction_10m_dominant[i];
   const thunder = hourly
