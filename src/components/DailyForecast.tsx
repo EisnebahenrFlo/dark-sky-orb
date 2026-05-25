@@ -39,16 +39,13 @@ function DayRow({ daily, i, hourly, current }: { daily: DailyData; i: number; ho
           </div>
         </div>
 
-        <EffectiveWeatherIcon
+        <RealisticWeatherIcon
           code={code}
-          precipitation={iconPrecip}
-          cloudCover={iconPrecip > 0 ? 100 : 50}
-          cloudCoverLow={i === 0 ? hourly?.cloud_cover_low?.[0] : undefined}
-          humidity={i === 0 ? current?.relative_humidity_2m : undefined}
-          hour={i === 0 && current?.time ? new Date(current.time).getHours() : undefined}
           isDay={1}
-          className="h-8 w-8 shrink-0 text-primary"
+          size={28}
+          className="shrink-0"
         />
+        {void iconPrecip}
 
         {/* Indicators column: rain % + thunder level */}
         <div className="flex w-[52px] shrink-0 flex-col items-end gap-px leading-tight">
