@@ -47,17 +47,22 @@ const FRAME_MS_FAST = 400;
 const FRAME_MS_NEAR_NOW = 700;
 const LOOP_RESET_PAUSE_MS = 1000;
 
-export default function RadarMap() {
+export default function RadarMap({ refreshKey = 0 }: { refreshKey?: number }) {
   const { location } = useWeather();
   const { resolved } = useTheme();
   const isDev = isDevEnvironment();
 
-  const { data } = useQuery({
+  const { data, refetch } = useQuery({
     queryKey: ["rainbow"],
     queryFn: fetchRainbow,
     refetchInterval: 5 * 60 * 1000,
     staleTime: 60_000,
   });
+
+  useEffect(() => {
+    if (refreshKey === 0) return;
+    refetch();
+  }, [refreshKey, refetch]);
 
   const frames = useMemo(
     () => (data ? [...data.past, ...data.nowcast] : []),
