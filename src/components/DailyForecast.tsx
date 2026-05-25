@@ -73,11 +73,6 @@ function DayRow({ daily, i, hourly, current }: { daily: DailyData; i: number; ho
         </div>
 
         <div className="flex flex-1 flex-wrap items-center gap-x-3 gap-y-1 text-sm">
-          <div className="hidden items-center gap-1 text-muted-foreground sm:flex">
-            <Droplets className="h-3.5 w-3.5" strokeWidth={1.5} />
-            <span className="tabular-nums">{pop}%</span>
-            {precip > 0 && <span className="tabular-nums">· {safeFixed(precip, 1)} mm</span>}
-          </div>
           <div className="hidden items-center gap-1 text-muted-foreground md:flex">
             <Wind className="h-3.5 w-3.5" strokeWidth={1.5} />
             <span className="tabular-nums">{wind != null ? `${wind} km/h` : "—"}</span>
