@@ -81,7 +81,5 @@ export function getWeatherIcon(code: number, isDay: number): LucideIcon {
   return Cloud;
 }
 
-export function WeatherIcon({ code, isDay, className }: { code: number; isDay: number; className?: string }) {
-  const Icon = getWeatherIcon(code, isDay);
-  return <Icon className={className} strokeWidth={1.25} />;
-}
+// Realistic gradient SVG weather icon. See ./RealisticWeatherIcon for the implementation.
+export { RealisticWeatherIcon as WeatherIcon } from "./RealisticWeatherIcon";
