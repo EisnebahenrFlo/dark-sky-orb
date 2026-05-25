@@ -42,6 +42,7 @@ export function WarnungenPage() {
   const { data, loading, error, errorCode: kiErrorCode, refresh, lastUpdated } = useRiskWarningsCtx();
   const { data: officialData } = useOfficialWarningsCtx();
   const [scrolled, setScrolled] = useState(false);
+  const unifiedRisk = useThunderstormRisk();
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 280);
@@ -52,7 +53,11 @@ export function WarnungenPage() {
   if (errorCode === "unsupported_location") return <UnsupportedLocationNotice />;
   if (!weather) return <WeatherLoader city={location.name} />;
 
-  const stickyMeta = data ? scoreMeta(data.gewitter_risiko_6h.score) : null;
+  // Unified thunderstorm score (single source of truth across all tabs).
+  // The AI provides zeitfenster/konvektionstyp/begründung; the numeric score
+  // is overridden with the deterministic, location-wide unified value.
+  const unifiedScore = unifiedRisk.current.score;
+  const stickyMeta = data ? scoreMeta(unifiedScore) : null;
   const stickyColor = stickyMeta ? colorClasses[stickyMeta.color] : null;
   const kiCopy = KI_ERROR_COPY[kiErrorCode ?? "UNKNOWN"];
 
