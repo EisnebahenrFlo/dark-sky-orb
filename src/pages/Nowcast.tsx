@@ -341,6 +341,18 @@ function RainbowChart({ data, minutes }: { data: RainbowNowcastResponse; minutes
         </div>
       </div>
 
+      {!noPrecip && (
+        <div
+          className="mt-3 rounded-lg px-2.5 py-2"
+          style={{ background: "#f8fafc" }}
+        >
+          <span className="text-[9.5px] leading-snug" style={{ color: "#3a5a7a" }}>
+            {summary.text}
+          </span>
+        </div>
+      )}
+
+
       {presentTypes.length > 1 && (
         <div className="mt-3 flex justify-center gap-3 text-xs text-muted-foreground">
           {presentTypes.map((t) => (
