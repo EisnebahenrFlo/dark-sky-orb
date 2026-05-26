@@ -228,6 +228,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   const textContent: string = apiResult.data?.content?.[0]?.text ?? '';
+  console.log('[synoptik] raw claude response:', textContent.slice(0, 1000));
   let parsed: any;
   try {
     parsed = extractJson(textContent);
