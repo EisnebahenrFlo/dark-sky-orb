@@ -31,7 +31,7 @@ export function HourlyChart({ hourly }: { hourly: HourlyData }) {
       </div>
       <div className="h-48 w-full sm:h-56">
         <ResponsiveContainer width="100%" height="100%">
-          <ComposedChart data={rows} margin={{ top: 10, right: 12, left: 4, bottom: 4 }}>
+          <ComposedChart data={rows} margin={{ top: 10, right: 12, left: 15, bottom: 4 }}>
             <CartesianGrid stroke="oklch(1 0 0 / 0.04)" vertical={false} />
             <XAxis
               dataKey="time"

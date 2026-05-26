@@ -43,8 +43,8 @@ interface Row {
   uv: number;
 }
 
-const Y_WIDTH = 32;
-const MARGIN = { top: 6, right: 8, left: 0, bottom: 0 };
+const Y_WIDTH = 44;
+const MARGIN = { top: 6, right: 10, left: 15, bottom: 0 };
 
 function UnifiedTooltip({ active, payload, label }: any) {
   if (!active || !payload?.length) return null;

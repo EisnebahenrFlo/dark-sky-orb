@@ -27,12 +27,17 @@ import { StaleBadge } from "@/components/StaleBadge";
 
 const formatHighlight = (text: string) => text.replaceAll(";", " ·");
 
-function relMin(ts: number) {
+function formatRelativeTime(minutes: number): string {
+  if (minutes < 1) return "gerade eben";
+  if (minutes < 60) return `vor ${Math.round(minutes)} Minuten`;
+  const h = Math.floor(minutes / 60);
+  const m = Math.round(minutes % 60);
+  return m > 0 ? `vor ${h} Std. ${m} Min.` : `vor ${h} Stunden`;
+}
 
-  const m = Math.max(0, Math.round((Date.now() - ts) / 60000));
-  if (m < 1) return "gerade eben";
-  if (m === 1) return "vor 1 Min";
-  return `vor ${m} Min`;
+function relMin(ts: number) {
+  const m = Math.max(0, (Date.now() - ts) / 60000);
+  return formatRelativeTime(m);
 }
 
 const ERROR_COPY: Record<SynoptikErrorCode, { title: string; body: string }> = {
@@ -257,10 +262,24 @@ export function AnalysePage() {
 
           <div className="flex flex-wrap items-center justify-between gap-3 pt-2 text-xs text-muted-foreground">
             <div className="italic">
-              {lastUpdated ? `Letzte Analyse: ${relMin(lastUpdated)}` : "—"}
-              {data.cached && (
-                <span className="ml-2 not-italic">(aus Cache, max. 30 Min alt)</span>
-              )}
+              {(() => {
+                // Prefer the original analysis time (derived from ageMinutes for cached results)
+                // over the cache-read timestamp. Falls back to lastUpdated for fresh fetches.
+                const ageMin = typeof data.ageMinutes === "number" ? data.ageMinutes : null;
+                const originTs =
+                  ageMin != null ? Date.now() - ageMin * 60000 : lastUpdated;
+                if (!originTs) return "—";
+                const label = `Letzte Analyse: ${relMin(originTs)}`;
+                const showFreshCacheHint = data.cached && ageMin != null && ageMin <= 30;
+                return (
+                  <>
+                    {label}
+                    {showFreshCacheHint && (
+                      <span className="ml-2 not-italic">(aus Cache, max. 30 Min alt)</span>
+                    )}
+                  </>
+                );
+              })()}
             </div>
           </div>
         </div>

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Info, Radio } from "lucide-react";
+import { Info, Radio, CloudSun } from "lucide-react";
 import type { HourlyData } from "@/lib/weather";
 import { Nowcast } from "@/components/Nowcast";
 import { PageState } from "@/components/PageState";
@@ -221,10 +221,10 @@ function RainbowChart({ data, minutes }: { data: RainbowNowcastResponse; minutes
 
       <div className="relative w-full overflow-hidden">
         {noPrecip ? (
-          <div className="grid h-40 place-items-center text-center">
+          <div className="grid h-40 place-items-center text-center text-muted-foreground">
             <div>
-              <div className="text-3xl">🌤️</div>
-              <div className="mt-2 text-sm text-muted-foreground">Kein Niederschlag erwartet</div>
+              <CloudSun className="mx-auto h-10 w-10" strokeWidth={1.5} aria-hidden="true" />
+              <div className="mt-2 text-sm">Kein Niederschlag erwartet</div>
             </div>
           </div>
         ) : (

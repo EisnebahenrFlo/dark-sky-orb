@@ -56,7 +56,7 @@ export function HourlyForecast({ hourly }: { hourly: HourlyData }) {
 
         <div className="mt-6 h-52 w-full">
           <ResponsiveContainer width="100%" height="100%">
-            <ComposedChart data={rows} margin={{ top: 10, right: 8, left: -16, bottom: 0 }}>
+            <ComposedChart data={rows} margin={{ top: 10, right: 10, left: 15, bottom: 0 }}>
               <CartesianGrid stroke="oklch(1 0 0 / 0.04)" vertical={false} />
               <XAxis
                 dataKey="time"
@@ -70,7 +70,7 @@ export function HourlyForecast({ hourly }: { hourly: HourlyData }) {
                 tick={{ fill: "var(--muted-foreground)", fontSize: 10 }}
                 tickLine={false}
                 axisLine={false}
-                width={36}
+                width={44}
                 unit="°"
               />
               <YAxis
@@ -80,7 +80,7 @@ export function HourlyForecast({ hourly }: { hourly: HourlyData }) {
                 tick={{ fill: "var(--muted-foreground)", fontSize: 10 }}
                 tickLine={false}
                 axisLine={false}
-                width={32}
+                width={40}
                 unit="%"
               />
               <Tooltip
