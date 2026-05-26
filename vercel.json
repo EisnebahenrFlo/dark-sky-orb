@@ -6,6 +6,9 @@
     "api/synoptik.ts": {
       "includeFiles": "api/_lib/**"
     },
+    "api/weather.ts": {
+      "includeFiles": "api/_lib/**"
+    },
     "api/risk-warnings.ts": {
       "includeFiles": "api/_lib/**"
     },
