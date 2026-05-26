@@ -4,22 +4,8 @@ import { SunPositionCard } from "@/components/current/SunPositionCard";
 import { WarningIndicatorCard } from "@/components/current/WarningIndicatorCard";
 import { UvIndexStat } from "@/components/current/UvIndexStat";
 import WeatherRiskGauges from "@/components/WeatherRiskGauges";
+import { Nowcast } from "@/components/Nowcast";
 import { PageState } from "@/components/PageState";
-
-function currentHourIndex(times: string[] | undefined, nowTime: string): number {
-  if (!times || times.length === 0) return -1;
-  const now = new Date(nowTime).getTime();
-  let best = 0;
-  let bestDiff = Infinity;
-  for (let i = 0; i < times.length; i++) {
-    const d = Math.abs(new Date(times[i]).getTime() - now);
-    if (d < bestDiff) {
-      bestDiff = d;
-      best = i;
-    }
-  }
-  return best;
-}
 
 export function CurrentPage({ onRefresh }: { onRefresh?: () => Promise<void> | void } = {}) {
   const { location, dataUpdatedAt } = useWeather();
@@ -28,20 +14,33 @@ export function CurrentPage({ onRefresh }: { onRefresh?: () => Promise<void> | v
       {(data) => {
         const uv = data.current.uv_index ?? 0;
         return (
-          <div className="space-y-6">
+          <div>
             <WeatherHero location={location} data={data.current} updatedAt={dataUpdatedAt} onRefresh={onRefresh} />
-            <WeatherRiskGauges />
-            <WeatherHeroStats data={data.current} />
-            <WarningIndicatorCard />
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+            <div className="mt-2 empty:mt-0">
+              <WeatherRiskGauges />
+            </div>
+            <div className="mt-2 empty:mt-0">
+              <WarningIndicatorCard />
+            </div>
+            <div className="mt-2">
+              <WeatherHeroStats data={data.current} />
+            </div>
+            <div className="mt-2 empty:mt-0">
               <UvIndexStat value={uv} isDay={!!data.current.is_day} />
             </div>
             {data.daily?.sunrise?.[0] && data.daily?.sunset?.[0] && (
-              <SunPositionCard
-                sunrise={data.daily.sunrise[0]}
-                sunset={data.daily.sunset[0]}
-                nextSunrise={data.daily.sunrise[1]}
-              />
+              <div className="mt-2">
+                <SunPositionCard
+                  sunrise={data.daily.sunrise[0]}
+                  sunset={data.daily.sunset[0]}
+                  nextSunrise={data.daily.sunrise[1]}
+                />
+              </div>
+            )}
+            {data.minutely_15 && (
+              <div className="mt-2">
+                <Nowcast minutely={data.minutely_15} />
+              </div>
             )}
           </div>
         );
