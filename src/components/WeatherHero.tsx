@@ -70,7 +70,7 @@ export function WeatherHero({ location, data, updatedAt, onRefresh }: Props) {
 
 export function WeatherHeroStats({ data }: { data: CurrentWeather }) {
   return (
-    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+    <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
       <Stat
         icon={Wind}
         label="Wind"
@@ -94,10 +94,10 @@ export function WeatherHeroStats({ data }: { data: CurrentWeather }) {
           </div>
         </div>
       </div>
-      <Stat icon={Droplets} label="Luftfeuchte" value={`${data.relative_humidity_2m}%`} />
-      <Stat icon={Gauge} label="Luftdruck" value={`${Math.round(data.pressure_msl)} hPa`} />
       <Stat icon={CloudRain} label="Niederschlag" value={data.precipitation < 0.1 ? "—" : `${safeFixed(data.precipitation, 1)} mm`} sub="aktuelle Stunde" />
       <Stat icon={Cloud} label="Bewölkung" value={`${data.cloud_cover}%`} />
+      <Stat icon={Droplets} label="Luftfeuchte" value={`${data.relative_humidity_2m}%`} />
+      <Stat icon={Gauge} label="Luftdruck" value={`${Math.round(data.pressure_msl)} hPa`} />
       <Stat icon={Thermometer} label="Gefühlt" value={`${Math.round(data.apparent_temperature)}°`} />
     </div>
   );
