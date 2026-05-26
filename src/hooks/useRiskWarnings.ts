@@ -135,6 +135,12 @@ export function useRiskWarnings() {
   // Fetch only when fresh weather data for the current location is available
   useEffect(() => {
     if (!weatherData || !location) return;
+    console.log('[risk-warnings] effect check', {
+      weatherFetching,
+      key: `${location.latitude}_${location.longitude}`,
+      loadedKey: loadedKeyRef.current,
+      hasWeatherData: !!weatherData,
+    });
     if (weatherFetching) return;
     if (
       Math.abs(weatherData.latitude - location.latitude) > 0.5 ||
