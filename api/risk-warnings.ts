@@ -311,7 +311,8 @@ export default async function handler(req: any, res: any) {
   const convectiveContext = buildConvectiveContext(weatherData, windowHours);
 
   // Ruhiges Wetter → kein Claude
-  if (warnings.length === 0 && frontendScore < 10) {
+  const hasOfficialWarnings = officialWarnings.length > 0;
+  if (warnings.length === 0 && frontendScore < 10 && !hasOfficialWarnings) {
     const result = {
       gewitter_risiko_6h: {
         level: 'kein', score: frontendScore, color: 'green',
