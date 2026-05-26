@@ -24,6 +24,7 @@ import { StaleBadge } from "@/components/StaleBadge";
 import { useRiskWarningsCtx } from "@/contexts/RiskWarningsContext";
 import { RiskHero } from "@/components/warnings/RiskHero";
 import { WarningCard } from "@/components/warnings/WarningCard";
+import { OfficialWarningsSection } from "@/components/warnings/OfficialWarningsSection";
 import { useThunderstormRisk } from "@/hooks/useThunderstormRisk";
 
 const formatHighlight = (text: string) => text.replaceAll(";", " ·");
@@ -118,14 +119,37 @@ export function AnalysePage() {
         </span>
       </div>
 
-      {/* RiskHero + KI-Warnungen — direkt nach Header */}
+      {/* Amtliche Warnungen */}
+      <OfficialWarningsSection />
+
+      {/* RiskHero — Gewitter-Score */}
       {riskData && (
-        <>
-          <RiskHero risk={{ ...riskData.gewitter_risiko_6h, score: unifiedRisk.current.score }} />
-          {riskData.warnungen_12h.map((w, i) => (
-            <WarningCard key={`${w.id}_${i}`} warning={w} />
-          ))}
-        </>
+        <RiskHero risk={{ ...riskData.gewitter_risiko_6h, score: unifiedRisk.current.score }} />
+      )}
+
+      {/* KI-Auswertung · 12 h */}
+      {riskData && riskData.warnungen_12h.length > 0 && (
+        <section className="space-y-3">
+          <div className="flex items-baseline justify-between gap-3 px-1">
+            <div>
+              <h2 className="font-display text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+                KI-Auswertung · 12 h
+              </h2>
+              <p className="mt-0.5 text-[11px] text-muted-foreground/80">
+                Synoptische KI-Risikoeinschätzung – nicht amtlich
+              </p>
+            </div>
+            <span className="text-xs text-muted-foreground">
+              {riskData.warnungen_12h.length}{" "}
+              {riskData.warnungen_12h.length === 1 ? "Warnung" : "Warnungen"}
+            </span>
+          </div>
+          <div className="space-y-3">
+            {riskData.warnungen_12h.map((w, i) => (
+              <WarningCard key={`${w.id}_${i}`} warning={w} />
+            ))}
+          </div>
+        </section>
       )}
 
       {/* Initial loading */}
