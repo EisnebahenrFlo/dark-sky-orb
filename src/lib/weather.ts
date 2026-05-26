@@ -130,10 +130,7 @@ export async function fetchWeather(lat: number, lon: number): Promise<WeatherDat
     forecast_days: "7",
     timezone: "auto",
   });
-  const apiKey = import.meta.env.VITE_OPEN_METEO_API_KEY;
-if (apiKey) params.append('apikey', apiKey);
-const baseUrl = apiKey ? 'https://customer-api.open-meteo.com/v1' : 'https://api.open-meteo.com/v1';
-const url = `${baseUrl}/forecast?${params.toString()}`;
+  const url = `/api/weather?${params.toString()}`;
   const res = await fetch(url);
   if (!res.ok) throw new Error("Wetterdaten fehlgeschlagen");
   const json = (await res.json()) as WeatherData;
