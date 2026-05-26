@@ -90,7 +90,6 @@ export function useRiskWarnings() {
                 convective_inhibition: weatherData.hourly.convective_inhibition,
                 lightning_potential: weatherData.hourly.lightning_potential,
                 snowfall: weatherData.hourly.snowfall,
-                temperature_2m: weatherData.hourly.temperature_2m,
               },
             },
             location,
