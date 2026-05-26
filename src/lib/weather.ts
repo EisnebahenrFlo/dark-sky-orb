@@ -33,7 +33,9 @@ export interface MinutelyData {
   weather_code: number[];
   temperature_2m: number[];
   wind_speed_10m: number[];
+  lightning_potential_index?: number[];
 }
+
 
 export interface HourlyData {
   time: string[];
@@ -53,6 +55,11 @@ export interface HourlyData {
   uv_index: number[];
   is_day: number[];
   lightning_potential?: number[];
+  snowfall?: number[];
+  visibility?: number[];
+  wet_bulb_temperature_2m?: number[];
+  freezing_level_height?: number[];
+
   // Synoptic / pressure-level fields
   dewpoint_2m?: number[];
   cape?: number[];
@@ -269,10 +276,10 @@ export async function fetchWeather(lat: number, lon: number, countryCode?: strin
     longitude: String(lon),
     current:
       "temperature_2m,apparent_temperature,relative_humidity_2m,weather_code,wind_speed_10m,wind_gusts_10m,wind_direction_10m,pressure_msl,precipitation,cloud_cover,is_day",
-    minutely_15: "precipitation,weather_code,temperature_2m,wind_speed_10m",
+    minutely_15: "precipitation,weather_code,temperature_2m,wind_speed_10m,lightning_potential_index",
     forecast_minutely_15: "24",
     hourly:
-      "temperature_2m,apparent_temperature,precipitation,precipitation_probability,weather_code,wind_speed_10m,wind_gusts_10m,wind_direction_10m,cloud_cover,cloud_cover_low,cloud_cover_mid,cloud_cover_high,relative_humidity_2m,uv_index,is_day,lightning_potential,dewpoint_2m,cape,lifted_index,convective_inhibition,temperature_850hPa,temperature_700hPa,temperature_500hPa,temperature_300hPa,geopotential_height_500hPa,geopotential_height_850hPa,wind_speed_850hPa,wind_direction_850hPa,wind_speed_500hPa,wind_direction_500hPa,wind_speed_300hPa,wind_direction_300hPa,relative_humidity_850hPa,relative_humidity_700hPa,vertical_velocity_700hPa",
+      "temperature_2m,apparent_temperature,precipitation,precipitation_probability,weather_code,wind_speed_10m,wind_gusts_10m,wind_direction_10m,cloud_cover,cloud_cover_low,cloud_cover_mid,cloud_cover_high,relative_humidity_2m,uv_index,is_day,lightning_potential,snowfall,visibility,wet_bulb_temperature_2m,freezing_level_height,dewpoint_2m,cape,lifted_index,convective_inhibition,temperature_850hPa,temperature_700hPa,temperature_500hPa,temperature_300hPa,geopotential_height_500hPa,geopotential_height_850hPa,wind_speed_850hPa,wind_direction_850hPa,wind_speed_500hPa,wind_direction_500hPa,wind_speed_300hPa,wind_direction_300hPa,relative_humidity_850hPa,relative_humidity_700hPa,vertical_velocity_700hPa",
     forecast_hours: "48",
     timezone: "auto",
     models: getWeatherModel(countryCode),
