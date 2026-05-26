@@ -1,5 +1,5 @@
 import { AlertTriangle, ShieldCheck } from "lucide-react";
-import { useOfficialWarnings } from "@/hooks/useOfficialWarnings";
+import { useOfficialWarningsCtx } from "@/contexts/OfficialWarningsContext";
 import { OfficialWarningCard } from "./OfficialWarningCard";
 
 function SkeletonCard() {
@@ -18,7 +18,7 @@ function SkeletonCard() {
 }
 
 export function OfficialWarningsSection() {
-  const { data, loading, error } = useOfficialWarnings();
+  const { data, loading, error } = useOfficialWarningsCtx();
 
   const sorted = data?.warnings ? [...data.warnings].sort((a, b) => b.level - a.level) : [];
 

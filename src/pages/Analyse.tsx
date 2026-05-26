@@ -120,21 +120,16 @@ export function AnalysePage() {
         </span>
       </div>
 
-      {/* Amtliche Warnungen */}
+      {/* Amtliche Warnungen — einmalig, ganz oben */}
       <OfficialWarningsSection />
 
-      {/* RiskHero — Gewitter-Score */}
-      {riskData && (
-        <RiskHero risk={{ ...riskData.gewitter_risiko_6h, score: unifiedRisk.current.score }} />
-      )}
-
-      {/* KI-Auswertung · 12 h */}
+      {/* KI-ANALYSE: Header + RiskHero + Warnungskarten */}
       {riskData && (
         <section className="space-y-3">
           <div className="flex items-baseline justify-between gap-3 px-1">
             <div>
               <h2 className="font-display text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-                KI-Auswertung · 12 h
+                KI-Analyse
               </h2>
               <p className="mt-0.5 text-[11px] text-muted-foreground/80">
                 Synoptische KI-Risikoeinschätzung – nicht amtlich
@@ -147,6 +142,9 @@ export function AnalysePage() {
               </span>
             )}
           </div>
+
+          <RiskHero risk={{ ...riskData.gewitter_risiko_6h, score: unifiedRisk.current.score }} />
+
           {riskData.warnungen_12h.length > 0 ? (
             <div className="space-y-3">
               {riskData.warnungen_12h.map((w, i) => (
