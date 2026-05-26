@@ -36,11 +36,6 @@ export function CurrentPage({ onRefresh }: { onRefresh?: () => Promise<void> | v
                 />
               </div>
             )}
-            {data.minutely_15 && (
-              <div className="mt-2">
-                <Nowcast minutely={data.minutely_15} />
-              </div>
-            )}
           </div>
         );
       }}
