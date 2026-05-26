@@ -6,8 +6,6 @@ import { RefreshButton } from "@/components/RefreshButton";
 const RadarMap = lazy(() => import("@/components/RadarMap"));
 const LightningMap = lazy(() => import("@/components/lightning/LightningMap"));
 
-
-
 type SubTab = "radar" | "lightning";
 
 function MapFallback() {
@@ -22,6 +20,7 @@ export function MapPage() {
   const [tab, setTab] = useState<SubTab>("radar");
   const [mounted, setMounted] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [lastRefresh, setLastRefresh] = useState<number>(() => Date.now());
   const { location } = useWeather();
   const queryClient = useQueryClient();
   useEffect(() => setMounted(true), []);
@@ -29,21 +28,19 @@ export function MapPage() {
   const handleRefresh = async () => {
     await queryClient.invalidateQueries({ queryKey: ["rainbow"] });
     setRefreshKey((k) => k + 1);
+    setLastRefresh(Date.now());
   };
 
   return (
-    <section className="relative space-y-4">
-      <div className="absolute right-0 top-0 z-20">
-        <RefreshButton onRefresh={handleRefresh} />
-      </div>
-      <div className="flex items-center gap-2 pr-14 text-sm text-muted-foreground">
+    <section className="space-y-4">
+      <div className="flex items-center gap-2 text-sm text-muted-foreground">
         <MapIcon className="h-4 w-4 text-accent" strokeWidth={1.75} />
         <span>
           Wetterradar für <span className="font-medium text-foreground">{location.name}</span>
         </span>
       </div>
 
-      <div className="mb-4 flex items-start justify-between gap-3 px-1">
+      <div className="mb-2 flex items-start justify-between gap-3 px-1">
         <div className="flex flex-col gap-1">
           <h2 className="font-display text-lg font-medium tracking-tight">Karte</h2>
           <span className="text-xs uppercase tracking-wider text-muted-foreground">
@@ -66,6 +63,8 @@ export function MapPage() {
           ))}
         </div>
       </div>
+
+      <RefreshButton variant="statusbar" onRefresh={handleRefresh} lastUpdated={lastRefresh} />
 
       {tab === "radar" ? (
         mounted ? (
