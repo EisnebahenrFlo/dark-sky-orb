@@ -472,3 +472,4 @@ export function weekdayLabel(iso: string, idx: number): string {
   if (idx === 1) return "Morgen";
   return new Date(iso).toLocaleDateString("de-DE", { weekday: "long" });
 }
+
