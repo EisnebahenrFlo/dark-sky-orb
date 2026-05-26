@@ -78,6 +78,8 @@ export function useRiskWarnings() {
             location,
             thunderstormScore: thunderstorm.current.score,
             windowHours: 48,
+            officialWarnings: officialWarnings.data?.warnings ?? [],
+            nowcast: nowcast.data ?? null,
           }),
           signal,
         });
