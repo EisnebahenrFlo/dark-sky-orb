@@ -1,23 +1,32 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useWeather } from "@/contexts/WeatherContext";
+import { useThunderstormRisk } from "@/hooks/useThunderstormRisk";
 
 export interface SynoptikAnalysis {
+  highlight: string;
   großwetterlage: { klassifikation: string; beschreibung: string };
-  höhenstruktur_500hPa: { muster: string; beschreibung: string };
-  bodendruck: { muster: string; beschreibung: string };
-  luftmasse: { klassifikation: string; begründung: string };
-  fronten_aktivität: { vorhanden: boolean; typ?: string; auswirkung?: string };
+  aktuell: { lage: string; luftmasse: string };
   konvektion: {
     potenzial: "kein" | "schwach" | "mäßig" | "hoch" | "extrem" | string;
+    score: number;
     begründung: string;
     typ?: string;
     zeitraum?: string;
   };
-  regionale_besonderheiten: string[];
-  jet_stream: { relevant: boolean; beschreibung?: string };
   entwicklung: { next_24h: string; next_48h: string; trend_3_7d: string };
+  regionale_besonderheiten: string[];
+  großwetterlage_detail: {
+    höhenstruktur: string;
+    bodendruck: string;
+    fronten?: string;
+  };
   confidence: { score: number; begründung: string };
-  highlight: string;
+  // Legacy-Felder für Abwärtskompatibilität (alte Cache-Einträge)
+  höhenstruktur_500hPa?: { muster: string; beschreibung: string };
+  bodendruck?: { muster: string; beschreibung: string };
+  luftmasse?: { klassifikation: string; begründung: string };
+  fronten_aktivität?: { vorhanden: boolean; typ?: string; auswirkung?: string };
+  jet_stream?: { relevant: boolean; beschreibung?: string };
   cached?: boolean;
   fromCache?: boolean;
   stale?: boolean;
@@ -32,6 +41,7 @@ const HOURLY_KEYS = [
   "cape",
   "lifted_index",
   "convective_inhibition",
+  "lightning_potential",
   "wind_speed_10m",
   "wind_gusts_10m",
   "wind_direction_10m",
@@ -45,15 +55,15 @@ const HOURLY_KEYS = [
 ] as const;
 
 function buildSubset(weatherData: any) {
-  const hours = 24;
+  const hours = 48;
   const hourly: Record<string, any> = { time: weatherData.hourly?.time?.slice(0, hours) ?? [] };
   for (const key of HOURLY_KEYS) {
     const arr = weatherData.hourly?.[key];
     if (Array.isArray(arr)) hourly[key] = arr.slice(0, hours);
   }
-  // pressure_msl is only on current; surface only what exists
-  if (weatherData.hourly?.pressure_msl) hourly.pressure_msl = weatherData.hourly.pressure_msl.slice(0, hours);
-
+  if (weatherData.hourly?.pressure_msl) {
+    hourly.pressure_msl = weatherData.hourly.pressure_msl.slice(0, hours);
+  }
   return {
     latitude: weatherData.latitude,
     longitude: weatherData.longitude,
@@ -76,6 +86,7 @@ export type SynoptikErrorCode =
 
 export function useSynoptikAnalysis() {
   const { data: weatherData, location, isFetching: weatherFetching } = useWeather();
+  const thunderstorm = useThunderstormRisk(24);
   const [data, setData] = useState<SynoptikAnalysis | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -95,7 +106,11 @@ export function useSynoptikAnalysis() {
         const res = await fetch(`${baseUrl}/api/synoptik`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ weatherData: subset, location }),
+          body: JSON.stringify({
+            weatherData: subset,
+            location,
+            thunderstormScore: thunderstorm.current.score,
+          }),
           signal,
         });
         const json = await res.json().catch(() => ({}));
@@ -113,7 +128,7 @@ export function useSynoptikAnalysis() {
         setLoading(false);
       }
     },
-    [weatherData, location],
+    [weatherData, location, thunderstorm.current.score],
   );
 
   useEffect(() => {
@@ -131,9 +146,7 @@ export function useSynoptikAnalysis() {
     if (
       Math.abs(weatherData.latitude - location.latitude) > 0.5 ||
       Math.abs(weatherData.longitude - location.longitude) > 0.5
-    ) {
-      return;
-    }
+    ) return;
     const key = `${location.latitude}_${location.longitude}`;
     if (loadedKeyRef.current === key) return;
     loadedKeyRef.current = key;
