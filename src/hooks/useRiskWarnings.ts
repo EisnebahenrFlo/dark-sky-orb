@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useWeather } from "@/contexts/WeatherContext";
 import { useThunderstormRisk } from "@/hooks/useThunderstormRisk";
-import { useOfficialWarnings } from "@/hooks/useOfficialWarnings";
+import { useOfficialWarningsCtx } from "@/contexts/OfficialWarningsContext";
 import { useRainbowNowcast } from "@/hooks/useRainbowNowcast";
 
 export type RiskColor = "green" | "yellow" | "orange" | "red" | "purple";
@@ -59,7 +59,7 @@ export function useRiskWarnings() {
   const loadedKeyRef = useRef<string | null>(null);
   const ctrlRef = useRef<AbortController | null>(null);
   const thunderstorm = useThunderstormRisk(48);
-  const officialWarnings = useOfficialWarnings();
+  const officialWarnings = useOfficialWarningsCtx();
   const nowcast = useRainbowNowcast();
 
   const fetchWarnings = useCallback(

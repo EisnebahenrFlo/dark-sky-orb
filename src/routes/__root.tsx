@@ -60,15 +60,15 @@ function RootComponent() {
         <HeadContent />
         <AppErrorBoundary>
           <WeatherProvider>
-            <RiskWarningsProvider>
-              <OfficialWarningsProvider>
+            <OfficialWarningsProvider>
+              <RiskWarningsProvider>
                 <SynoptikAnalysisProvider>
                   <SplashScreen />
                   <AppShell />
                   <ThemedToaster />
                 </SynoptikAnalysisProvider>
-              </OfficialWarningsProvider>
-            </RiskWarningsProvider>
+              </RiskWarningsProvider>
+            </OfficialWarningsProvider>
           </WeatherProvider>
         </AppErrorBoundary>
       </QueryClientProvider>
