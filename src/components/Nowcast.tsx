@@ -1,5 +1,6 @@
 import { safeFixed } from "@/lib/safeFormat";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, ReferenceLine } from "recharts";
+import { CloudSun } from "lucide-react";
 import { precipKind, formatTime, type MinutelyData } from "@/lib/weather";
 import { EffectiveWeatherIcon } from "./WeatherIcon";
 import { SectionHeader } from "./SectionHeader";
@@ -45,10 +46,10 @@ export function Nowcast({
       )}
       <div className="glass rounded-3xl p-5 sm:p-6">
         {totalPrecip === 0 ? (
-          <div className="grid h-44 place-items-center text-center">
+          <div className="grid h-44 place-items-center text-center text-muted-foreground">
             <div>
-              <div className="text-3xl">🌤️</div>
-              <div className="mt-2 text-muted-foreground">Kein Niederschlag erwartet</div>
+              <CloudSun className="mx-auto h-10 w-10" strokeWidth={1.5} aria-hidden="true" />
+              <div className="mt-2">Kein Niederschlag erwartet</div>
             </div>
           </div>
         ) : (
@@ -79,7 +80,7 @@ export function Nowcast({
                     }}
                     formatter={(v: number) => [`${safeFixed(v, 2)} mm`, "Niederschlag"]}
                   />
-                  <ReferenceLine y={0} stroke="#e0e8f0" strokeWidth={1.5} strokeLinecap="round" />
+                  <ReferenceLine y={0} stroke="currentColor" strokeOpacity={0.2} strokeDasharray="3 3" />
                   <Bar dataKey="precip" radius={[6, 6, 2, 2]}>
                     {points.map((p, i) => (
                       <Cell key={i} fill={KIND_COLOR[p.kind]} />
