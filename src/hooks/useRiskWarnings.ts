@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useWeather } from "@/contexts/WeatherContext";
 import { useThunderstormRisk } from "@/hooks/useThunderstormRisk";
+import { useOfficialWarnings } from "@/hooks/useOfficialWarnings";
+import { useRainbowNowcast } from "@/hooks/useRainbowNowcast";
 
 export type RiskColor = "green" | "yellow" | "orange" | "red" | "purple";
 export type RiskLevel = "kein" | "schwach" | "mäßig" | "hoch" | "sehr_hoch" | "extrem";
@@ -57,6 +59,8 @@ export function useRiskWarnings() {
   const loadedKeyRef = useRef<string | null>(null);
   const ctrlRef = useRef<AbortController | null>(null);
   const thunderstorm = useThunderstormRisk(48);
+  const officialWarnings = useOfficialWarnings();
+  const nowcast = useRainbowNowcast();
 
   const fetchWarnings = useCallback(
     async (signal?: AbortSignal) => {
@@ -74,6 +78,8 @@ export function useRiskWarnings() {
             location,
             thunderstormScore: thunderstorm.current.score,
             windowHours: 48,
+            officialWarnings: officialWarnings.data?.warnings ?? [],
+            nowcast: nowcast.data ?? null,
           }),
           signal,
         });
@@ -92,7 +98,7 @@ export function useRiskWarnings() {
         setLoading(false);
       }
     },
-    [weatherData, location, thunderstorm.current.score],
+    [weatherData, location, thunderstorm.current.score, officialWarnings.data, nowcast.data],
   );
 
   // Clear stale warnings immediately when location changes
