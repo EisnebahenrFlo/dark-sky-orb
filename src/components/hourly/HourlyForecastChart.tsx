@@ -228,7 +228,7 @@ export function HourlyForecastChart({
         ]} />
         <div className="h-[120px] w-full pt-2 pb-1 sm:h-[160px]">
           <ResponsiveContainer width="100%" height="100%">
-            <ComposedChart data={rows} margin={MARGIN}>
+            <ComposedChart data={rows} margin={MARGIN} onClick={handleChartClick}>
               <CartesianGrid stroke={grid} vertical={false} />
               {hiddenX}
               <YAxis
@@ -242,7 +242,7 @@ export function HourlyForecastChart({
               <Tooltip content={<UnifiedTooltip />} cursor={false} wrapperStyle={{ pointerEvents: "none" }} position={{ x: 0, y: 0 }} />
               <Area type="monotone" dataKey="diffCold" stroke="none" fill="#3B82F6" fillOpacity={0.18} isAnimationActive={false} connectNulls={false} baseValue={0} activeDot={false} />
               <Area type="monotone" dataKey="diffWarm" stroke="none" fill="#EF4444" fillOpacity={0.18} isAnimationActive={false} connectNulls={false} baseValue={0} activeDot={false} />
-              <Area type="monotone" dataKey="temp" stroke={accent} strokeOpacity={0.6} strokeWidth={2} fill={accent} fillOpacity={0.08} dot={false} activeDot={{ r: 3 }} />
+              <Area type="monotone" dataKey="temp" stroke={accent} strokeOpacity={0.6} strokeWidth={2} fill={accent} fillOpacity={0.08} dot={false} activeDot={{ r: 6, strokeWidth: 0 }} />
               <Line type="monotone" dataKey="feels" stroke={accent} strokeOpacity={0.4} strokeDasharray="3 3" strokeWidth={1.5} dot={false} activeDot={false} />
               {nowLabel && <ReferenceLine x={nowLabel} stroke={accent} strokeWidth={1.5} strokeDasharray="4 4" strokeOpacity={0.8} />}
             </ComposedChart>
@@ -264,7 +264,7 @@ export function HourlyForecastChart({
         ]} />
         <div className="h-[100px] w-full pt-2 pb-1 sm:h-[130px]">
           <ResponsiveContainer width="100%" height="100%">
-            <ComposedChart data={rows} margin={MARGIN}>
+            <ComposedChart data={rows} margin={MARGIN} onClick={handleChartClick}>
               <CartesianGrid stroke={grid} vertical={false} />
               {hiddenX}
               <YAxis
@@ -301,7 +301,7 @@ export function HourlyForecastChart({
         ]} />
         <div className="h-[120px] w-full pt-2 pb-1 sm:h-[160px]">
           <ResponsiveContainer width="100%" height="100%">
-            <ComposedChart data={rows} margin={MARGIN}>
+            <ComposedChart data={rows} margin={MARGIN} onClick={handleChartClick}>
               <CartesianGrid stroke={grid} vertical={false} />
               {hiddenX}
               <YAxis
@@ -318,7 +318,7 @@ export function HourlyForecastChart({
               <ReferenceLine y={20} stroke={muted} strokeDasharray="2 3" strokeOpacity={0.4} label={{ value: "leichte Brise", position: "insideTopRight", fill: muted, fontSize: 8 }} />
               <ReferenceLine y={50} stroke={muted} strokeDasharray="2 3" strokeOpacity={0.4} label={{ value: "starker Wind", position: "insideTopRight", fill: muted, fontSize: 8 }} />
               <Line type="monotone" dataKey="gust" stroke={accent} strokeOpacity={0.6} strokeDasharray="4 3" strokeWidth={1} dot={false} activeDot={false} />
-              <Line type="monotone" dataKey="wind" stroke={accent} strokeWidth={2} dot={false} activeDot={{ r: 3 }} />
+              <Line type="monotone" dataKey="wind" stroke={accent} strokeWidth={2} dot={false} activeDot={{ r: 6, strokeWidth: 0 }} />
               {nowLabel && <ReferenceLine x={nowLabel} stroke={accent} strokeWidth={1.5} strokeDasharray="4 4" strokeOpacity={0.8} />}
             </ComposedChart>
           </ResponsiveContainer>
@@ -346,7 +346,7 @@ export function HourlyForecastChart({
         ]} />
         <div className="h-[110px] w-full pt-2 pb-1 sm:h-[140px]">
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={rows} margin={{ ...MARGIN, top: 18, bottom: 4 }}>
+            <BarChart data={rows} margin={{ ...MARGIN, top: 18, bottom: 4 }} onClick={handleChartClick}>
               <CartesianGrid stroke={grid} vertical={false} />
               <XAxis
                 dataKey="time"
