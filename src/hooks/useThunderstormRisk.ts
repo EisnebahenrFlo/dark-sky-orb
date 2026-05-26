@@ -1,13 +1,14 @@
 /**
  * Single source of truth for thunderstorm risk across MeteoFlo.
  *
- * Primary signal: `lightning_potential` (LPI, J/kg) from Open-Meteo hourly
- *   (DWD ICON-D2 in DACH + Northern Italy).
- * Fallback: `cape` (J/kg) when LPI is unavailable or zero.
+ * Composite-Score aus 4 Signalen (wie operationelle Meteorologen arbeiten):
+ *   1. LPI  — Lightning Potential Index (primäres Signal, DWD ICON-D2)
+ *   2. CAPE — Konvektionsenergie (Fallback wenn kein LPI)
+ *   3. Lifted Index — Verstärker/Dämpfer der Instabilität
+ *   4. CIN  — Convective Inhibition (Bremse/Gate-Keeper)
+ *   + Tageszeit-Gewichtung (Konvektion entsteht durch Erwärmung)
  *
- * All tabs (Heute, Warnungen, Stündlich, 7-Tage) MUST use this hook so the
- * displayed thunderstorm risk score is identical for the same location and
- * timestamp everywhere.
+ * Alle Tabs nutzen diesen Hook → identische Werte überall.
  */
 import { useMemo } from "react";
 import { useWeather } from "@/contexts/WeatherContext";
@@ -16,20 +17,16 @@ import type { HourlyData } from "@/lib/weather";
 export type ThunderstormLevel = "none" | "low" | "moderate" | "high" | "extreme";
 
 export interface ThunderstormRisk {
-  score: number; // 0–100, integer
+  score: number;
   level: ThunderstormLevel;
-  label: string; // German label
+  label: string;
   source: "lpi" | "cape";
 }
 
 export interface ThunderstormRiskSeries {
-  /** Peak risk over the next 24 h — used by the "current" card. */
   current: ThunderstormRisk;
-  /** Per-hour risk aligned with hourly.time. */
   hourly: ThunderstormRisk[];
-  /** Daily max risk keyed by YYYY-MM-DD. */
   byDay: Record<string, ThunderstormRisk>;
-  /** Whether LPI was usable at all in this dataset. */
   source: "lpi" | "cape";
   hasData: boolean;
 }
@@ -54,18 +51,62 @@ function clamp(v: number, lo: number, hi: number) {
   return Math.max(lo, Math.min(hi, v));
 }
 
-/** LPI J/kg → 0..100. Below 0.5 J/kg counts as no risk, 10 J/kg = 100. */
 export function scoreFromLPI(lpi: number | null | undefined): number {
   if (lpi == null || Number.isNaN(lpi) || lpi < 0.5) return 0;
   return Math.round(clamp((lpi / 10) * 100, 0, 100));
 }
 
-/** CAPE J/kg → 0..100. 0 = 0, 500 = 50, 2000+ = 100 (piecewise linear). */
 export function scoreFromCAPE(cape: number | null | undefined): number {
   if (cape == null || Number.isNaN(cape) || cape <= 0) return 0;
   if (cape <= 500) return Math.round((cape / 500) * 50);
   if (cape >= 2000) return 100;
   return Math.round(50 + ((cape - 500) / 1500) * 50);
+}
+
+/**
+ * Lifted Index → Multiplikator.
+ * Quelle: NWS / WMO operationelle Schwellenwerte.
+ *   LI >= 0       = stabil, dämpfen
+ *   LI 0..-2      = leicht instabil, neutral
+ *   LI -2..-6     = instabil, verstärken
+ *   LI < -6       = schwere Gewitter sehr wahrscheinlich, stark verstärken
+ */
+function liFactor(li: number | null | undefined): number {
+  if (li == null || Number.isNaN(li)) return 1.0;
+  if (li >= 2)  return 0.6;
+  if (li >= 0)  return 0.85;
+  if (li >= -2) return 1.0;
+  if (li >= -6) return 1.25;
+  return 1.5;
+}
+
+/**
+ * CIN → Dämpfungs-Faktor (Gate-Keeper).
+ * CIN ist negativ in J/kg. Je negativer, desto stärker die Sperrschicht.
+ * Quelle: Atmosphärenphysik — CIN > 200 J/kg verhindert Konvektion praktisch vollständig.
+ */
+function cinFactor(cin: number | null | undefined): number {
+  if (cin == null || Number.isNaN(cin)) return 1.0;
+  const absCin = Math.abs(cin); // CIN kommt als negative Zahl
+  if (absCin <= 10)  return 1.0;   // keine Hemmung
+  if (absCin <= 50)  return 0.85;  // leichte Hemmung
+  if (absCin <= 100) return 0.65;  // mäßige Hemmung
+  if (absCin <= 200) return 0.3;   // starke Sperrschicht
+  return 0.05;                      // Konvektion praktisch gesperrt
+}
+
+/**
+ * Tageszeit-Faktor.
+ * Konvektion entsteht fast immer durch Tageserwärmung.
+ * Ausnahme: Frontgewitter (dann ist LPI das dominante Signal und schon hoch).
+ */
+function daytimeFactor(isoTime: string): number {
+  const h = new Date(isoTime).getHours();
+  if (h >= 0  && h <= 5)  return 0.5;
+  if (h >= 6  && h <= 9)  return 0.8;
+  if (h >= 10 && h <= 19) return 1.0;
+  if (h >= 20 && h <= 22) return 0.75;
+  return 0.5; // 23 Uhr
 }
 
 function makeRisk(score: number, source: "lpi" | "cape"): ThunderstormRisk {
@@ -77,11 +118,31 @@ function makeRisk(score: number, source: "lpi" | "cape"): ThunderstormRisk {
 const EMPTY: ThunderstormRisk = makeRisk(0, "lpi");
 
 /**
- * Compute the unified risk series from a WeatherData snapshot. Pure helper
- * so it can be reused outside React (tests, analytics, etc.).
+ * Berechnet den Composite-Score für eine einzelne Stunde.
  */
+function computeHourScore(
+  lpiVal: number | null | undefined,
+  capeVal: number | null | undefined,
+  liVal: number | null | undefined,
+  cinVal: number | null | undefined,
+  isoTime: string,
+): { score: number; source: "lpi" | "cape" } {
+  const lpiScore = scoreFromLPI(lpiVal);
+  const capeScore = scoreFromCAPE(capeVal);
+
+  // Primäres Signal: LPI wenn verfügbar, sonst CAPE
+  const rawScore = lpiScore > 0 ? lpiScore : capeScore;
+  const source: "lpi" | "cape" = lpiScore > 0 ? "lpi" : "cape";
+
+  // Modifier anwenden
+  const modifiedScore = rawScore * liFactor(liVal) * cinFactor(cinVal) * daytimeFactor(isoTime);
+
+  return { score: modifiedScore, source };
+}
+
 export function computeThunderstormRiskSeries(
   hourly: HourlyData | undefined,
+  windowHours = 24,
 ): ThunderstormRiskSeries {
   if (!hourly || !hourly.time || hourly.time.length === 0) {
     return { current: EMPTY, hourly: [], byDay: {}, source: "lpi", hasData: false };
@@ -89,28 +150,34 @@ export function computeThunderstormRiskSeries(
 
   const lpi = hourly.lightning_potential;
   const cape = hourly.cape;
+  const li = hourly.lifted_index;
+  const cin = hourly.convective_inhibition;
+
   const hasLPI = Array.isArray(lpi) && lpi.some((v) => typeof v === "number" && v >= 0.5);
   const source: "lpi" | "cape" = hasLPI ? "lpi" : "cape";
 
-  const series: ThunderstormRisk[] = hourly.time.map((_, i) => {
-    const lpiScore = scoreFromLPI(lpi?.[i]);
-    if (lpiScore > 0) return makeRisk(lpiScore, "lpi");
-    const capeScore = scoreFromCAPE(cape?.[i]);
-    if (capeScore > 0) return makeRisk(capeScore, "cape");
-    return makeRisk(0, source);
+  const series: ThunderstormRisk[] = hourly.time.map((t, i) => {
+    const { score, source: s } = computeHourScore(
+      lpi?.[i],
+      cape?.[i],
+      li?.[i],
+      cin?.[i],
+      t,
+    );
+    return makeRisk(score, s);
   });
 
-  // Current = peak risk over the next 24 hourly entries from now.
+  // Peak im konfigurierbaren Zeitfenster ab jetzt
   const nowMs = Date.now();
   let startIdx = hourly.time.findIndex((t) => new Date(t).getTime() >= nowMs);
   if (startIdx < 0) startIdx = 0;
-  const window = series.slice(startIdx, startIdx + 24);
+  const window = series.slice(startIdx, startIdx + windowHours);
   const current = window.reduce<ThunderstormRisk>(
     (best, r) => (r.score > best.score ? r : best),
     makeRisk(0, source),
   );
 
-  // Per-day maximum.
+  // Tages-Maximum
   const byDay: Record<string, ThunderstormRisk> = {};
   for (let i = 0; i < hourly.time.length; i++) {
     const day = hourly.time[i].slice(0, 10);
@@ -122,16 +189,11 @@ export function computeThunderstormRiskSeries(
   return { current, hourly: series, byDay, source, hasData: true };
 }
 
-/**
- * React hook — pulls the active weather snapshot from WeatherContext and
- * returns the unified thunderstorm risk series. Memoised on the timestamp
- * of the underlying data so repeated reads are cheap.
- */
-export function useThunderstormRisk(): ThunderstormRiskSeries {
+export function useThunderstormRisk(windowHours = 24): ThunderstormRiskSeries {
   const { data, dataUpdatedAt } = useWeather();
   return useMemo(
-    () => computeThunderstormRiskSeries(data?.hourly),
+    () => computeThunderstormRiskSeries(data?.hourly, windowHours),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [dataUpdatedAt, data?.hourly],
+    [dataUpdatedAt, data?.hourly, windowHours],
   );
 }
