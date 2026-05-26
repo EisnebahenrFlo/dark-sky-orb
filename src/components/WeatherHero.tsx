@@ -69,7 +69,7 @@ export function WeatherHero({ location, data, updatedAt, onRefresh }: Props) {
   );
 }
 
-export function WeatherHeroStats({ data, children }: { data: CurrentWeather; children?: React.ReactNode }) {
+export function WeatherHeroStats({ data, children }: { data: CurrentWeather; children?: ReactNode }) {
   return (
     <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
       <Stat
