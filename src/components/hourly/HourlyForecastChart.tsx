@@ -170,7 +170,7 @@ export function HourlyForecastChart({
   const hiddenX = <XAxis dataKey="time" hide tickLine={false} axisLine={false} />;
 
   return (
-    <div className="glass overflow-hidden rounded-3xl">
+    <div className="glass overflow-visible rounded-3xl">
       {/* Panel 1: Temp & Gefühlt */}
       <div className="px-3 pt-3">
         <div className="px-1 pb-1 text-[10px] uppercase tracking-wider text-muted-foreground/70">
