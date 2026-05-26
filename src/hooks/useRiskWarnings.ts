@@ -56,7 +56,7 @@ export function useRiskWarnings() {
   const [error, setError] = useState<string | null>(null);
   const [errorCode, setErrorCode] = useState<RiskWarningsErrorCode | null>(null);
   const [lastUpdated, setLastUpdated] = useState<number | null>(null);
-  const loadedKeyRef = useRef<string | null>(null);
+  
   const ctrlRef = useRef<AbortController | null>(null);
   const thunderstorm = useThunderstormRisk(48);
   const officialWarnings = useOfficialWarningsCtx();
@@ -129,18 +129,11 @@ export function useRiskWarnings() {
     setErrorCode(null);
     setLastUpdated(null);
     setLoading(true);
-    loadedKeyRef.current = null;
   }, [location.latitude, location.longitude, weatherData?.latitude, weatherData?.longitude]);
 
-  // Fetch only when fresh weather data for the current location is available
+  // Fetch whenever location or weather coordinates change; abort previous in-flight request
   useEffect(() => {
     if (!weatherData || !location) return;
-    console.log('[risk-warnings] effect check', {
-      weatherFetching,
-      key: `${location.latitude}_${location.longitude}`,
-      loadedKey: loadedKeyRef.current,
-      hasWeatherData: !!weatherData,
-    });
     if (weatherFetching) return;
     if (
       Math.abs(weatherData.latitude - location.latitude) > 0.5 ||
@@ -148,9 +141,6 @@ export function useRiskWarnings() {
     ) {
       return;
     }
-    const key = `${location.latitude}_${location.longitude}`;
-    if (loadedKeyRef.current === key) return;
-    loadedKeyRef.current = key;
     ctrlRef.current?.abort();
     const ctrl = new AbortController();
     ctrlRef.current = ctrl;
