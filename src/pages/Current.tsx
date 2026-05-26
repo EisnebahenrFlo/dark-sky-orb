@@ -3,7 +3,7 @@ import { WeatherHero } from "@/components/WeatherHero";
 import { SunPositionCard } from "@/components/current/SunPositionCard";
 import { WarningIndicatorCard } from "@/components/current/WarningIndicatorCard";
 import { UvIndexStat } from "@/components/current/UvIndexStat";
-import { LightningPotentialStat } from "@/components/current/LightningPotentialStat";
+import WeatherRiskGauges from "@/components/WeatherRiskGauges";
 import { PageState } from "@/components/PageState";
 
 function currentHourIndex(times: string[] | undefined, nowTime: string): number {
