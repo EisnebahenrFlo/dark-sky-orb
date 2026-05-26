@@ -23,10 +23,9 @@ export function CurrentPage({ onRefresh }: { onRefresh?: () => Promise<void> | v
               <WarningIndicatorCard />
             </div>
             <div className="mt-2">
-              <WeatherHeroStats data={data.current} />
-            </div>
-            <div className="mt-2 empty:mt-0">
-              <UvIndexStat value={uv} isDay={!!data.current.is_day} />
+              <WeatherHeroStats data={data.current}>
+                <UvIndexStat value={uv} isDay={!!data.current.is_day} />
+              </WeatherHeroStats>
             </div>
             {data.daily?.sunrise?.[0] && data.daily?.sunset?.[0] && (
               <div className="mt-2">
