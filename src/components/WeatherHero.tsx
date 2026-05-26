@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { safeFixed } from "@/lib/safeFormat";
 import { Wind, Droplets, Gauge, CloudRain, Thermometer, Cloud, Navigation } from "lucide-react";
 import type { CurrentWeather, GeoResult } from "@/lib/weather";
