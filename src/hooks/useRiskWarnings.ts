@@ -59,6 +59,8 @@ export function useRiskWarnings() {
   const loadedKeyRef = useRef<string | null>(null);
   const ctrlRef = useRef<AbortController | null>(null);
   const thunderstorm = useThunderstormRisk(48);
+  const officialWarnings = useOfficialWarnings();
+  const nowcast = useRainbowNowcast();
 
   const fetchWarnings = useCallback(
     async (signal?: AbortSignal) => {
