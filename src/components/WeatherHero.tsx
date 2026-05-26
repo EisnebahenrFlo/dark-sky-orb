@@ -23,7 +23,7 @@ function Stat({ icon: Icon, label, value, sub }: { icon: typeof Wind; label: str
   );
 }
 
-export function WeatherHero({ location, data, updatedAt }: Props) {
+export function WeatherHero({ location, data, updatedAt, onRefresh }: Props) {
   const effective = getEffectiveWeather(data.weather_code, data.precipitation, data.cloud_cover, data.is_day, data.relative_humidity_2m, new Date(data.time).getHours());
   const group = getWeatherGroup(data.weather_code, (data.is_day ? 1 : 0) as 0 | 1);
   const palette = getHeroPalette(group);
