@@ -56,15 +56,16 @@ export function useRiskWarnings() {
   const [error, setError] = useState<string | null>(null);
   const [errorCode, setErrorCode] = useState<RiskWarningsErrorCode | null>(null);
   const [lastUpdated, setLastUpdated] = useState<number | null>(null);
-  
-  const ctrlRef = useRef<AbortController | null>(null);
+
+  const fetchIdRef = useRef<number>(0);
   const thunderstorm = useThunderstormRisk(48);
   const officialWarnings = useOfficialWarningsCtx();
   const nowcast = useRainbowNowcast();
 
   const fetchWarnings = useCallback(
-    async (signal?: AbortSignal) => {
+    async () => {
       if (!weatherData || !location) return;
+      const myId = ++fetchIdRef.current;
       setLoading(true);
       setError(null);
       setErrorCode(null);
@@ -101,9 +102,9 @@ export function useRiskWarnings() {
               forecast: nowcast.data.forecast.slice(0, 12),
             } : null,
           }),
-          signal,
         });
         const json = await res.json().catch(() => ({}));
+        if (myId !== fetchIdRef.current) return; // stale
         if (!res.ok) {
           setErrorCode((json?.code as RiskWarningsErrorCode) || "API_ERROR");
           throw new Error(json?.error || "Warnungen konnten nicht geladen werden");
@@ -111,49 +112,35 @@ export function useRiskWarnings() {
         setData(json as RiskWarnings);
         setLastUpdated(Date.now());
       } catch (e: any) {
-        if (e?.name === "AbortError") return;
+        if (myId !== fetchIdRef.current) return;
         setErrorCode((prev) => prev ?? "NETWORK");
         setError(e?.message || "Unbekannter Fehler");
       } finally {
-        setLoading(false);
+        if (myId === fetchIdRef.current) setLoading(false);
       }
     },
     [weatherData, location, thunderstorm.current.score, officialWarnings.data, nowcast.data],
   );
 
-  // Clear stale warnings immediately when location changes
+  // Drive fetches from location/weather changes
   useEffect(() => {
-    ctrlRef.current?.abort();
-    setData(null);
-    setError(null);
-    setErrorCode(null);
-    setLastUpdated(null);
-    setLoading(true);
-  }, [location.latitude, location.longitude, weatherData?.latitude, weatherData?.longitude]);
-
-  // Fetch whenever location or weather coordinates change; abort previous in-flight request
-  useEffect(() => {
-    if (!weatherData || !location) return;
-    if (weatherFetching) return;
+    if (!weatherData || !location) {
+      setLoading(true);
+      return;
+    }
+    if (weatherFetching) {
+      setLoading(true);
+      return;
+    }
     if (
       Math.abs(weatherData.latitude - location.latitude) > 0.5 ||
       Math.abs(weatherData.longitude - location.longitude) > 0.5
     ) {
+      setLoading(true);
       return;
     }
-    ctrlRef.current?.abort();
-    const ctrl = new AbortController();
-    ctrlRef.current = ctrl;
-    fetchWarnings(ctrl.signal);
-    return () => ctrl.abort();
-  }, [
-    location.latitude,
-    location.longitude,
-    weatherData?.latitude,
-    weatherData?.longitude,
-    weatherFetching,
-    fetchWarnings,
-  ]);
+    fetchWarnings();
+  }, [location.latitude, location.longitude, weatherData, weatherFetching, fetchWarnings]);
 
   // Auto-refresh every 15 min, pause when tab is hidden
   useEffect(() => {
@@ -163,9 +150,7 @@ export function useRiskWarnings() {
       if (timer) return;
       timer = setInterval(() => {
         if (document.visibilityState === "visible") {
-          const ctrl = new AbortController();
-          ctrlRef.current = ctrl;
-          fetchWarnings(ctrl.signal);
+          fetchWarnings();
         }
       }, REFRESH_MS);
     };
@@ -189,9 +174,7 @@ export function useRiskWarnings() {
   }, [fetchWarnings]);
 
   const refresh = useCallback(() => {
-    const ctrl = new AbortController();
-    ctrlRef.current = ctrl;
-    return fetchWarnings(ctrl.signal);
+    return fetchWarnings();
   }, [fetchWarnings]);
 
   return { data, loading, error, errorCode, refresh, lastUpdated };
