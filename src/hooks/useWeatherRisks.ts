@@ -90,7 +90,8 @@ export function useWeatherRisks(): UseWeatherRisksResult {
     const cape = hourly?.cape?.[i] ?? 0;
     const freezing = hourly?.freezing_level_height?.[i] ?? 9999;
     const snow = hourly?.snowfall?.[i] ?? 0;
-    const wetBulb = hourly?.wet_bulb_temperature_2m?.[i] ?? 99;
+    const temp2m = hourly?.temperature_2m?.[i] ?? 0;
+    const wetBulb = hourly?.wet_bulb_temperature_2m?.[i] ?? temp2m - 2;
     const visibility = hourly?.visibility?.[i] ?? 10000;
     const wmoCode = hourly?.weather_code?.[i] ?? 0;
 
