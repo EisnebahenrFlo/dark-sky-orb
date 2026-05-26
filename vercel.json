@@ -15,6 +15,8 @@
     "api/rainbow-tile.ts": {
       "includeFiles": "api/_lib/**"
     },
-    "api/weather.ts": {}
+    "api/weather.ts": {
+      "memory": 256
+    }
   }
 }
