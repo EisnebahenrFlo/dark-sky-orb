@@ -8,6 +8,13 @@
     },
     "api/risk-warnings.ts": {
       "includeFiles": "api/_lib/**"
-    }
+    },
+    "api/rainbow-snapshot.ts": {
+      "includeFiles": "api/_lib/**"
+    },
+    "api/rainbow-tile.ts": {
+      "includeFiles": "api/_lib/**"
+    },
+    "api/weather.ts": {}
   }
 }
