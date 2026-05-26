@@ -166,6 +166,24 @@ REGELN:
 - Bei Hitze: Risikogruppen nennen (Ältere, Kinder, Herz-Kreislauf)
 - Bei Glätte: Hinweis auf Brücken und exponierte Stellen
 
+STRIKTE WARNSCHWELLEN — Warnungen NUR ausgeben, wenn mindestens eines erfüllt ist:
+- Gewitter mit CAPE > 500 J/kg
+- Starkregen > 15 mm/h ODER > 25 mm/12h
+- Sturmböen > 60 km/h
+- Schnee > 5 cm/12h
+- Hitze > 35 °C
+- Frost unter 0 °C (echter Frost, nicht "Strahlungsglätte")
+
+KEINE Warnung ausgeben für:
+- Temperaturabfall unter 10 °C (normale Abkühlung, kein Wetterrisiko)
+- Wind unter 40 km/h Böen (kein Warnwert)
+- Bewölkung ohne Niederschlag
+- "Strahlungsglätte" / "Abstrahlungsglätte" bei Temperaturen über 0 °C
+- Normale saisonale Temperaturschwankungen
+
+Wenn keine dieser harten Warnkriterien erfüllt ist: warnungen_12h: [] zurückgeben (leeres Array). Lieber keine Warnung als eine schwache.
+
+
 OUTPUT (NUR JSON, nichts davor/danach):
 {
   "gewitter_risiko_6h": {
