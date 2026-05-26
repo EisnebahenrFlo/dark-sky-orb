@@ -38,7 +38,7 @@ function getIndices(hourly: any, hours: number): number[] {
     .map((item: { t: number; i: number }) => item.i);
 }
 
-function detectWarnings(weatherData: any, windowHours: number) {
+function detectWarnings(weatherData: any, windowHours: number, officialWarnings: any[] = []) {
   const warnings: any[] = [];
   const hourly = weatherData.hourly;
   if (!hourly?.time) return warnings;
