@@ -3,7 +3,7 @@ import { useWeather } from "@/contexts/WeatherContext";
 import { useThunderstormRisk } from "@/hooks/useThunderstormRisk";
 
 export interface SynoptikAnalysis {
-  highlight: string;
+  highlight: { text: string };
   großwetterlage: { klassifikation: string; beschreibung: string };
   aktuell: { lage: string; luftmasse: string };
   konvektion: {
