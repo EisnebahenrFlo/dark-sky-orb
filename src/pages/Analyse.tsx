@@ -19,6 +19,7 @@ import { ConvectionBadge } from "@/components/synoptik/ConvectionBadge";
 import { useWeather } from "@/contexts/WeatherContext";
 import { UnsupportedLocationNotice } from "@/components/PageState";
 import { AnalysisLoader } from "@/components/loaders/AnalysisLoader";
+import { WarningsLoader } from "@/components/loaders/WarningsLoader";
 import { WeatherLoader } from "@/components/loaders/WeatherLoader";
 import { AnalysisDisclaimer } from "@/components/analysis/AnalysisDisclaimer";
 import { StaleBadge } from "@/components/StaleBadge";
@@ -97,7 +98,8 @@ export function AnalysePage() {
   const { data: weather, location, errorCode: weatherErrorCode } = useWeather();
   const { data, loading, error, errorCode, refresh, lastUpdated } = useSynoptikAnalysisCtx();
   const retry = useDebouncedAction(() => refresh(), 5000);
-  const { data: riskData } = useRiskWarningsCtx();
+  const { data: riskData, loading: riskLoading, error: riskError, refresh: refreshRisk } = useRiskWarningsCtx();
+  const riskRetry = useDebouncedAction(() => refreshRisk(), 5000);
   const unifiedRisk = useThunderstormRisk();
 
   if (weatherErrorCode === "unsupported_location") {
@@ -123,44 +125,66 @@ export function AnalysePage() {
       {/* Amtliche Warnungen — einmalig, ganz oben */}
       <OfficialWarningsSection />
 
-      {/* KI-ANALYSE: Header + RiskHero + Warnungskarten */}
-      {riskData && (
-        <section className="space-y-3">
-          <div className="flex items-baseline justify-between gap-3 px-1">
-            <div>
-              <h2 className="font-display text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-                KI-Analyse
-              </h2>
-              <p className="mt-0.5 text-[11px] text-muted-foreground/80">
-                Synoptische KI-Risikoeinschätzung – nicht amtlich
-              </p>
-            </div>
-            {riskData.warnungen_12h.length > 0 && (
-              <span className="text-xs text-muted-foreground">
-                {riskData.warnungen_12h.length}{" "}
-                {riskData.warnungen_12h.length === 1 ? "Warnung" : "Warnungen"}
-              </span>
-            )}
+      {/* KI-ANALYSE: Header + Loader/Error/Daten */}
+      <section className="space-y-3">
+        <div className="flex items-baseline justify-between gap-3 px-1">
+          <div>
+            <h2 className="font-display text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+              KI-Auswertung · 12 H
+            </h2>
+            <p className="mt-0.5 text-[11px] text-muted-foreground/80">
+              Synoptische KI-Risikoeinschätzung – nicht amtlich
+            </p>
           </div>
-
-          <RiskHero risk={{ ...riskData.gewitter_risiko_6h, score: unifiedRisk.current.score }} />
-
-          {riskData.warnungen_12h.length > 0 ? (
-            <div className="space-y-3">
-              {riskData.warnungen_12h.map((w, i) => (
-                <WarningCard key={`${w.id}_${i}`} warning={w} />
-              ))}
-            </div>
-          ) : (
-            <div className="flex items-center gap-3 rounded-2xl border border-border bg-card p-4">
-              <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-500" strokeWidth={2} />
-              <p className="text-sm text-muted-foreground">
-                Die KI-Auswertung sieht aktuell keine kritischen Risiken.
-              </p>
-            </div>
+          {riskData && riskData.warnungen_12h.length > 0 && (
+            <span className="text-xs text-muted-foreground">
+              {riskData.warnungen_12h.length}{" "}
+              {riskData.warnungen_12h.length === 1 ? "Warnung" : "Warnungen"}
+            </span>
           )}
-        </section>
-      )}
+        </div>
+
+        {riskLoading && !riskData && <WarningsLoader />}
+
+        {riskError && !riskData && (
+          <div className="flex flex-col items-center gap-3 rounded-2xl border border-border bg-card p-6 text-center shadow-sm">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-muted">
+              <AlertCircle className="h-5 w-5 text-foreground/70" strokeWidth={1.75} />
+            </div>
+            <p className="text-sm text-muted-foreground">
+              KI-Auswertung konnte nicht geladen werden.
+            </p>
+            <button
+              onClick={riskRetry.trigger}
+              disabled={riskRetry.disabled || riskLoading}
+              className="inline-flex items-center gap-2 rounded-2xl bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-sm transition-opacity hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Erneut versuchen
+            </button>
+          </div>
+        )}
+
+        {riskData && (
+          <>
+            <RiskHero risk={{ ...riskData.gewitter_risiko_6h, score: unifiedRisk.current.score }} />
+
+            {riskData.warnungen_12h.length > 0 ? (
+              <div className="space-y-3">
+                {riskData.warnungen_12h.map((w, i) => (
+                  <WarningCard key={`${w.id}_${i}`} warning={w} />
+                ))}
+              </div>
+            ) : (
+              <div className="flex items-center gap-3 rounded-2xl border border-border bg-card p-4">
+                <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-500" strokeWidth={2} />
+                <p className="text-sm text-muted-foreground">
+                  Die KI-Auswertung sieht aktuell keine kritischen Risiken.
+                </p>
+              </div>
+            )}
+          </>
+        )}
+      </section>
 
       {/* Initial loading */}
       {!data && !error && <AnalysisLoader />}
