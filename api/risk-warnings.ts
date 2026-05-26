@@ -4,11 +4,10 @@
 import { getCached, setCached, isFresh, isStaleButUsable, ageMinutes } from './_lib/cache.js';
 
 const THRESHOLDS = {
-  wind_gust_markant: 70, wind_gust_severe: 90, wind_gust_extreme: 118,
+  wind_gust_markant: 60, wind_gust_severe: 90, wind_gust_extreme: 118,
   precip_1h_markant: 15, precip_1h_severe: 25, precip_1h_extreme: 40,
   precip_12h_markant: 25, precip_12h_severe: 40, precip_12h_extreme: 70,
   snow_12h_markant: 10, snow_12h_severe: 20,
-  temp_hot_markant: 32, temp_hot_severe: 38,
   glaze_temp: -1,
 };
 
