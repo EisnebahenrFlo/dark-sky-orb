@@ -1,5 +1,5 @@
 import { useWeather } from "@/contexts/WeatherContext";
-import { WeatherHero } from "@/components/WeatherHero";
+import { WeatherHero, WeatherHeroStats } from "@/components/WeatherHero";
 import { SunPositionCard } from "@/components/current/SunPositionCard";
 import { WarningIndicatorCard } from "@/components/current/WarningIndicatorCard";
 import { UvIndexStat } from "@/components/current/UvIndexStat";
@@ -30,9 +30,8 @@ export function CurrentPage({ onRefresh }: { onRefresh?: () => Promise<void> | v
         return (
           <div className="space-y-6">
             <WeatherHero location={location} data={data.current} updatedAt={dataUpdatedAt} onRefresh={onRefresh} />
-            <div className="mt-2">
-              <WeatherRiskGauges />
-            </div>
+            <WeatherRiskGauges />
+            <WeatherHeroStats data={data.current} />
             <WarningIndicatorCard />
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
               <UvIndexStat value={uv} isDay={!!data.current.is_day} />
