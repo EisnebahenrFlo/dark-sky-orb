@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { safeFixed } from "@/lib/safeFormat";
 import { Wind, Droplets, Gauge, CloudRain, Thermometer, Cloud, Navigation } from "lucide-react";
 import type { CurrentWeather, GeoResult } from "@/lib/weather";
@@ -68,7 +69,7 @@ export function WeatherHero({ location, data, updatedAt, onRefresh }: Props) {
   );
 }
 
-export function WeatherHeroStats({ data }: { data: CurrentWeather }) {
+export function WeatherHeroStats({ data, children }: { data: CurrentWeather; children?: ReactNode }) {
   return (
     <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
       <Stat
@@ -99,6 +100,7 @@ export function WeatherHeroStats({ data }: { data: CurrentWeather }) {
       <Stat icon={Droplets} label="Luftfeuchte" value={`${data.relative_humidity_2m}%`} />
       <Stat icon={Gauge} label="Luftdruck" value={`${Math.round(data.pressure_msl)} hPa`} />
       <Stat icon={Thermometer} label="Gefühlt" value={`${Math.round(data.apparent_temperature)}°`} />
+      {children}
     </div>
   );
 }
