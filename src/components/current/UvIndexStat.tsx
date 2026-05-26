@@ -24,7 +24,7 @@ export function UvIndexStat({ value, isDay = true }: Props) {
   const meta = uv > 0 ? uvMeta(uv) : { label: "Minimal", color: "#10b981" };
 
   return (
-    <div className="glass rounded-2xl p-4">
+    <div className="glass rounded-2xl p-5">
       <div className="mb-2 flex items-center gap-2 text-[11px] uppercase tracking-wider text-muted-foreground">
         <Sun className="h-3.5 w-3.5" strokeWidth={1.5} />
         UV-Index
