@@ -92,7 +92,7 @@ export function useRiskWarnings() {
         setLoading(false);
       }
     },
-    [weatherData, location],
+    [weatherData, location, thunderstorm.current.score],
   );
 
   // Clear stale warnings immediately when location changes
