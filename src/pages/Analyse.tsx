@@ -6,8 +6,6 @@ import {
   Globe,
   Layers,
   MapPin,
-  Plane,
-  Split,
   Wind,
   Zap,
 } from "lucide-react";
@@ -26,7 +24,6 @@ import { StaleBadge } from "@/components/StaleBadge";
 import { useRiskWarningsCtx } from "@/contexts/RiskWarningsContext";
 import { RiskHero } from "@/components/warnings/RiskHero";
 import { WarningCard } from "@/components/warnings/WarningCard";
-
 import { useThunderstormRisk } from "@/hooks/useThunderstormRisk";
 
 const formatHighlight = (text: string) => text.replaceAll(";", " ·");
@@ -94,30 +91,11 @@ function useDebouncedAction(action: () => void, ms = 5000) {
   return { trigger, disabled };
 }
 
-function SkeletonCard() {
-  return (
-    <div className="rounded-2xl border border-border bg-card p-5 sm:p-6">
-      <div className="flex items-start gap-3">
-        <div className="h-10 w-10 animate-pulse rounded-xl bg-muted" />
-        <div className="flex-1 space-y-2">
-          <div className="h-4 w-1/3 animate-pulse rounded bg-muted" />
-          <div className="h-3 w-1/2 animate-pulse rounded bg-muted" />
-        </div>
-      </div>
-      <div className="mt-4 space-y-2">
-        <div className="h-3 w-full animate-pulse rounded bg-muted" />
-        <div className="h-3 w-11/12 animate-pulse rounded bg-muted" />
-        <div className="h-3 w-3/4 animate-pulse rounded bg-muted" />
-      </div>
-    </div>
-  );
-}
-
 export function AnalysePage() {
   const { data: weather, location, errorCode: weatherErrorCode } = useWeather();
   const { data, loading, error, errorCode, refresh, lastUpdated } = useSynoptikAnalysisCtx();
   const retry = useDebouncedAction(() => refresh(), 5000);
-  const { data: riskData, loading: riskLoading } = useRiskWarningsCtx();
+  const { data: riskData } = useRiskWarningsCtx();
   const unifiedRisk = useThunderstormRisk();
 
   if (weatherErrorCode === "unsupported_location") {
@@ -140,7 +118,17 @@ export function AnalysePage() {
         </span>
       </div>
 
-      {/* Initial loading: show as long as we have neither data nor error */}
+      {/* RiskHero + KI-Warnungen — direkt nach Header */}
+      {riskData && (
+        <>
+          <RiskHero risk={{ ...riskData.gewitter_risiko_6h, score: unifiedRisk.current.score }} />
+          {riskData.warnungen_12h.map((w, i) => (
+            <WarningCard key={`${w.id}_${i}`} warning={w} />
+          ))}
+        </>
+      )}
+
+      {/* Initial loading */}
       {!data && !error && <AnalysisLoader />}
 
       {/* Error */}
@@ -165,23 +153,12 @@ export function AnalysePage() {
 
       {data && (
         <div className={`relative space-y-5 transition-opacity ${loading ? "opacity-50" : ""}`}>
-          {/* Hero: highlight + confidence */}
+          {/* KI-Analyse Hero */}
           <HeroCard
             highlight={formatHighlight(data.highlight)}
             confidenceScore={data.confidence?.score ?? 0}
             confidenceReason={data.confidence?.begründung}
           />
-
-
-          {/* KI-Auswertung */}
-          {riskData && (
-            <>
-              <RiskHero risk={{ ...riskData.gewitter_risiko_6h, score: unifiedRisk.current.score }} />
-              {riskData.warnungen_12h.map((w, i) => (
-                <WarningCard key={`${w.id}_${i}`} warning={w} />
-              ))}
-            </>
-          )}
 
           {/* Großwetterlage */}
           <SectionCard
@@ -192,7 +169,7 @@ export function AnalysePage() {
             {data.großwetterlage?.beschreibung}
           </SectionCard>
 
-          {/* Aktuell */}
+          {/* Aktuelle Lage */}
           {data.aktuell && (
             <SectionCard icon={Wind} title="Aktuelle Lage">
               <p>{data.aktuell.lage}</p>
@@ -202,7 +179,7 @@ export function AnalysePage() {
             </SectionCard>
           )}
 
-          {/* Konvektion */}
+          {/* Gewitterrisiko & Konvektion */}
           <SectionCard icon={Zap} title="Gewitterrisiko & Konvektion">
             <div className="flex flex-wrap items-center gap-2">
               <ConvectionBadge potenzial={data.konvektion?.potenzial ?? "kein"} />
@@ -240,7 +217,7 @@ export function AnalysePage() {
             </div>
           </SectionCard>
 
-          {/* Regionale Besonderheiten — nur wenn vorhanden */}
+          {/* Regionale Besonderheiten */}
           {data.regionale_besonderheiten && data.regionale_besonderheiten.length > 0 && (
             <SectionCard icon={MapPin} title="Regionale Besonderheiten">
               <ul className="list-disc space-y-1 pl-5">
@@ -251,7 +228,7 @@ export function AnalysePage() {
             </SectionCard>
           )}
 
-          {/* Großwetterlage Detail — für Interessierte */}
+          {/* Details für Wetter-Nerds */}
           {data.großwetterlage_detail && (
             <SectionCard icon={Layers} title="Details für Wetter-Nerds">
               <div className="space-y-2">
@@ -266,37 +243,6 @@ export function AnalysePage() {
                 )}
               </div>
             </SectionCard>
-          )}
-
-          {/* Legacy-Fallback: alte Cache-Einträge mit altem Schema */}
-          {!data.großwetterlage_detail && !data.aktuell && (
-            <>
-              {data.höhenstruktur_500hPa && (
-                <SectionCard icon={Layers} title="Höhenstruktur 500 hPa" subtitle={data.höhenstruktur_500hPa.muster}>
-                  {data.höhenstruktur_500hPa.beschreibung}
-                </SectionCard>
-              )}
-              {data.bodendruck && (
-                <SectionCard icon={Layers} title="Bodendruck" subtitle={data.bodendruck.muster}>
-                  {data.bodendruck.beschreibung}
-                </SectionCard>
-              )}
-              {data.luftmasse && (
-                <SectionCard icon={Wind} title="Luftmasse" subtitle={data.luftmasse.klassifikation}>
-                  {data.luftmasse.begründung}
-                </SectionCard>
-              )}
-              {data.fronten_aktivität?.vorhanden ? (
-                <SectionCard icon={Split} title="Fronten" subtitle={data.fronten_aktivität.typ}>
-                  {data.fronten_aktivität.auswirkung}
-                </SectionCard>
-              ) : null}
-              {data.jet_stream?.relevant && (
-                <SectionCard icon={Plane} title="Jet Stream">
-                  {data.jet_stream.beschreibung}
-                </SectionCard>
-              )}
-            </>
           )}
 
           <AnalysisDisclaimer />
@@ -328,7 +274,6 @@ export function AnalysePage() {
           </div>
         </div>
       )}
-
 
       <div className="mt-6 text-center text-xs text-muted-foreground">
         Datenquelle: {getWeatherModelLabel(location.country_code)}
