@@ -96,7 +96,6 @@ export function WeatherHero({ location, data, updatedAt, onRefresh }: Props) {
         <Stat icon={CloudRain} label="Niederschlag" value={data.precipitation < 0.1 ? "—" : `${safeFixed(data.precipitation, 1)} mm`} sub="aktuelle Stunde" />
         <Stat icon={Cloud} label="Bewölkung" value={`${data.cloud_cover}%`} />
         <Stat icon={Thermometer} label="Gefühlt" value={`${Math.round(data.apparent_temperature)}°`} />
-        <Stat icon={Eye} label="Tageszeit" value={data.is_day ? "Tag" : "Nacht"} />
       </div>
     </div>
   );
