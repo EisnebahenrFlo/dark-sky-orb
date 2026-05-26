@@ -75,12 +75,8 @@ function detectWarnings(weatherData: any, windowHours: number) {
     warnings.push({ typ: 'schnee', stufe, sum: Math.round(snow * 10) / 10, unit: 'cm' });
   }
 
-  // Hitze
-  const maxTemp = getMax(hourly.temperature_2m);
-  if (maxTemp >= THRESHOLDS.temp_hot_markant) {
-    const stufe = maxTemp >= THRESHOLDS.temp_hot_severe ? 'unwetter' : 'markant';
-    warnings.push({ typ: 'hitze', stufe, max_value: Math.round(maxTemp * 10) / 10, unit: '°C' });
-  }
+  // Hitze: deaktiviert (Schwelle 32°C zu niedrig für Mai/Juni — würde Fehlalarme erzeugen)
+
 
   // Glätte
   const glazeRisk = idx.some((i: number) =>
