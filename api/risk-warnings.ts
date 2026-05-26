@@ -151,6 +151,9 @@ DEINE AUFGABE:
 - Schätze Konvektionstyp ein (Einzelzellen / Multizellen / Superzellen / MCS / Frontgewitter)
 
 REGELN:
+- Amtliche Warnungen haben HÖCHSTE PRIORITÄT. Wenn eine amtliche Gewitterwarnung vorhanden ist, MUSS die KI-Auswertung mindestens eine Gewitterwarnung ausgeben.
+- Rainbow Nowcast zeigt was in den nächsten 2h tatsächlich kommt — nutze das als Realitäts-Check.
+- Wenn amtliche Warnung vorhanden aber Open-Meteo-Score niedrig → erkläre die Diskrepanz in der Begründung.
 - Erfinde KEINE Warnungen
 - Max. 2 Sätze pro Beschreibung, aktiv formuliert
 - Konkrete Zahlen einbauen
