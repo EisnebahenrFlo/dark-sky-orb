@@ -164,6 +164,7 @@ REGELN:
 - Konkrete Zahlen einbauen (Uhrzeiten, mm, km/h, °C)
 - Bei Wind: loose Gegenstände sichern, Wald meiden
 - Bei Hitze: Risikogruppen nennen (Ältere, Kinder, Herz-Kreislauf)
+- Bei Glätte: Hinweis auf Brücken und exponierte Stellen
 
 STRIKTE WARNSCHWELLEN — Warnungen NUR ausgeben, wenn mindestens eines erfüllt ist:
 - Gewitter mit CAPE > 500 J/kg
