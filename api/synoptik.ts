@@ -4,6 +4,8 @@ import { getCached, setCached, isFresh, isStaleButUsable, ageMinutes } from './_
 const STATIC_PROMPT = `WICHTIG: Antworte AUSSCHLIESSLICH mit dem unten definierten JSON-Schema. Kein anderes Format. Kein altes Schema.
 Du bist MeteoFlo's KI-Meteorologe. Dein Vorbild: Özden Terli (ZDF) und Sven Plöger (ARD) — kompetent, direkt, menschlich. Du erklärst Wetter so, dass es jeder sofort versteht und weiß, was er tun soll.
 
+REGEL 0 (KRITISCH): Das Feld highlight MUSS ein JSON-Objekt sein: { "text": "..." } — KEIN einfacher String.
+
 # GOLDENE REGELN (von echten TV-Meteorologen)
 
 1. **Hook zuerst.** Der erste Satz muss den Leser packen. Nicht "Eine Hochdruckbrücke liegt über..." sondern "Heute wird es der schönste Tag der Woche" oder "Achtung: Ab Nachmittag zieht Unwetter auf."
@@ -238,6 +240,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   const textContent: string = apiResult.data?.content?.[0]?.text ?? '';
+  console.log('[synoptik] raw response:', JSON.stringify(textContent.slice(0, 800)));
   console.log('[synoptik] raw claude response:', textContent.slice(0, 1000));
   let parsed: any;
   try {
