@@ -40,6 +40,7 @@ export function WeatherHero({ location, data, updatedAt, onRefresh }: Props) {
         }}
       >
         <WeatherHeroCanvas weatherCode={data.weather_code} isDay={(data.is_day ? 1 : 0) as 0 | 1} />
+        {onRefresh && <RefreshButton variant="hero" onRefresh={onRefresh} />}
         <div style={{ position: "relative", zIndex: 10 }}>
           <div className="text-sm uppercase tracking-[0.2em]" style={{ color: palette.subtext }}>
             {[location.admin1, location.country].filter(Boolean).join(" · ")}
