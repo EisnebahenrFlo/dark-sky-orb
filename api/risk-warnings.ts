@@ -77,6 +77,22 @@ function detectWarnings(weatherData: any, windowHours: number, officialWarnings:
 
   // Hitze: deaktiviert (Schwelle 32°C zu niedrig für Mai/Juni — würde Fehlalarme erzeugen)
 
+  // Gewitter: CAPE-Schwelle ODER amtliche Gewitterwarnung
+  const maxCape = idx.reduce((m: number, i: number) => Math.max(m, hourly.cape?.[i] ?? 0), 0);
+  const hasOfficialThunderstorm = officialWarnings?.some(
+    (w: any) => typeof w?.type === 'string' && w.type.toLowerCase().includes('thunderstorm'),
+  );
+  if (maxCape >= 500 || hasOfficialThunderstorm) {
+    warnings.push({
+      typ: 'gewitter',
+      stufe: 'markant',
+      cape_max: Math.round(maxCape),
+      official: !!hasOfficialThunderstorm,
+      unit: 'J/kg',
+    });
+  }
+
+
 
   // Glätte
   const glazeRisk = idx.some((i: number) =>
