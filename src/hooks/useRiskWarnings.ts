@@ -69,7 +69,12 @@ export function useRiskWarnings() {
         const res = await fetch(`${baseUrl}/api/risk-warnings`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ weatherData, location }),
+          body: JSON.stringify({
+            weatherData,
+            location,
+            thunderstormScore: thunderstorm.current.score,
+            windowHours: 48,
+          }),
           signal,
         });
         const json = await res.json().catch(() => ({}));
