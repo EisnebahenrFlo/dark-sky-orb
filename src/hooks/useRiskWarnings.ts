@@ -52,7 +52,7 @@ const REFRESH_MS = 15 * 60 * 1000;
 export function useRiskWarnings() {
   const { data: weatherData, location, isFetching: weatherFetching } = useWeather();
   const [data, setData] = useState<RiskWarnings | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [errorCode, setErrorCode] = useState<RiskWarningsErrorCode | null>(null);
   const [lastUpdated, setLastUpdated] = useState<number | null>(null);
