@@ -1,3 +1,4 @@
+import React from "react";
 import {
   ComposedChart,
   BarChart,
@@ -12,6 +13,8 @@ import {
   ResponsiveContainer,
   CartesianGrid,
 } from "recharts";
+import { Wind, Droplets, Thermometer, X } from "lucide-react";
+import { getWeatherIcon } from "@/components/WeatherIcon";
 import type { HourlyData, DailyData } from "@/lib/weather";
 
 const HOURS = 24;
@@ -41,6 +44,40 @@ interface Row {
   gust: number;
   gustBand: number;
   uv: number;
+  code: number;
+  isDay: number;
+}
+
+function InfoBar({ row, onClose }: { row: Row; onClose: () => void }) {
+  const WeatherIcon = getWeatherIcon(row.code, row.isDay);
+  return (
+    <div className="pointer-events-auto absolute left-1/2 top-2 z-20 -translate-x-1/2 rounded-full border border-border/40 bg-popover/95 px-3 py-1.5 shadow-xl backdrop-blur">
+      <div className="flex items-center gap-3 text-xs tabular-nums">
+        <WeatherIcon className="h-4 w-4" strokeWidth={1.5} />
+        <span className="font-medium">{row.time}</span>
+        <span className="inline-flex items-center gap-1">
+          <Thermometer className="h-3.5 w-3.5 opacity-70" />
+          {row.temp}° <span className="opacity-60">({row.feels}°)</span>
+        </span>
+        <span className="inline-flex items-center gap-1">
+          <Droplets className="h-3.5 w-3.5 opacity-70" />
+          {row.pop}%
+        </span>
+        <span className="inline-flex items-center gap-1">
+          <Wind className="h-3.5 w-3.5 opacity-70" />
+          {row.wind}/{row.gust}
+        </span>
+        <span className="opacity-70">UV {row.uv.toFixed(1)}</span>
+        <button
+          onClick={onClose}
+          className="ml-1 rounded-full p-0.5 hover:bg-muted"
+          aria-label="Schließen"
+        >
+          <X className="h-3.5 w-3.5" />
+        </button>
+      </div>
+    </div>
+  );
 }
 
 const Y_WIDTH = 44;
@@ -131,6 +168,8 @@ export function HourlyForecastChart({
       gust,
       gustBand: Math.max(0, gust - wind),
       uv: hourly.uv_index?.[i] ?? 0,
+      code: hourly.weather_code?.[i] ?? 0,
+      isDay: hourly.is_day?.[i] ?? 1,
     });
   }
 
