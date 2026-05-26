@@ -3,6 +3,7 @@ import {
   AlertCircle,
   Brain,
   CalendarClock,
+  CheckCircle2,
   Globe,
   Layers,
   MapPin,
@@ -128,7 +129,7 @@ export function AnalysePage() {
       )}
 
       {/* KI-Auswertung · 12 h */}
-      {riskData && riskData.warnungen_12h.length > 0 && (
+      {riskData && (
         <section className="space-y-3">
           <div className="flex items-baseline justify-between gap-3 px-1">
             <div>
@@ -139,16 +140,27 @@ export function AnalysePage() {
                 Synoptische KI-Risikoeinschätzung – nicht amtlich
               </p>
             </div>
-            <span className="text-xs text-muted-foreground">
-              {riskData.warnungen_12h.length}{" "}
-              {riskData.warnungen_12h.length === 1 ? "Warnung" : "Warnungen"}
-            </span>
+            {riskData.warnungen_12h.length > 0 && (
+              <span className="text-xs text-muted-foreground">
+                {riskData.warnungen_12h.length}{" "}
+                {riskData.warnungen_12h.length === 1 ? "Warnung" : "Warnungen"}
+              </span>
+            )}
           </div>
-          <div className="space-y-3">
-            {riskData.warnungen_12h.map((w, i) => (
-              <WarningCard key={`${w.id}_${i}`} warning={w} />
-            ))}
-          </div>
+          {riskData.warnungen_12h.length > 0 ? (
+            <div className="space-y-3">
+              {riskData.warnungen_12h.map((w, i) => (
+                <WarningCard key={`${w.id}_${i}`} warning={w} />
+              ))}
+            </div>
+          ) : (
+            <div className="flex items-center gap-3 rounded-2xl border border-border bg-card p-4">
+              <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-500" strokeWidth={2} />
+              <p className="text-sm text-muted-foreground">
+                Die KI-Auswertung sieht aktuell keine kritischen Risiken.
+              </p>
+            </div>
+          )}
         </section>
       )}
 

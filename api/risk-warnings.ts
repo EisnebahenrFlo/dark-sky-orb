@@ -9,7 +9,7 @@ const THRESHOLDS = {
   precip_12h_markant: 25, precip_12h_severe: 40, precip_12h_extreme: 70,
   snow_12h_markant: 10, snow_12h_severe: 20,
   temp_hot_markant: 32, temp_hot_severe: 38,
-  glaze_temp: 2,
+  glaze_temp: -1,
 };
 
 type ErrorCode =
