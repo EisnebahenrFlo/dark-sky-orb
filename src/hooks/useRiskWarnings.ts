@@ -56,6 +56,7 @@ export function useRiskWarnings() {
   const [lastUpdated, setLastUpdated] = useState<number | null>(null);
   const loadedKeyRef = useRef<string | null>(null);
   const ctrlRef = useRef<AbortController | null>(null);
+  const thunderstorm = useThunderstormRisk(48);
 
   const fetchWarnings = useCallback(
     async (signal?: AbortSignal) => {
