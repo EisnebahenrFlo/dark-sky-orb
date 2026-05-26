@@ -143,8 +143,6 @@ async function callAnthropicWithRetry(body: unknown): Promise<
 
 function extractJson(text: string): any {
   const trimmed = text.trim();
-  const fenced = trimmed.match(/```json\s*([\s\S]*?)\s*```/i);
-  if (fenced) return JSON.parse(fenced[1].trim());
   const first = trimmed.indexOf('{');
   const last = trimmed.lastIndexOf('}');
   if (first !== -1 && last !== -1 && last > first) return JSON.parse(trimmed.slice(first, last + 1).trim());
