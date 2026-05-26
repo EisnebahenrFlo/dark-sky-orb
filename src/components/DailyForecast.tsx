@@ -69,11 +69,11 @@ function DayRow({ daily, i, hourly, current }: { daily: DailyData; i: number; ho
           {thunder.risk >= 20 && (
             <div
               className="flex items-center gap-[2px] text-[8.5px] font-semibold"
-              style={{ color: thunder.risk >= 60 ? "#b45309" : "#d97706" }}
+              style={{ color: thunderColor }}
               title={`Gewitter-Risiko: ${thunder.label}`}
             >
               <Zap size={9} strokeWidth={2} />
-              <span>{thunder.risk >= 60 ? "Unwetter" : "Gew. mögl."}</span>
+              <span>{thunderLabel}</span>
             </div>
           )}
         </div>
