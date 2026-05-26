@@ -98,7 +98,7 @@ export function useRiskWarnings() {
         setLoading(false);
       }
     },
-    [weatherData, location, thunderstorm.current.score],
+    [weatherData, location, thunderstorm.current.score, officialWarnings.data, nowcast.data],
   );
 
   // Clear stale warnings immediately when location changes
