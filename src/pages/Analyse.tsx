@@ -3,6 +3,7 @@ import {
   AlertCircle,
   Brain,
   CalendarClock,
+  CheckCircle2,
   Globe,
   Layers,
   MapPin,
