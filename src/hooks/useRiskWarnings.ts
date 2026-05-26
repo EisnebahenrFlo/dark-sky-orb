@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useWeather } from "@/contexts/WeatherContext";
+import { useThunderstormRisk } from "@/hooks/useThunderstormRisk";
 
 export type RiskColor = "green" | "yellow" | "orange" | "red" | "purple";
 export type RiskLevel = "kein" | "schwach" | "mäßig" | "hoch" | "sehr_hoch" | "extrem";
