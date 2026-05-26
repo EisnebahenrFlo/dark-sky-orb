@@ -1,5 +1,5 @@
 import { useWeather } from "@/contexts/WeatherContext";
-import { WeatherHero } from "@/components/WeatherHero";
+import { WeatherHero, WeatherHeroStats } from "@/components/WeatherHero";
 import { SunPositionCard } from "@/components/current/SunPositionCard";
 import { WarningIndicatorCard } from "@/components/current/WarningIndicatorCard";
 import { UvIndexStat } from "@/components/current/UvIndexStat";
