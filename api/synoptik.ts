@@ -146,12 +146,14 @@ async function callAnthropicWithRetry(body: unknown): Promise<
 }
 
 function extractJson(text: string): any {
-  const trimmed = text.trim();
+  let trimmed = text.trim();
+  if (!trimmed.startsWith('{')) trimmed = '{"highlight":{"text":"' + trimmed;
   const first = trimmed.indexOf('{');
   const last = trimmed.lastIndexOf('}');
   if (first !== -1 && last !== -1 && last > first) return JSON.parse(trimmed.slice(first, last + 1).trim());
   return JSON.parse(trimmed);
 }
+
 
 function validateSchema(r: any): string | null {
   if (!r || typeof r !== 'object') return 'not an object';
@@ -240,11 +242,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   const textContent: string = apiResult.data?.content?.[0]?.text ?? '';
+  const fullText = '{"highlight":{"text":"' + textContent;
   console.log('[synoptik] raw response:', JSON.stringify(textContent.slice(0, 800)));
   console.log('[synoptik] raw claude response:', textContent.slice(0, 1000));
   let parsed: any;
   try {
-    parsed = extractJson(textContent);
+    parsed = extractJson(fullText);
+
   } catch {
     if (cached && isStaleButUsable(cached.timestamp, STALE_MAX_MS))
       return res.status(200).json({ ...cached.data, cached: true, fromCache: true, stale: true, ageMinutes: ageMinutes(cached.timestamp) });
