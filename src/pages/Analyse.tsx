@@ -19,6 +19,7 @@ import { ConvectionBadge } from "@/components/synoptik/ConvectionBadge";
 import { useWeather } from "@/contexts/WeatherContext";
 import { UnsupportedLocationNotice } from "@/components/PageState";
 import { AnalysisLoader } from "@/components/loaders/AnalysisLoader";
+import { WarningsLoader } from "@/components/loaders/WarningsLoader";
 import { WeatherLoader } from "@/components/loaders/WeatherLoader";
 import { AnalysisDisclaimer } from "@/components/analysis/AnalysisDisclaimer";
 import { StaleBadge } from "@/components/StaleBadge";
