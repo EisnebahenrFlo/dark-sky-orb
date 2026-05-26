@@ -172,6 +172,19 @@ export function AnalysePage() {
             confidenceReason={data.confidence?.begründung}
           />
 
+          {/* Amtliche Warnungen */}
+          <OfficialWarningsSection />
+
+          {/* KI-Auswertung */}
+          {riskData && (
+            <>
+              <RiskHero risk={{ ...riskData.gewitter_risiko_6h, score: unifiedRisk.current.score }} />
+              {riskData.warnungen_12h.map((w, i) => (
+                <WarningCard key={`${w.id}_${i}`} warning={w} />
+              ))}
+            </>
+          )}
+
           {/* Großwetterlage */}
           <SectionCard
             icon={Globe}
