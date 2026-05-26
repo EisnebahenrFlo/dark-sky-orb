@@ -333,7 +333,9 @@ export default async function handler(req: any, res: any) {
     `Standort: ${JSON.stringify(location)}\n` +
     `Berechneter Gewitter-Score (Frontend, exakt übernehmen): score=${frontendScore}, level="${level}", color="${color}"\n` +
     `Konvektive Metriken (${windowHours}h-Fenster): ${JSON.stringify(convectiveContext, null, 2)}\n` +
-    `Berechnete Warnungen: ${JSON.stringify(warnings, null, 2)}`;
+    `Berechnete Warnungen aus Open-Meteo: ${JSON.stringify(warnings, null, 2)}\n` +
+    `Amtliche Warnungen (DWD/MeteoAlarm — höchste Priorität): ${JSON.stringify(officialWarnings, null, 2)}\n` +
+    `Rainbow Nowcast (Niederschlag nächste 2h): ${JSON.stringify(nowcast, null, 2)}`;
 
   const apiResult = await callAnthropicWithRetry({
     model: 'claude-haiku-4-5-20251001',
