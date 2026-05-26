@@ -21,13 +21,15 @@ function DayRow({ daily, i, hourly, current }: { daily: DailyData; i: number; ho
   
   const wind = daily.wind_speed_10m_max[i] != null ? Math.round(daily.wind_speed_10m_max[i]) : null;
   const dir = daily.wind_direction_10m_dominant[i];
-  const thunderSeries = hourly ? computeThunderstormRiskSeries(hourly) : null;
-  const dayKey = daily.time[i].slice(0, 10);
-  const dayRisk = thunderSeries?.byDay[dayKey];
-  const thunder = {
-    risk: dayRisk?.score ?? 0,
-    label: dayRisk?.label ?? "Kein Risiko",
-  };
+  const dayRisk = hourly
+    ? dailyThunderRiskFromHourly(hourly.time, hourly.cape, hourly.lifted_index, daily.time[i])
+    : null;
+  const riskScore = dayRisk?.risk ?? 0;
+  const thunderLabel =
+    riskScore >= 75 ? "Gewitter: Sehr hoch" : riskScore >= 50 ? "Gewitter: Hoch" : "Gewitter: Möglich";
+  const thunderColor =
+    riskScore >= 75 ? "#ef4444" : riskScore >= 50 ? "#f97316" : "#f59e0b";
+  const thunder = { risk: riskScore, label: dayRisk?.label ?? "Kein Risiko" };
   
 
   return (
