@@ -55,6 +55,11 @@ export interface HourlyData {
   uv_index: number[];
   is_day: number[];
   lightning_potential?: number[];
+  snowfall?: number[];
+  visibility?: number[];
+  wet_bulb_temperature_2m?: number[];
+  freezing_level_height?: number[];
+
   // Synoptic / pressure-level fields
   dewpoint_2m?: number[];
   cape?: number[];
