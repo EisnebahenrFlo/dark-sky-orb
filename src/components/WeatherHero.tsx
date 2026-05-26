@@ -6,7 +6,9 @@ import { getEffectiveWeather } from "@/lib/weatherDescription";
 import { RelativeTime } from "./RelativeTime";
 import { WeatherHeroCanvas, getWeatherGroup, getHeroPalette } from "./WeatherHeroCanvas";
 
-interface Props { location: GeoResult; data: CurrentWeather; updatedAt: number }
+import { RefreshButton } from "./RefreshButton";
+
+interface Props { location: GeoResult; data: CurrentWeather; updatedAt: number; onRefresh?: () => Promise<void> | void }
 
 function Stat({ icon: Icon, label, value, sub }: { icon: typeof Wind; label: string; value: string; sub?: string }) {
   return (
