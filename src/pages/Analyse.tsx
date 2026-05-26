@@ -97,7 +97,8 @@ export function AnalysePage() {
   const { data: weather, location, errorCode: weatherErrorCode } = useWeather();
   const { data, loading, error, errorCode, refresh, lastUpdated } = useSynoptikAnalysisCtx();
   const retry = useDebouncedAction(() => refresh(), 5000);
-  const { data: riskData } = useRiskWarningsCtx();
+  const { data: riskData, loading: riskLoading, error: riskError, refresh: refreshRisk } = useRiskWarningsCtx();
+  const riskRetry = useDebouncedAction(() => refreshRisk(), 5000);
   const unifiedRisk = useThunderstormRisk();
 
   if (weatherErrorCode === "unsupported_location") {
