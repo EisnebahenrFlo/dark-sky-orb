@@ -4,7 +4,7 @@ import { SunPositionCard } from "@/components/current/SunPositionCard";
 import { WarningIndicatorCard } from "@/components/current/WarningIndicatorCard";
 import { UvIndexStat } from "@/components/current/UvIndexStat";
 import WeatherRiskGauges from "@/components/WeatherRiskGauges";
-import { Nowcast } from "@/components/Nowcast";
+
 import { PageState } from "@/components/PageState";
 
 export function CurrentPage({ onRefresh }: { onRefresh?: () => Promise<void> | void } = {}) {
@@ -34,11 +34,6 @@ export function CurrentPage({ onRefresh }: { onRefresh?: () => Promise<void> | v
                   sunset={data.daily.sunset[0]}
                   nextSunrise={data.daily.sunrise[1]}
                 />
-              </div>
-            )}
-            {data.minutely_15 && (
-              <div className="mt-2">
-                <Nowcast minutely={data.minutely_15} />
               </div>
             )}
           </div>
