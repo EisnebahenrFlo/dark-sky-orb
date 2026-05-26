@@ -318,22 +318,26 @@ export default async function handler(req: any, res: any) {
   const warnings = detectWarnings(weatherData, windowHours);
   const convectiveContext = buildConvectiveContext(weatherData, windowHours);
 
-  // Ruhiges Wetter → kein Claude
-  const hasOfficialWarnings = officialWarnings.length > 0;
-  if (warnings.length === 0 && frontendScore < 10 && !hasOfficialWarnings) {
-    const result = {
-      gewitter_risiko_6h: {
-        level: 'kein', score: frontendScore, color: 'green',
-        begründung: 'Stabile Wetterlage, keine konvektiven Auslöser erkennbar.',
-        zeitfenster: '', konvektionstyp: '',
-      },
-      warnungen_12h: [],
-      summary: 'Keine aktiven Warnungen. Wetterlage ruhig.',
-      disclaimer: 'Experimentelle KI-Auswertung. Keine amtliche Warnung.',
+  // Rohe Stundenwerte für die nächsten windowHours an Claude weiterreichen
+  const rawHourly = (() => {
+    const h = weatherData.hourly;
+    if (!h?.time) return null;
+    const idx = getIndices(h, windowHours);
+    if (idx.length === 0) return null;
+    const pick = (arr: any[] | undefined) =>
+      arr ? idx.map((i: number) => arr[i] ?? null) : null;
+    return {
+      time: idx.map((i: number) => h.time[i]),
+      temperature_2m: pick(h.temperature_2m),
+      precipitation: pick(h.precipitation),
+      wind_gusts_10m: pick(h.wind_gusts_10m),
+      wind_speed_10m: pick(h.wind_speed_10m),
+      cape: pick(h.cape),
+      lifted_index: pick(h.lifted_index),
+      lightning_potential: pick(h.lightning_potential),
+      weather_code: pick(h.weather_code),
     };
-    await setCached(cacheKey, result, 24 * 60 * 60);
-    return res.status(200).json({ ...result, cached: false, fromCache: false, stale: false });
-  }
+  })();
 
   // Claude formuliert
   const dynamicPart =
@@ -341,7 +345,8 @@ export default async function handler(req: any, res: any) {
     `Standort: ${JSON.stringify(location)}\n` +
     `Berechneter Gewitter-Score (Frontend, exakt übernehmen): score=${frontendScore}, level="${level}", color="${color}"\n` +
     `Konvektive Metriken (${windowHours}h-Fenster): ${JSON.stringify(convectiveContext, null, 2)}\n` +
-    `Berechnete Warnungen aus Open-Meteo: ${JSON.stringify(warnings, null, 2)}\n` +
+    `Hinweis-Warnungen aus Schwellenwerten (nur Anhaltspunkt): ${JSON.stringify(warnings, null, 2)}\n` +
+    `Rohe Stundenwerte nächste ${windowHours}h: ${JSON.stringify(rawHourly)}\n` +
     `Amtliche Warnungen (DWD/MeteoAlarm — höchste Priorität): ${JSON.stringify(officialWarnings, null, 2)}\n` +
     `Rainbow Nowcast (Niederschlag nächste 2h): ${JSON.stringify(nowcast, null, 2)}`;
 
