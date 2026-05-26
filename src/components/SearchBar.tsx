@@ -83,25 +83,8 @@ export function SearchBar({ onSelect, recent, onClearRecent }: Props) {
 
   return (
     <div ref={ref} className="relative w-full">
-      <div className="glass flex items-center gap-3 rounded-2xl px-4 py-4 sm:px-5">
-        <button
-          type="button"
-          onClick={() => {
-            haptic("light");
-            requestLocation();
-          }}
-          disabled={gpsStatus === "loading"}
-          aria-label="Aktuellen Standort verwenden"
-          title="Aktuellen Standort verwenden"
-          className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-primary transition hover:bg-primary/10 disabled:opacity-60"
-        >
-          {gpsStatus === "loading" ? (
-            <Loader2 className="h-5 w-5 animate-spin" strokeWidth={1.75} />
-          ) : (
-            <Navigation className="h-5 w-5" strokeWidth={1.75} />
-          )}
-        </button>
-        <Search className="h-5 w-5 text-muted-foreground" strokeWidth={1.5} />
+      <div className="glass relative flex items-center gap-3 rounded-2xl px-4 py-4 sm:px-5">
+        <Search className="h-5 w-5 shrink-0 text-muted-foreground" strokeWidth={1.5} />
         <input
           value={q}
           onChange={(e) => {
@@ -111,7 +94,7 @@ export function SearchBar({ onSelect, recent, onClearRecent }: Props) {
           onFocus={() => setOpen(true)}
           inputMode="search"
           placeholder="Stadt oder Postleitzahl…"
-          className="flex-1 bg-transparent text-base outline-none placeholder:text-muted-foreground"
+          className="flex-1 bg-transparent pr-24 text-base outline-none placeholder:text-muted-foreground"
         />
         {loading && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
         {q && !loading && (
@@ -119,6 +102,23 @@ export function SearchBar({ onSelect, recent, onClearRecent }: Props) {
             <X className="h-4 w-4" />
           </button>
         )}
+        <button
+          type="button"
+          onClick={() => {
+            haptic("light");
+            requestLocation();
+          }}
+          disabled={gpsStatus === "loading"}
+          aria-label="Aktuellen Standort verwenden"
+          title="Aktuellen Standort verwenden"
+          className="absolute right-3 top-1/2 grid h-9 w-9 -translate-y-1/2 shrink-0 place-items-center rounded-full text-primary transition hover:bg-primary/10 disabled:opacity-60"
+        >
+          {gpsStatus === "loading" ? (
+            <Loader2 className="h-5 w-5 animate-spin" strokeWidth={1.75} />
+          ) : (
+            <Navigation className="h-5 w-5" strokeWidth={1.75} />
+          )}
+        </button>
       </div>
 
       {gpsStatus === "error" && gpsError && (
