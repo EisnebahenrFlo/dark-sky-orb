@@ -30,10 +30,12 @@ export function CurrentPage({ onRefresh }: { onRefresh?: () => Promise<void> | v
         return (
           <div className="space-y-6">
             <WeatherHero location={location} data={data.current} updatedAt={dataUpdatedAt} onRefresh={onRefresh} />
+            <div className="mt-2">
+              <WeatherRiskGauges />
+            </div>
             <WarningIndicatorCard />
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
               <UvIndexStat value={uv} isDay={!!data.current.is_day} />
-              {data.hourly && <LightningPotentialStat />}
             </div>
             {data.daily?.sunrise?.[0] && data.daily?.sunset?.[0] && (
               <SunPositionCard
