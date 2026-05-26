@@ -48,7 +48,7 @@ export function WarningCard({ warning }: { warning: RiskWarning }) {
           </div>
           <div className="mt-1 flex items-start justify-between gap-3">
             <h3
-              className="text-[11px] font-bold tracking-tight"
+              className="text-base font-semibold tracking-tight"
               style={{ color: "#1a2a3a" }}
             >
               {warning.titel}
@@ -60,7 +60,7 @@ export function WarningCard({ warning }: { warning: RiskWarning }) {
               {STUFE_LABEL[warning.stufe] ?? warning.stufe}
             </span>
           </div>
-          <p className="mt-1 text-[9px] leading-relaxed" style={{ color: "#5a6a7a" }}>
+          <p className="mt-1 text-sm" style={{ color: "#5a6a7a", lineHeight: 1.6 }}>
             {warning.beschreibung}
           </p>
           <div className="mt-2">
