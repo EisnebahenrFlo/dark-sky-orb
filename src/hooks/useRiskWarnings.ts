@@ -130,7 +130,7 @@ export function useRiskWarnings() {
     setLastUpdated(null);
     setLoading(true);
     loadedKeyRef.current = null;
-  }, [location.latitude, location.longitude]);
+  }, [location.latitude, location.longitude, weatherData?.latitude, weatherData?.longitude]);
 
   // Fetch only when fresh weather data for the current location is available
   useEffect(() => {
