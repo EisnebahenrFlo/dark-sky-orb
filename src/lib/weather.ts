@@ -33,7 +33,9 @@ export interface MinutelyData {
   weather_code: number[];
   temperature_2m: number[];
   wind_speed_10m: number[];
+  lightning_potential_index?: number[];
 }
+
 
 export interface HourlyData {
   time: string[];
