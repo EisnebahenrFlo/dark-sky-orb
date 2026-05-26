@@ -1,6 +1,7 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useOfficialWarningsCtx } from "@/contexts/OfficialWarningsContext";
 import { useSynoptikAnalysisCtx } from "@/contexts/SynoptikAnalysisContext";
+import { useWeather } from "@/contexts/WeatherContext";
 import { OfficialWarningCard } from "@/components/warnings/OfficialWarningCard";
 import { AnalysePage } from "@/pages/Analyse";
 import { RefreshButton } from "@/components/RefreshButton";
@@ -59,6 +60,7 @@ export function AnalyseTabPage() {
   const { data: officialData, refresh: refreshOfficial } = useOfficialWarningsCtx();
   const { refresh: refreshSynoptik } = useSynoptikAnalysisCtx();
   const queryClient = useQueryClient();
+  const { dataUpdatedAt } = useWeather();
   const official = officialData?.warnings ?? [];
   const sorted = [...official].sort((a, b) => (b.level ?? 0) - (a.level ?? 0));
   const hasOfficial = sorted.length > 0;
@@ -72,10 +74,8 @@ export function AnalyseTabPage() {
   };
 
   return (
-    <div className="relative space-y-8">
-      <div className="absolute right-0 top-0 z-20">
-        <RefreshButton onRefresh={handleRefresh} />
-      </div>
+    <div className="space-y-6">
+      <RefreshButton variant="statusbar" onRefresh={handleRefresh} lastUpdated={dataUpdatedAt} />
       <section>
         <SectionHeaderDot title="Amtliche Warnungen" active={hasOfficial} />
         {hasOfficial ? (

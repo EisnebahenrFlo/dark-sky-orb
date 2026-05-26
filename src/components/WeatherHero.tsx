@@ -6,7 +6,9 @@ import { getEffectiveWeather } from "@/lib/weatherDescription";
 import { RelativeTime } from "./RelativeTime";
 import { WeatherHeroCanvas, getWeatherGroup, getHeroPalette } from "./WeatherHeroCanvas";
 
-interface Props { location: GeoResult; data: CurrentWeather; updatedAt: number }
+import { RefreshButton } from "./RefreshButton";
+
+interface Props { location: GeoResult; data: CurrentWeather; updatedAt: number; onRefresh?: () => Promise<void> | void }
 
 function Stat({ icon: Icon, label, value, sub }: { icon: typeof Wind; label: string; value: string; sub?: string }) {
   return (
@@ -21,7 +23,7 @@ function Stat({ icon: Icon, label, value, sub }: { icon: typeof Wind; label: str
   );
 }
 
-export function WeatherHero({ location, data, updatedAt }: Props) {
+export function WeatherHero({ location, data, updatedAt, onRefresh }: Props) {
   const effective = getEffectiveWeather(data.weather_code, data.precipitation, data.cloud_cover, data.is_day, data.relative_humidity_2m, new Date(data.time).getHours());
   const group = getWeatherGroup(data.weather_code, (data.is_day ? 1 : 0) as 0 | 1);
   const palette = getHeroPalette(group);
@@ -38,6 +40,7 @@ export function WeatherHero({ location, data, updatedAt }: Props) {
         }}
       >
         <WeatherHeroCanvas weatherCode={data.weather_code} isDay={(data.is_day ? 1 : 0) as 0 | 1} />
+        {onRefresh && <RefreshButton variant="hero" onRefresh={onRefresh} />}
         <div style={{ position: "relative", zIndex: 10 }}>
           <div className="text-sm uppercase tracking-[0.2em]" style={{ color: palette.subtext }}>
             {[location.admin1, location.country].filter(Boolean).join(" · ")}
