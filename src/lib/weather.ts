@@ -296,10 +296,9 @@ export async function fetchWeather(lat: number, lon: number, countryCode?: strin
     models: "best_match",
   });
 
-  const [shortRes, longRes] = await Promise.all([
-    fetch(`https://api.open-meteo.com/v1/forecast?${shortParams.toString()}`),
-    fetch(`https://api.open-meteo.com/v1/forecast?${longParams.toString()}`),
-  ]);
+  const shortRes = await fetch(`https://api.open-meteo.com/v1/forecast?${shortParams.toString()}`);
+  await new Promise(r => setTimeout(r, 500));
+  const longRes = await fetch(`https://api.open-meteo.com/v1/forecast?${longParams.toString()}`);
   if (!shortRes.ok || !longRes.ok) throw new Error("Wetterdaten fehlgeschlagen");
   const [shortJson, longJson] = (await Promise.all([shortRes.json(), longRes.json()])) as [
     WeatherData,
