@@ -330,7 +330,7 @@ export default async function handler(req: any, res: any) {
   console.log('[risk-warnings] cache MISS', { location: locLabel, hasStale: !!cached });
 
   // Warnungen berechnen
-  const warnings = detectWarnings(weatherData, windowHours);
+  const warnings = detectWarnings(weatherData, windowHours, officialWarnings);
   const convectiveContext = buildConvectiveContext(weatherData, windowHours);
 
   // Rohe Stundenwerte für die nächsten windowHours an Claude weiterreichen
