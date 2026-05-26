@@ -137,6 +137,12 @@ export function HourlyForecastChart({
   daily?: DailyData;
   currentTime?: string;
 }) {
+  const [activeRow, setActiveRow] = React.useState<Row | null>(null);
+  const handleChartClick = (data: any) => {
+    if (data?.activePayload?.[0]?.payload) {
+      setActiveRow(data.activePayload[0].payload as Row);
+    }
+  };
   // Find starting index = current hour (or closest)
   const now = currentTime ? new Date(currentTime).getTime() : Date.now();
   let startIdx = 0;
@@ -209,7 +215,8 @@ export function HourlyForecastChart({
   const hiddenX = <XAxis dataKey="time" hide tickLine={false} axisLine={false} />;
 
   return (
-    <div className="glass overflow-visible rounded-3xl">
+    <div className="glass relative overflow-visible rounded-3xl">
+      {activeRow && <InfoBar row={activeRow} onClose={() => setActiveRow(null)} />}
       {/* Panel 1: Temp & Gefühlt */}
       <div className="px-3 pt-3">
         <div className="px-1 pb-1 text-[10px] uppercase tracking-wider text-muted-foreground/70">
