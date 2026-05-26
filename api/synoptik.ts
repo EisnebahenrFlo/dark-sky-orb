@@ -212,13 +212,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const apiResult = await callAnthropicWithRetry({
     model: 'claude-sonnet-4-20250514',
     max_tokens: 3000,
-    messages: [{
-      role: 'user',
-      content: [
-        { type: 'text', text: STATIC_PROMPT, cache_control: { type: 'ephemeral' } },
-        { type: 'text', text: dynamicPart },
-      ],
-    }],
+    messages: [
+      {
+        role: 'user',
+        content: [
+          { type: 'text', text: STATIC_PROMPT, cache_control: { type: 'ephemeral' } },
+          { type: 'text', text: dynamicPart },
+        ],
+      },
+      {
+        role: 'assistant',
+        content: '{"highlight":"',
+      },
+    ],
   });
 
   if (!apiResult.ok) {
