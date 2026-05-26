@@ -137,26 +137,31 @@ function scoreToColor(score: number): string {
   return 'green';
 }
 
-const STATIC_PROMPT = `Du bist Wetter-Sicherheits-Kommunikator für DACH und Italien.
+const STATIC_PROMPT = `Du bist erfahrener Meteorologe und Wetter-Sicherheits-Kommunikator für DACH und Italien.
 
 Du bekommst:
-1. BERECHNETE Warnungen (aus harten Schwellenwerten — nicht verändern)
+1. ROHE Stundenwerte der nächsten 48h (Temperatur, Niederschlag, Wind, CAPE, LI, LPI, Wettercode)
 2. Einen FERTIG BERECHNETEN Gewitter-Score (0–100) aus dem Frontend — du übernimmst diesen exakt
-3. Konvektive Messgrößen (nur zur Begründung/Formulierung)
+3. Hinweis-Warnungen aus harten Schwellenwerten (nur als Anhaltspunkt)
+4. Konvektive Kontext-Metriken
+5. Amtliche Warnungen und Rainbow Nowcast
 
 DEINE AUFGABE:
-- Formuliere für jede Warnung Titel + Beschreibung
-- Übernimm score und level exakt aus dem Input
-- Begründe das Gewitter-Risiko mit den gegebenen Metriken
+- Werte die Rohdaten der nächsten 24–48h eigenständig wie ein Meteorologe aus
+- Identifiziere relevante Wetterereignisse (Wind, Regen, Gewitter, Schnee, Hitze, Glätte) und formuliere Warnungen/Hinweise
+- Auch wenn keine harten Schwellenwerte ausgelöst wurden, kannst und sollst du auf Basis der Daten Hinweise oder Warnungen ausgeben (z.B. längerer Dauerregen, böiger Wind, schwüle Hitze, Glättegefahr in den Morgenstunden)
+- Übernimm score, level und color des Gewitter-Risikos EXAKT aus dem Input
+- Begründe das Gewitter-Risiko mit den gegebenen Metriken und Rohdaten
 - Schätze Konvektionstyp ein (Einzelzellen / Multizellen / Superzellen / MCS / Frontgewitter)
 
 REGELN:
 - Amtliche Warnungen haben HÖCHSTE PRIORITÄT. Wenn eine amtliche Gewitterwarnung vorhanden ist, MUSS die KI-Auswertung mindestens eine Gewitterwarnung ausgeben.
 - Rainbow Nowcast zeigt was in den nächsten 2h tatsächlich kommt — nutze das als Realitäts-Check.
 - Wenn amtliche Warnung vorhanden aber Open-Meteo-Score niedrig → erkläre die Diskrepanz in der Begründung.
-- Erfinde KEINE Warnungen
+- Die "berechneten Warnungen" sind nur ein Hinweis aus festen Schwellen — du darfst zusätzliche Warnungen ergänzen oder weniger relevante weglassen, wenn die Rohdaten das rechtfertigen.
+- Erfinde keine Werte, die nicht aus den Daten ableitbar sind.
 - Max. 2 Sätze pro Beschreibung, aktiv formuliert
-- Konkrete Zahlen einbauen
+- Konkrete Zahlen einbauen (Uhrzeiten, mm, km/h, °C)
 - Bei Wind: loose Gegenstände sichern, Wald meiden
 - Bei Hitze: Risikogruppen nennen (Ältere, Kinder, Herz-Kreislauf)
 - Bei Glätte: Hinweis auf Brücken und exponierte Stellen
@@ -174,8 +179,8 @@ OUTPUT (NUR JSON, nichts davor/danach):
   "warnungen_12h": [
     {
       "id": "typ_stufe",
-      "typ": "<übernehmen>",
-      "stufe": "<übernehmen>",
+      "typ": "wind|regen|gewitter|schnee|hitze|glätte|...",
+      "stufe": "markant|unwetter|extrem",
       "titel": "Max. 5 Wörter",
       "beschreibung": "1-2 Sätze mit Zahlen und Empfehlung",
       "color": "yellow|orange|red|purple",
@@ -313,22 +318,26 @@ export default async function handler(req: any, res: any) {
   const warnings = detectWarnings(weatherData, windowHours);
   const convectiveContext = buildConvectiveContext(weatherData, windowHours);
 
-  // Ruhiges Wetter → kein Claude
-  const hasOfficialWarnings = officialWarnings.length > 0;
-  if (warnings.length === 0 && frontendScore < 10 && !hasOfficialWarnings) {
-    const result = {
-      gewitter_risiko_6h: {
-        level: 'kein', score: frontendScore, color: 'green',
-        begründung: 'Stabile Wetterlage, keine konvektiven Auslöser erkennbar.',
-        zeitfenster: '', konvektionstyp: '',
-      },
-      warnungen_12h: [],
-      summary: 'Keine aktiven Warnungen. Wetterlage ruhig.',
-      disclaimer: 'Experimentelle KI-Auswertung. Keine amtliche Warnung.',
+  // Rohe Stundenwerte für die nächsten windowHours an Claude weiterreichen
+  const rawHourly = (() => {
+    const h = weatherData.hourly;
+    if (!h?.time) return null;
+    const idx = getIndices(h, windowHours);
+    if (idx.length === 0) return null;
+    const pick = (arr: any[] | undefined) =>
+      arr ? idx.map((i: number) => arr[i] ?? null) : null;
+    return {
+      time: idx.map((i: number) => h.time[i]),
+      temperature_2m: pick(h.temperature_2m),
+      precipitation: pick(h.precipitation),
+      wind_gusts_10m: pick(h.wind_gusts_10m),
+      wind_speed_10m: pick(h.wind_speed_10m),
+      cape: pick(h.cape),
+      lifted_index: pick(h.lifted_index),
+      lightning_potential: pick(h.lightning_potential),
+      weather_code: pick(h.weather_code),
     };
-    await setCached(cacheKey, result, 24 * 60 * 60);
-    return res.status(200).json({ ...result, cached: false, fromCache: false, stale: false });
-  }
+  })();
 
   // Claude formuliert
   const dynamicPart =
@@ -336,7 +345,8 @@ export default async function handler(req: any, res: any) {
     `Standort: ${JSON.stringify(location)}\n` +
     `Berechneter Gewitter-Score (Frontend, exakt übernehmen): score=${frontendScore}, level="${level}", color="${color}"\n` +
     `Konvektive Metriken (${windowHours}h-Fenster): ${JSON.stringify(convectiveContext, null, 2)}\n` +
-    `Berechnete Warnungen aus Open-Meteo: ${JSON.stringify(warnings, null, 2)}\n` +
+    `Hinweis-Warnungen aus Schwellenwerten (nur Anhaltspunkt): ${JSON.stringify(warnings, null, 2)}\n` +
+    `Rohe Stundenwerte nächste ${windowHours}h: ${JSON.stringify(rawHourly)}\n` +
     `Amtliche Warnungen (DWD/MeteoAlarm — höchste Priorität): ${JSON.stringify(officialWarnings, null, 2)}\n` +
     `Rainbow Nowcast (Niederschlag nächste 2h): ${JSON.stringify(nowcast, null, 2)}`;
 
