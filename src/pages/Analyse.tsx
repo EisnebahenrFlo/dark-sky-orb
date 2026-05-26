@@ -29,6 +29,8 @@ import { WarningCard } from "@/components/warnings/WarningCard";
 import { OfficialWarningsSection } from "@/components/warnings/OfficialWarningsSection";
 import { useThunderstormRisk } from "@/hooks/useThunderstormRisk";
 
+type Tab = "warnungen" | "analyse";
+
 const formatHighlight = (text: string) => text.replaceAll(";", " ·");
 
 function formatRelativeTime(minutes: number): string {
@@ -94,38 +96,20 @@ function useDebouncedAction(action: () => void, ms = 5000) {
   return { trigger, disabled };
 }
 
-export function AnalysePage() {
-  const { data: weather, location, errorCode: weatherErrorCode } = useWeather();
-  const { data, loading, error, errorCode, refresh, lastUpdated } = useSynoptikAnalysisCtx();
-  const retry = useDebouncedAction(() => refresh(), 5000);
-  const { data: riskData, loading: riskLoading, error: riskError, refresh: refreshRisk } = useRiskWarningsCtx();
-  const riskRetry = useDebouncedAction(() => refreshRisk(), 5000);
+function WarnungenTab() {
+  const {
+    data: riskData,
+    loading: riskLoading,
+    error: riskError,
+    refresh: riskRefresh,
+  } = useRiskWarningsCtx();
+  const riskRetry = useDebouncedAction(() => riskRefresh(), 5000);
   const unifiedRisk = useThunderstormRisk();
-
-  if (weatherErrorCode === "unsupported_location") {
-    return <UnsupportedLocationNotice />;
-  }
-
-  if (!weather) {
-    return <WeatherLoader city={location.name} />;
-  }
-
-  const copy = ERROR_COPY[(errorCode ?? "UNKNOWN") as SynoptikErrorCode];
 
   return (
     <div className="space-y-5">
-      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-        <Brain className="h-4 w-4 text-accent" strokeWidth={1.75} />
-        <span>
-          Synoptische KI-Analyse für{" "}
-          <span className="font-medium text-foreground">{location.name}</span>
-        </span>
-      </div>
-
-      {/* Amtliche Warnungen — einmalig, ganz oben */}
       <OfficialWarningsSection />
 
-      {/* KI-ANALYSE: Header + Loader/Error/Daten */}
       <section className="space-y-3">
         <div className="flex items-baseline justify-between gap-3 px-1">
           <div>
@@ -166,7 +150,9 @@ export function AnalysePage() {
 
         {riskData && (
           <>
-            <RiskHero risk={{ ...riskData.gewitter_risiko_6h, score: unifiedRisk.current.score }} />
+            <RiskHero
+              risk={{ ...riskData.gewitter_risiko_6h, score: unifiedRisk.current.score }}
+            />
 
             {riskData.warnungen_12h.length > 0 ? (
               <div className="space-y-3">
@@ -185,11 +171,28 @@ export function AnalysePage() {
           </>
         )}
       </section>
+    </div>
+  );
+}
 
-      {/* Initial loading */}
-      {!data && !error && <AnalysisLoader />}
+function AnalyseTab() {
+  const { location } = useWeather();
+  const { data, loading, error, errorCode, refresh, lastUpdated } = useSynoptikAnalysisCtx();
+  const retry = useDebouncedAction(() => refresh(), 5000);
+  const copy = ERROR_COPY[(errorCode ?? "UNKNOWN") as SynoptikErrorCode];
 
-      {/* Error */}
+  return (
+    <div className="space-y-5">
+      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+        <Brain className="h-4 w-4 text-accent" strokeWidth={1.75} />
+        <span>
+          Synoptische KI-Analyse für{" "}
+          <span className="font-medium text-foreground">{location.name}</span>
+        </span>
+      </div>
+
+      {loading && !data && <AnalysisLoader />}
+
       {error && !data && (
         <div className="flex flex-col items-center gap-4 rounded-2xl border border-border bg-card p-8 text-center shadow-sm">
           <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted">
@@ -211,14 +214,12 @@ export function AnalysePage() {
 
       {data && (
         <div className={`relative space-y-5 transition-opacity ${loading ? "opacity-50" : ""}`}>
-          {/* KI-Analyse Hero */}
           <HeroCard
             highlight={formatHighlight(data.highlight?.text ?? "")}
             confidenceScore={data.confidence?.score ?? 0}
             confidenceReason={data.confidence?.begründung}
           />
 
-          {/* Großwetterlage */}
           <SectionCard
             icon={Globe}
             title="Großwetterlage"
@@ -227,7 +228,6 @@ export function AnalysePage() {
             {data.großwetterlage?.beschreibung}
           </SectionCard>
 
-          {/* Aktuelle Lage */}
           {data.aktuell && (
             <SectionCard icon={Wind} title="Aktuelle Lage">
               <p>{data.aktuell.lage}</p>
@@ -237,7 +237,6 @@ export function AnalysePage() {
             </SectionCard>
           )}
 
-          {/* Gewitterrisiko & Konvektion */}
           <SectionCard icon={Zap} title="Gewitterrisiko & Konvektion">
             <div className="flex flex-wrap items-center gap-2">
               <ConvectionBadge potenzial={data.konvektion?.potenzial ?? "kein"} />
@@ -251,7 +250,6 @@ export function AnalysePage() {
             )}
           </SectionCard>
 
-          {/* Entwicklung */}
           <SectionCard icon={CalendarClock} title="Entwicklung">
             <div className="space-y-3">
               <div>
@@ -275,7 +273,6 @@ export function AnalysePage() {
             </div>
           </SectionCard>
 
-          {/* Regionale Besonderheiten */}
           {data.regionale_besonderheiten && data.regionale_besonderheiten.length > 0 && (
             <SectionCard icon={MapPin} title="Regionale Besonderheiten">
               <ul className="list-disc space-y-1 pl-5">
@@ -286,18 +283,26 @@ export function AnalysePage() {
             </SectionCard>
           )}
 
-          {/* Details für Wetter-Nerds */}
           {data.großwetterlage_detail && (
             <SectionCard icon={Layers} title="Details für Wetter-Nerds">
               <div className="space-y-2">
                 {data.großwetterlage_detail.höhenstruktur && (
-                  <p><span className="font-medium">Höhenstruktur: </span>{data.großwetterlage_detail.höhenstruktur}</p>
+                  <p>
+                    <span className="font-medium">Höhenstruktur: </span>
+                    {data.großwetterlage_detail.höhenstruktur}
+                  </p>
                 )}
                 {data.großwetterlage_detail.bodendruck && (
-                  <p><span className="font-medium">Bodendruck: </span>{data.großwetterlage_detail.bodendruck}</p>
+                  <p>
+                    <span className="font-medium">Bodendruck: </span>
+                    {data.großwetterlage_detail.bodendruck}
+                  </p>
                 )}
                 {data.großwetterlage_detail.fronten && (
-                  <p><span className="font-medium">Fronten: </span>{data.großwetterlage_detail.fronten}</p>
+                  <p>
+                    <span className="font-medium">Fronten: </span>
+                    {data.großwetterlage_detail.fronten}
+                  </p>
                 )}
               </div>
             </SectionCard>
@@ -336,6 +341,52 @@ export function AnalysePage() {
       <div className="mt-6 text-center text-xs text-muted-foreground">
         Datenquelle: {getWeatherModelLabel(location.country_code)}
       </div>
+    </div>
+  );
+}
+
+export function AnalysePage() {
+  const { data: weather, location, errorCode: weatherErrorCode } = useWeather();
+  const [tab, setTab] = useState<Tab>("warnungen");
+
+  if (weatherErrorCode === "unsupported_location") {
+    return <UnsupportedLocationNotice />;
+  }
+
+  if (!weather) {
+    return <WeatherLoader city={location.name} />;
+  }
+
+  return (
+    <div className="space-y-4">
+      <div
+        className="flex w-full rounded-[10px] p-[3px]"
+        style={{ background: "#f0f4f8" }}
+      >
+        {[
+          { v: "warnungen" as Tab, label: "Warnungen" },
+          { v: "analyse" as Tab, label: "Analyse" },
+        ].map(({ v, label }) => {
+          const active = tab === v;
+          return (
+            <button
+              key={v}
+              onClick={() => setTab(v)}
+              className="flex-1 rounded-lg border-0 px-0 py-[7px] text-[12px] font-semibold transition-all"
+              style={{
+                background: active ? "white" : "transparent",
+                color: active ? "#1a2a3a" : "#8a9ab0",
+                boxShadow: active ? "0 1px 4px rgba(0,0,0,0.12)" : "none",
+                cursor: "pointer",
+              }}
+            >
+              {label}
+            </button>
+          );
+        })}
+      </div>
+
+      {tab === "warnungen" ? <WarnungenTab /> : <AnalyseTab />}
     </div>
   );
 }
