@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useWeather } from "@/contexts/WeatherContext";
+import { useThunderstormRisk } from "@/hooks/useThunderstormRisk";
 
 export type RiskColor = "green" | "yellow" | "orange" | "red" | "purple";
 export type RiskLevel = "kein" | "schwach" | "mäßig" | "hoch" | "sehr_hoch" | "extrem";
@@ -55,6 +56,7 @@ export function useRiskWarnings() {
   const [lastUpdated, setLastUpdated] = useState<number | null>(null);
   const loadedKeyRef = useRef<string | null>(null);
   const ctrlRef = useRef<AbortController | null>(null);
+  const thunderstorm = useThunderstormRisk(48);
 
   const fetchWarnings = useCallback(
     async (signal?: AbortSignal) => {
@@ -67,7 +69,12 @@ export function useRiskWarnings() {
         const res = await fetch(`${baseUrl}/api/risk-warnings`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ weatherData, location }),
+          body: JSON.stringify({
+            weatherData,
+            location,
+            thunderstormScore: thunderstorm.current.score,
+            windowHours: 48,
+          }),
           signal,
         });
         const json = await res.json().catch(() => ({}));
@@ -85,7 +92,7 @@ export function useRiskWarnings() {
         setLoading(false);
       }
     },
-    [weatherData, location],
+    [weatherData, location, thunderstorm.current.score],
   );
 
   // Clear stale warnings immediately when location changes

@@ -1,12 +1,12 @@
-// Vercel Serverless Function – Gewitter-Risiko + KI-Warnungen
+// Vercel Serverless Function – KI-Warnungen
+// Gewitter-Score kommt FERTIG BERECHNET vom Frontend (useThunderstormRisk).
+// Claude formuliert nur — er rechnet nicht.
 import { getCached, setCached, isFresh, isStaleButUsable, ageMinutes } from './_lib/cache.js';
 
 const THRESHOLDS = {
   wind_gust_markant: 70, wind_gust_severe: 90, wind_gust_extreme: 118,
   precip_1h_markant: 15, precip_1h_severe: 25, precip_1h_extreme: 40,
   precip_12h_markant: 25, precip_12h_severe: 40, precip_12h_extreme: 70,
-  cape_markant: 500, cape_severe: 1500, cape_extreme: 2500,
-  li_markant: -2, li_severe: -5, li_extreme: -8,
   snow_12h_markant: 10, snow_12h_severe: 20,
   temp_hot_markant: 32, temp_hot_severe: 38,
   glaze_temp: 2,
@@ -39,11 +39,11 @@ function getIndices(hourly: any, hours: number): number[] {
     .map((item: { t: number; i: number }) => item.i);
 }
 
-function detectWarnings(weatherData: any) {
+function detectWarnings(weatherData: any, windowHours: number) {
   const warnings: any[] = [];
   const hourly = weatherData.hourly;
   if (!hourly?.time) return warnings;
-  const idx = getIndices(hourly, 12);
+  const idx = getIndices(hourly, windowHours);
   if (idx.length === 0) return warnings;
 
   const getMax = (arr: number[], key: 'max' | 'min' = 'max') =>
@@ -52,6 +52,7 @@ function detectWarnings(weatherData: any) {
       return key === 'max' ? Math.max(acc, v) : Math.min(acc, v);
     }, key === 'max' ? -Infinity : Infinity);
 
+  // Wind
   const maxGust = getMax(hourly.wind_gusts_10m);
   if (maxGust >= THRESHOLDS.wind_gust_markant) {
     const stufe = maxGust >= THRESHOLDS.wind_gust_extreme ? 'extrem'
@@ -59,34 +60,30 @@ function detectWarnings(weatherData: any) {
     warnings.push({ typ: 'wind', stufe, max_value: Math.round(maxGust), unit: 'km/h' });
   }
 
+  // Regen
   const max1h = getMax(hourly.precipitation);
-  const sum12h = idx.reduce((s: number, i: number) => s + (hourly.precipitation?.[i] ?? 0), 0);
-  if (max1h >= THRESHOLDS.precip_1h_markant || sum12h >= THRESHOLDS.precip_12h_markant) {
-    const stufe = (max1h >= THRESHOLDS.precip_1h_extreme || sum12h >= THRESHOLDS.precip_12h_extreme) ? 'extrem'
-                : (max1h >= THRESHOLDS.precip_1h_severe || sum12h >= THRESHOLDS.precip_12h_severe) ? 'unwetter' : 'markant';
-    warnings.push({ typ: 'regen', stufe, max_1h: Math.round(max1h * 10) / 10, sum_12h: Math.round(sum12h * 10) / 10, unit: 'mm' });
+  const sum = idx.reduce((s: number, i: number) => s + (hourly.precipitation?.[i] ?? 0), 0);
+  if (max1h >= THRESHOLDS.precip_1h_markant || sum >= THRESHOLDS.precip_12h_markant) {
+    const stufe = (max1h >= THRESHOLDS.precip_1h_extreme || sum >= THRESHOLDS.precip_12h_extreme) ? 'extrem'
+                : (max1h >= THRESHOLDS.precip_1h_severe || sum >= THRESHOLDS.precip_12h_severe) ? 'unwetter' : 'markant';
+    warnings.push({ typ: 'regen', stufe, max_1h: Math.round(max1h * 10) / 10, sum: Math.round(sum * 10) / 10, unit: 'mm' });
   }
 
-  const maxCape = getMax(hourly.cape);
-  const minLI = getMax(hourly.lifted_index, 'min');
-  if (maxCape >= THRESHOLDS.cape_markant && minLI <= THRESHOLDS.li_markant) {
-    const stufe = (maxCape >= THRESHOLDS.cape_extreme && minLI <= THRESHOLDS.li_extreme) ? 'extrem'
-                : (maxCape >= THRESHOLDS.cape_severe && minLI <= THRESHOLDS.li_severe) ? 'unwetter' : 'markant';
-    warnings.push({ typ: 'gewitter', stufe, cape: Math.round(maxCape), lifted_index: Math.round(minLI * 10) / 10 });
+  // Schnee
+  const snow = idx.reduce((s: number, i: number) => s + (hourly.snowfall?.[i] ?? 0), 0);
+  if (snow >= THRESHOLDS.snow_12h_markant) {
+    const stufe = snow >= THRESHOLDS.snow_12h_severe ? 'unwetter' : 'markant';
+    warnings.push({ typ: 'schnee', stufe, sum: Math.round(snow * 10) / 10, unit: 'cm' });
   }
 
-  const snow12h = idx.reduce((s: number, i: number) => s + (hourly.snowfall?.[i] ?? 0), 0);
-  if (snow12h >= THRESHOLDS.snow_12h_markant) {
-    const stufe = snow12h >= THRESHOLDS.snow_12h_severe ? 'unwetter' : 'markant';
-    warnings.push({ typ: 'schnee', stufe, sum_12h: Math.round(snow12h * 10) / 10, unit: 'cm' });
-  }
-
+  // Hitze
   const maxTemp = getMax(hourly.temperature_2m);
   if (maxTemp >= THRESHOLDS.temp_hot_markant) {
     const stufe = maxTemp >= THRESHOLDS.temp_hot_severe ? 'unwetter' : 'markant';
     warnings.push({ typ: 'hitze', stufe, max_value: Math.round(maxTemp * 10) / 10, unit: '°C' });
   }
 
+  // Glätte
   const glazeRisk = idx.some((i: number) =>
     (hourly.temperature_2m?.[i] ?? 999) <= THRESHOLDS.glaze_temp &&
     (hourly.precipitation?.[i] ?? 0) > 0.1
@@ -96,75 +93,87 @@ function detectWarnings(weatherData: any) {
   return warnings;
 }
 
-function computeStormRisk(weatherData: any) {
+// Kontext-Metriken für Claude (nur zur Formulierung, nicht zur Score-Berechnung)
+function buildConvectiveContext(weatherData: any, windowHours: number) {
   const hourly = weatherData.hourly;
-  if (!hourly?.time) return { level: 'kein', score: 0, metrics: {} };
-  const idx = getIndices(hourly, 6);
-  if (idx.length === 0) return { level: 'kein', score: 0, metrics: {} };
+  if (!hourly?.time) return {};
+  const idx = getIndices(hourly, windowHours);
+  if (idx.length === 0) return {};
 
-  let maxCape = 0, minLI = 999, maxGust = 0, maxShear = 0, maxLight = 0;
+  let maxCape = 0, minLI = 999, minCIN = 0, maxLPI = 0, maxShear = 0;
   for (const i of idx) {
-    maxCape = Math.max(maxCape, hourly.cape?.[i] ?? 0);
-    minLI = Math.min(minLI, hourly.lifted_index?.[i] ?? 999);
-    maxGust = Math.max(maxGust, hourly.wind_gusts_10m?.[i] ?? 0);
-    const w10 = hourly.wind_speed_10m?.[i] ?? 0;
+    maxCape  = Math.max(maxCape,  hourly.cape?.[i] ?? 0);
+    minLI    = Math.min(minLI,    hourly.lifted_index?.[i] ?? 999);
+    minCIN   = Math.min(minCIN,   hourly.convective_inhibition?.[i] ?? 0);
+    maxLPI   = Math.max(maxLPI,   hourly.lightning_potential?.[i] ?? 0);
+    const w10  = hourly.wind_speed_10m?.[i] ?? 0;
     const w500 = hourly.wind_speed_500hPa?.[i] ?? w10;
     maxShear = Math.max(maxShear, Math.abs(w500 - w10));
-    maxLight = Math.max(maxLight, hourly.lightning_potential?.[i] ?? 0);
   }
 
-  let score = 0;
-  if (maxCape >= 500) score += Math.min(40, (maxCape - 500) / 75);
-  if (minLI <= 0) score += Math.min(25, Math.abs(minLI) * 4);
-  if (maxShear >= 10) score += Math.min(20, maxShear - 10);
-  if (maxLight >= 1) score += Math.min(15, maxLight * 2);
-  score = Math.min(100, Math.round(score));
-
-  const level = score >= 80 ? 'extrem' : score >= 65 ? 'sehr_hoch'
-             : score >= 45 ? 'hoch' : score >= 25 ? 'mäßig'
-             : score >= 10 ? 'schwach' : 'kein';
-
   return {
-    level, score,
-    metrics: {
-      cape_max: Math.round(maxCape),
-      lifted_index_min: Math.round(minLI * 10) / 10,
-      gust_max: Math.round(maxGust),
-      shear_max: Math.round(maxShear),
-      lightning_max: Math.round(maxLight * 10) / 10,
-    }
+    cape_max_jkg:     Math.round(maxCape),
+    lifted_index_min: Math.round(minLI * 10) / 10,
+    cin_min_jkg:      Math.round(minCIN),
+    lpi_max_jkg:      Math.round(maxLPI * 10) / 10,
+    wind_shear_max:   Math.round(maxShear),
   };
 }
 
-const STATIC_PROMPT = `Du bist Wetter-Sicherheits-Kommunikator für DACH und Italien. Du bekommst BERECHNETE Warnungen (aus harten Schwellenwerten) und ein berechnetes Gewitter-Risiko.
+function scoreLevelLabel(score: number): string {
+  if (score >= 86) return 'extrem';
+  if (score >= 61) return 'sehr_hoch';
+  if (score >= 31) return 'hoch';
+  if (score >= 11) return 'mäßig';
+  if (score >= 1)  return 'schwach';
+  return 'kein';
+}
 
-DEINE AUFGABE: Formuliere für jede Warnung einen prägnanten Titel + verständliche Beschreibung. Bewerte das Gewitter-Risiko mit Begründung und Konvektionstyp.
+function scoreToColor(score: number): string {
+  if (score >= 86) return 'purple';
+  if (score >= 61) return 'red';
+  if (score >= 31) return 'orange';
+  if (score >= 11) return 'yellow';
+  return 'green';
+}
 
-KRITISCH:
-- Erfinde KEINE Warnungen. Nutze nur die übergebenen.
-- Beschreibung max. 2 Sätze, aktiv formuliert.
-- Konkrete Zahlen einbauen (z.B. "Böen bis 85 km/h").
-- Bei Gewitter: Konvektionstyp einschätzen (Einzelzellen / Multizellen / Superzellen / MCS).
-- Bei Glätte: Hinweis auf Brücken/exponierte Stellen.
-- Bei Hitze: Risikogruppen erwähnen (Ältere, Kinder, Herz-Kreislauf).
-- Bei Wind: Empfehlung (lose Gegenstände sichern, Wald meiden).
+const STATIC_PROMPT = `Du bist Wetter-Sicherheits-Kommunikator für DACH und Italien.
+
+Du bekommst:
+1. BERECHNETE Warnungen (aus harten Schwellenwerten — nicht verändern)
+2. Einen FERTIG BERECHNETEN Gewitter-Score (0–100) aus dem Frontend — du übernimmst diesen exakt
+3. Konvektive Messgrößen (nur zur Begründung/Formulierung)
+
+DEINE AUFGABE:
+- Formuliere für jede Warnung Titel + Beschreibung
+- Übernimm score und level exakt aus dem Input
+- Begründe das Gewitter-Risiko mit den gegebenen Metriken
+- Schätze Konvektionstyp ein (Einzelzellen / Multizellen / Superzellen / MCS / Frontgewitter)
+
+REGELN:
+- Erfinde KEINE Warnungen
+- Max. 2 Sätze pro Beschreibung, aktiv formuliert
+- Konkrete Zahlen einbauen
+- Bei Wind: loose Gegenstände sichern, Wald meiden
+- Bei Hitze: Risikogruppen nennen (Ältere, Kinder, Herz-Kreislauf)
+- Bei Glätte: Hinweis auf Brücken und exponierte Stellen
 
 OUTPUT (NUR JSON, nichts davor/danach):
 {
   "gewitter_risiko_6h": {
-    "level": "<übernehme aus Input>",
-    "score": <übernehme>,
-    "begründung": "1-2 Sätze, mit konkreten Zahlen",
-    "zeitfenster": "z.B. '14-19 Uhr' oder 'durchgehend'",
+    "level": "<aus Input übernehmen>",
+    "score": <aus Input übernehmen — EXAKT>,
+    "begründung": "1-2 Sätze mit konkreten Messwerten",
+    "zeitfenster": "z.B. '14–19 Uhr' oder 'ganztägig'",
     "konvektionstyp": "z.B. 'organisierte Multizellen mit Hagel-Potenzial'",
-    "color": "green|yellow|orange|red|purple"
+    "color": "<aus Input übernehmen>"
   },
   "warnungen_12h": [
     {
       "id": "typ_stufe",
-      "typ": "<übernehme>",
-      "stufe": "<übernehme>",
-      "titel": "Prägnant, max 5 Wörter",
+      "typ": "<übernehmen>",
+      "stufe": "<übernehmen>",
+      "titel": "Max. 5 Wörter",
       "beschreibung": "1-2 Sätze mit Zahlen und Empfehlung",
       "color": "yellow|orange|red|purple",
       "icon": "Wind|CloudRain|Zap|Snowflake|Thermometer|AlertTriangle"
@@ -174,11 +183,9 @@ OUTPUT (NUR JSON, nichts davor/danach):
   "disclaimer": "Experimentelle KI-Auswertung. Keine amtliche Warnung. Bei akuter Gefahr DWD/ZAMG/MeteoSwiss/Protezione Civile konsultieren."
 }
 
-Farbcodes:
-- gewitter_risiko: kein/schwach=green, mäßig=yellow, hoch=orange, sehr_hoch=red, extrem=purple
-- warnungen: markant=yellow/orange, unwetter=red, extrem=purple
+Farbcodes Warnungen: markant=yellow/orange, unwetter=red, extrem=purple
 
-# DATEN-INPUT FOLGT IM NÄCHSTEN BLOCK`;
+# DATEN FOLGEN IM NÄCHSTEN BLOCK`;
 
 async function callAnthropicWithRetry(body: unknown): Promise<
   | { ok: true; data: any }
@@ -256,7 +263,7 @@ export default async function handler(req: any, res: any) {
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return errorResponse(res, 405, 'BAD_REQUEST', 'Method not allowed');
 
-  const { weatherData, location } = req.body ?? {};
+  const { weatherData, location, thunderstormScore, windowHours = 48 } = req.body ?? {};
   if (!weatherData || !location) return errorResponse(res, 400, 'BAD_REQUEST', 'Missing weatherData or location');
 
   const locLat = typeof location.latitude === 'number' ? location.latitude : location.lat;
@@ -274,13 +281,18 @@ export default async function handler(req: any, res: any) {
     }
   }
 
+  // Score vom Frontend übernehmen, Fallback auf 0
+  const frontendScore: number = typeof thunderstormScore === 'number' ? thunderstormScore : 0;
+  const level = scoreLevelLabel(frontendScore);
+  const color = scoreToColor(frontendScore);
+
   const dLat = typeof dataLat === 'number' ? Math.round(dataLat * 10) : 'x';
   const dLon = typeof dataLon === 'number' ? Math.round(dataLon * 10) : 'x';
   const bucket = Math.floor(Date.now() / FRESH_MS);
-  const cacheKey = `warnings:${Math.round(locLat * 10)}_${Math.round(locLon * 10)}_${dLat}_${dLon}_${bucket}`;
+  const cacheKey = `warnings_v2:${Math.round(locLat * 10)}_${Math.round(locLon * 10)}_${dLat}_${dLon}_${bucket}`;
   const locLabel = `${location?.name ?? '?'} (${locLat},${locLon})`;
 
-  // 1) Cache lookup
+  // Cache lookup
   const cached = await getCached<any>(cacheKey);
   if (cached && isFresh(cached.timestamp, FRESH_MS)) {
     console.log('[risk-warnings] cache HIT (fresh)', { location: locLabel });
@@ -292,14 +304,18 @@ export default async function handler(req: any, res: any) {
   }
   console.log('[risk-warnings] cache MISS', { location: locLabel, hasStale: !!cached });
 
-  // 2) Compute warnings + storm risk
-  const warnings = detectWarnings(weatherData);
-  const stormRisk = computeStormRisk(weatherData);
+  // Warnungen berechnen
+  const warnings = detectWarnings(weatherData, windowHours);
+  const convectiveContext = buildConvectiveContext(weatherData, windowHours);
 
-  // 3) Quiet weather: skip Claude
-  if (warnings.length === 0 && stormRisk.score < 10) {
+  // Ruhiges Wetter → kein Claude
+  if (warnings.length === 0 && frontendScore < 10) {
     const result = {
-      gewitter_risiko_6h: { ...stormRisk, begründung: 'Stabile Wetterlage, keine konvektiven Auslöser erkennbar.', zeitfenster: '', konvektionstyp: '', color: 'green' },
+      gewitter_risiko_6h: {
+        level: 'kein', score: frontendScore, color: 'green',
+        begründung: 'Stabile Wetterlage, keine konvektiven Auslöser erkennbar.',
+        zeitfenster: '', konvektionstyp: '',
+      },
       warnungen_12h: [],
       summary: 'Keine aktiven Warnungen. Wetterlage ruhig.',
       disclaimer: 'Experimentelle KI-Auswertung. Keine amtliche Warnung.',
@@ -308,12 +324,13 @@ export default async function handler(req: any, res: any) {
     return res.status(200).json({ ...result, cached: false, fromCache: false, stale: false });
   }
 
-  // 4) Claude formulates
+  // Claude formuliert
   const dynamicPart =
     `# DATEN\n` +
     `Standort: ${JSON.stringify(location)}\n` +
-    `Berechnete Warnungen: ${JSON.stringify(warnings, null, 2)}\n` +
-    `Gewitter-Risiko (berechnet): ${JSON.stringify(stormRisk, null, 2)}`;
+    `Berechneter Gewitter-Score (Frontend, exakt übernehmen): score=${frontendScore}, level="${level}", color="${color}"\n` +
+    `Konvektive Metriken (${windowHours}h-Fenster): ${JSON.stringify(convectiveContext, null, 2)}\n` +
+    `Berechnete Warnungen: ${JSON.stringify(warnings, null, 2)}`;
 
   const apiResult = await callAnthropicWithRetry({
     model: 'claude-haiku-4-5-20251001',
@@ -329,13 +346,11 @@ export default async function handler(req: any, res: any) {
 
   if (!apiResult.ok) {
     console.error('[risk-warnings] anthropic failed', {
-      location: locLabel, code: apiResult.code, status: apiResult.status, body: apiResult.details,
+      location: locLabel, code: apiResult.code, status: apiResult.status,
     });
     if (cached && isStaleButUsable(cached.timestamp, STALE_MAX_MS)) {
-      console.log('[risk-warnings] STALE fallback', { location: locLabel, ageMin: ageMinutes(cached.timestamp) });
       return res.status(200).json({
-        ...cached.data,
-        cached: true, fromCache: true, stale: true,
+        ...cached.data, cached: true, fromCache: true, stale: true,
         ageMinutes: ageMinutes(cached.timestamp),
       });
     }
@@ -351,19 +366,18 @@ export default async function handler(req: any, res: any) {
   try {
     parsed = extractJson(textContent);
   } catch (parseError) {
-    console.error('[risk-warnings] parse error', { location: locLabel, err: String(parseError), raw: textContent.slice(0, 500) });
+    console.error('[risk-warnings] parse error', { location: locLabel, err: String(parseError) });
     if (cached && isStaleButUsable(cached.timestamp, STALE_MAX_MS)) {
       return res.status(200).json({
         ...cached.data, cached: true, fromCache: true, stale: true,
         ageMinutes: ageMinutes(cached.timestamp),
       });
     }
-    return errorResponse(res, 500, 'PARSE_ERROR', 'KI-Antwort konnte nicht geparst werden', textContent.slice(0, 500));
+    return errorResponse(res, 500, 'PARSE_ERROR', 'KI-Antwort konnte nicht geparst werden');
   }
 
   const schemaErr = validateSchema(parsed);
   if (schemaErr) {
-    console.error('[risk-warnings] invalid response', { location: locLabel, reason: schemaErr });
     if (cached && isStaleButUsable(cached.timestamp, STALE_MAX_MS)) {
       return res.status(200).json({
         ...cached.data, cached: true, fromCache: true, stale: true,
@@ -372,6 +386,11 @@ export default async function handler(req: any, res: any) {
     }
     return errorResponse(res, 500, 'INVALID_RESPONSE', 'KI-Antwort unvollständig', schemaErr);
   }
+
+  // Score aus Frontend erzwingen (Claude darf ihn nicht verändern)
+  parsed.gewitter_risiko_6h.score = frontendScore;
+  parsed.gewitter_risiko_6h.level = level;
+  parsed.gewitter_risiko_6h.color = color;
 
   await setCached(cacheKey, parsed, 24 * 60 * 60);
   console.log('[risk-warnings] cache SET', { location: locLabel });
