@@ -38,7 +38,7 @@ function getIndices(hourly: any, hours: number): number[] {
     .map((item: { t: number; i: number }) => item.i);
 }
 
-function detectWarnings(weatherData: any, windowHours: number) {
+function detectWarnings(weatherData: any, windowHours: number, officialWarnings: any[] = []) {
   const warnings: any[] = [];
   const hourly = weatherData.hourly;
   if (!hourly?.time) return warnings;
@@ -76,6 +76,22 @@ function detectWarnings(weatherData: any, windowHours: number) {
   }
 
   // Hitze: deaktiviert (Schwelle 32°C zu niedrig für Mai/Juni — würde Fehlalarme erzeugen)
+
+  // Gewitter: CAPE-Schwelle ODER amtliche Gewitterwarnung
+  const maxCape = idx.reduce((m: number, i: number) => Math.max(m, hourly.cape?.[i] ?? 0), 0);
+  const hasOfficialThunderstorm = officialWarnings?.some(
+    (w: any) => typeof w?.type === 'string' && w.type.toLowerCase().includes('thunderstorm'),
+  );
+  if (maxCape >= 500 || hasOfficialThunderstorm) {
+    warnings.push({
+      typ: 'gewitter',
+      stufe: 'markant',
+      cape_max: Math.round(maxCape),
+      official: !!hasOfficialThunderstorm,
+      unit: 'J/kg',
+    });
+  }
+
 
 
   // Glätte
@@ -314,7 +330,7 @@ export default async function handler(req: any, res: any) {
   console.log('[risk-warnings] cache MISS', { location: locLabel, hasStale: !!cached });
 
   // Warnungen berechnen
-  const warnings = detectWarnings(weatherData, windowHours);
+  const warnings = detectWarnings(weatherData, windowHours, officialWarnings);
   const convectiveContext = buildConvectiveContext(weatherData, windowHours);
 
   // Rohe Stundenwerte für die nächsten windowHours an Claude weiterreichen
