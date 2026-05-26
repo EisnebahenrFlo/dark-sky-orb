@@ -1,3 +1,4 @@
+import React from "react";
 import {
   ComposedChart,
   BarChart,
@@ -12,6 +13,8 @@ import {
   ResponsiveContainer,
   CartesianGrid,
 } from "recharts";
+import { Wind, Droplets, Thermometer, X } from "lucide-react";
+import { getWeatherIcon } from "@/components/WeatherIcon";
 import type { HourlyData, DailyData } from "@/lib/weather";
 
 const HOURS = 24;
@@ -41,6 +44,40 @@ interface Row {
   gust: number;
   gustBand: number;
   uv: number;
+  code: number;
+  isDay: number;
+}
+
+function InfoBar({ row, onClose }: { row: Row; onClose: () => void }) {
+  const WeatherIcon = getWeatherIcon(row.code, row.isDay);
+  return (
+    <div className="pointer-events-auto absolute left-1/2 top-2 z-20 -translate-x-1/2 rounded-full border border-border/40 bg-popover/95 px-3 py-1.5 shadow-xl backdrop-blur">
+      <div className="flex items-center gap-3 text-xs tabular-nums">
+        <WeatherIcon className="h-4 w-4" strokeWidth={1.5} />
+        <span className="font-medium">{row.time}</span>
+        <span className="inline-flex items-center gap-1">
+          <Thermometer className="h-3.5 w-3.5 opacity-70" />
+          {row.temp}° <span className="opacity-60">({row.feels}°)</span>
+        </span>
+        <span className="inline-flex items-center gap-1">
+          <Droplets className="h-3.5 w-3.5 opacity-70" />
+          {row.pop}%
+        </span>
+        <span className="inline-flex items-center gap-1">
+          <Wind className="h-3.5 w-3.5 opacity-70" />
+          {row.wind}/{row.gust}
+        </span>
+        <span className="opacity-70">UV {row.uv.toFixed(1)}</span>
+        <button
+          onClick={onClose}
+          className="ml-1 rounded-full p-0.5 hover:bg-muted"
+          aria-label="Schließen"
+        >
+          <X className="h-3.5 w-3.5" />
+        </button>
+      </div>
+    </div>
+  );
 }
 
 const Y_WIDTH = 44;
@@ -100,6 +137,12 @@ export function HourlyForecastChart({
   daily?: DailyData;
   currentTime?: string;
 }) {
+  const [activeRow, setActiveRow] = React.useState<Row | null>(null);
+  const handleChartClick = (data: any) => {
+    if (data?.activePayload?.[0]?.payload) {
+      setActiveRow(data.activePayload[0].payload as Row);
+    }
+  };
   // Find starting index = current hour (or closest)
   const now = currentTime ? new Date(currentTime).getTime() : Date.now();
   let startIdx = 0;
@@ -131,6 +174,8 @@ export function HourlyForecastChart({
       gust,
       gustBand: Math.max(0, gust - wind),
       uv: hourly.uv_index?.[i] ?? 0,
+      code: hourly.weather_code?.[i] ?? 0,
+      isDay: hourly.is_day?.[i] ?? 1,
     });
   }
 
@@ -170,7 +215,8 @@ export function HourlyForecastChart({
   const hiddenX = <XAxis dataKey="time" hide tickLine={false} axisLine={false} />;
 
   return (
-    <div className="glass overflow-visible rounded-3xl">
+    <div className="glass relative overflow-visible rounded-3xl">
+      {activeRow && <InfoBar row={activeRow} onClose={() => setActiveRow(null)} />}
       {/* Panel 1: Temp & Gefühlt */}
       <div className="px-3 pt-3">
         <div className="px-1 pb-1 text-[10px] uppercase tracking-wider text-muted-foreground/70">
@@ -182,7 +228,7 @@ export function HourlyForecastChart({
         ]} />
         <div className="h-[120px] w-full pt-2 pb-1 sm:h-[160px]">
           <ResponsiveContainer width="100%" height="100%">
-            <ComposedChart data={rows} margin={MARGIN}>
+            <ComposedChart data={rows} margin={MARGIN} onClick={handleChartClick}>
               <CartesianGrid stroke={grid} vertical={false} />
               {hiddenX}
               <YAxis
@@ -196,7 +242,7 @@ export function HourlyForecastChart({
               <Tooltip content={<UnifiedTooltip />} cursor={false} wrapperStyle={{ pointerEvents: "none" }} position={{ x: 0, y: 0 }} />
               <Area type="monotone" dataKey="diffCold" stroke="none" fill="#3B82F6" fillOpacity={0.18} isAnimationActive={false} connectNulls={false} baseValue={0} activeDot={false} />
               <Area type="monotone" dataKey="diffWarm" stroke="none" fill="#EF4444" fillOpacity={0.18} isAnimationActive={false} connectNulls={false} baseValue={0} activeDot={false} />
-              <Area type="monotone" dataKey="temp" stroke={accent} strokeOpacity={0.6} strokeWidth={2} fill={accent} fillOpacity={0.08} dot={false} activeDot={{ r: 3 }} />
+              <Area type="monotone" dataKey="temp" stroke={accent} strokeOpacity={0.6} strokeWidth={2} fill={accent} fillOpacity={0.08} dot={false} activeDot={{ r: 6, strokeWidth: 0 }} />
               <Line type="monotone" dataKey="feels" stroke={accent} strokeOpacity={0.4} strokeDasharray="3 3" strokeWidth={1.5} dot={false} activeDot={false} />
               {nowLabel && <ReferenceLine x={nowLabel} stroke={accent} strokeWidth={1.5} strokeDasharray="4 4" strokeOpacity={0.8} />}
             </ComposedChart>
@@ -218,7 +264,7 @@ export function HourlyForecastChart({
         ]} />
         <div className="h-[100px] w-full pt-2 pb-1 sm:h-[130px]">
           <ResponsiveContainer width="100%" height="100%">
-            <ComposedChart data={rows} margin={MARGIN}>
+            <ComposedChart data={rows} margin={MARGIN} onClick={handleChartClick}>
               <CartesianGrid stroke={grid} vertical={false} />
               {hiddenX}
               <YAxis
@@ -255,7 +301,7 @@ export function HourlyForecastChart({
         ]} />
         <div className="h-[120px] w-full pt-2 pb-1 sm:h-[160px]">
           <ResponsiveContainer width="100%" height="100%">
-            <ComposedChart data={rows} margin={MARGIN}>
+            <ComposedChart data={rows} margin={MARGIN} onClick={handleChartClick}>
               <CartesianGrid stroke={grid} vertical={false} />
               {hiddenX}
               <YAxis
@@ -272,7 +318,7 @@ export function HourlyForecastChart({
               <ReferenceLine y={20} stroke={muted} strokeDasharray="2 3" strokeOpacity={0.4} label={{ value: "leichte Brise", position: "insideTopRight", fill: muted, fontSize: 8 }} />
               <ReferenceLine y={50} stroke={muted} strokeDasharray="2 3" strokeOpacity={0.4} label={{ value: "starker Wind", position: "insideTopRight", fill: muted, fontSize: 8 }} />
               <Line type="monotone" dataKey="gust" stroke={accent} strokeOpacity={0.6} strokeDasharray="4 3" strokeWidth={1} dot={false} activeDot={false} />
-              <Line type="monotone" dataKey="wind" stroke={accent} strokeWidth={2} dot={false} activeDot={{ r: 3 }} />
+              <Line type="monotone" dataKey="wind" stroke={accent} strokeWidth={2} dot={false} activeDot={{ r: 6, strokeWidth: 0 }} />
               {nowLabel && <ReferenceLine x={nowLabel} stroke={accent} strokeWidth={1.5} strokeDasharray="4 4" strokeOpacity={0.8} />}
             </ComposedChart>
           </ResponsiveContainer>
@@ -300,7 +346,7 @@ export function HourlyForecastChart({
         ]} />
         <div className="h-[110px] w-full pt-2 pb-1 sm:h-[140px]">
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={rows} margin={{ ...MARGIN, top: 18, bottom: 4 }}>
+            <BarChart data={rows} margin={{ ...MARGIN, top: 18, bottom: 4 }} onClick={handleChartClick}>
               <CartesianGrid stroke={grid} vertical={false} />
               <XAxis
                 dataKey="time"
