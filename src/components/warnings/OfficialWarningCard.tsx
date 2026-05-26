@@ -128,10 +128,10 @@ export function OfficialWarningCard({ warning }: { warning: OfficialWarning }) {
           </div>
           <div className="mt-1 flex flex-wrap items-start justify-between gap-2">
             <h3
-              className="text-[11px] font-bold tracking-tight"
+              className="text-base font-semibold tracking-tight"
               style={{ color: "#1a2a3a" }}
             >
-              <Icon className="mr-1 inline h-3 w-3" strokeWidth={2} />
+              <Icon className="mr-1 inline h-4 w-4" strokeWidth={2} />
               {warning.title}
             </h3>
             <span
@@ -142,7 +142,7 @@ export function OfficialWarningCard({ warning }: { warning: OfficialWarning }) {
           </div>
           {warning.description && (
             <>
-              <p className="mt-1 whitespace-pre-line text-[9px] leading-relaxed" style={{ color: "#5a6a7a" }}>
+              <p className="mt-1 whitespace-pre-line text-sm" style={{ color: "#5a6a7a", lineHeight: 1.6 }}>
                 {desc}
               </p>
               {longDesc && (
