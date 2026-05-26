@@ -99,6 +99,7 @@ export function WeatherHeroStats({ data, children }: { data: CurrentWeather; chi
       <Stat icon={Droplets} label="Luftfeuchte" value={`${data.relative_humidity_2m}%`} />
       <Stat icon={Gauge} label="Luftdruck" value={`${Math.round(data.pressure_msl)} hPa`} />
       <Stat icon={Thermometer} label="Gefühlt" value={`${Math.round(data.apparent_temperature)}°`} />
+      {children}
     </div>
   );
 }
