@@ -155,7 +155,7 @@ export function AnalysePage() {
         <div className={`relative space-y-5 transition-opacity ${loading ? "opacity-50" : ""}`}>
           {/* KI-Analyse Hero */}
           <HeroCard
-            highlight={formatHighlight(data.highlight)}
+            highlight={formatHighlight(data.highlight?.text ?? "")}
             confidenceScore={data.confidence?.score ?? 0}
             confidenceReason={data.confidence?.begründung}
           />

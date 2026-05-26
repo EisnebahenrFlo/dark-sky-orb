@@ -34,7 +34,7 @@ Der thunderstorm_score ist vom Frontend berechnet (physikalische Formel mit LPI,
 # OUTPUT — NUR DIESES JSON, NICHTS DAVOR/DANACH
 
 {
-  "highlight": "DER eine Satz. Konkret, handlungsorientiert, heute-relevant. Beispiele: 'Gewittergefahr ab 15 Uhr — Ausflüge lieber auf den Vormittag legen.' oder 'Perfekter Sommertag — Sonne satt bis zum Abend, 26 Grad.'",
+  "highlight": { "text": "Der eine wichtigste Punkt ohne Anführungszeichen" },
 
   "großwetterlage": {
     "klassifikation": "Kurzname z.B. 'Trog Mitteleuropa' oder 'Azorenhoch-Ableger'",
@@ -157,9 +157,9 @@ function validateSchema(r: any): string | null {
   if (!r.konvektion?.potenzial) return 'konvektion.potenzial missing';
   if (!r.entwicklung?.next_24h) return 'entwicklung.next_24h missing';
   if (typeof r.confidence?.score !== 'number') return 'confidence.score not a number';
-  // highlight ist optional — wird aus großwetterlage generiert wenn leer
-  if (!r.highlight || !r.highlight.trim()) {
-    r.highlight = r.großwetterlage?.beschreibung?.split('.')[0] ?? 'Aktuelle Wetteranalyse verfügbar.';
+  // highlight muss ein Objekt mit nicht-leerem text-String sein — sonst aus großwetterlage generieren
+  if (!r.highlight || typeof r.highlight !== 'object' || typeof r.highlight.text !== 'string' || !r.highlight.text.trim()) {
+    r.highlight = { text: r.großwetterlage?.beschreibung?.split('.')[0] ?? 'Aktuelle Wetteranalyse verfügbar.' };
   }
   return null;
 }
@@ -222,7 +222,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       },
       {
         role: 'assistant',
-        content: '{"highlight":"',
+        content: '{"highlight":{"text":"',
       },
     ],
   });
