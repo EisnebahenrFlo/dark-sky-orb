@@ -70,7 +70,7 @@ export function HourlyForecast({ hourly }: { hourly: HourlyData }) {
                 tick={{ fill: "var(--muted-foreground)", fontSize: 10 }}
                 tickLine={false}
                 axisLine={false}
-                width={36}
+                width={44}
                 unit="°"
               />
               <YAxis
@@ -80,7 +80,7 @@ export function HourlyForecast({ hourly }: { hourly: HourlyData }) {
                 tick={{ fill: "var(--muted-foreground)", fontSize: 10 }}
                 tickLine={false}
                 axisLine={false}
-                width={32}
+                width={40}
                 unit="%"
               />
               <Tooltip
