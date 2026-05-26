@@ -153,11 +153,14 @@ function extractJson(text: string): any {
 
 function validateSchema(r: any): string | null {
   if (!r || typeof r !== 'object') return 'not an object';
-  if (typeof r.highlight !== 'string' || !r.highlight.trim()) return 'highlight missing';
   if (!r.großwetterlage?.klassifikation) return 'großwetterlage.klassifikation missing';
   if (!r.konvektion?.potenzial) return 'konvektion.potenzial missing';
   if (!r.entwicklung?.next_24h) return 'entwicklung.next_24h missing';
   if (typeof r.confidence?.score !== 'number') return 'confidence.score not a number';
+  // highlight ist optional — wird aus großwetterlage generiert wenn leer
+  if (!r.highlight || !r.highlight.trim()) {
+    r.highlight = r.großwetterlage?.beschreibung?.split('.')[0] ?? 'Aktuelle Wetteranalyse verfügbar.';
+  }
   return null;
 }
 
