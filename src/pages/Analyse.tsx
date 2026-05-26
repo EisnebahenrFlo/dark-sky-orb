@@ -26,7 +26,7 @@ import { StaleBadge } from "@/components/StaleBadge";
 import { useRiskWarningsCtx } from "@/contexts/RiskWarningsContext";
 import { RiskHero } from "@/components/warnings/RiskHero";
 import { WarningCard } from "@/components/warnings/WarningCard";
-import { OfficialWarningsSection } from "@/components/warnings/OfficialWarningsSection";
+
 import { useThunderstormRisk } from "@/hooks/useThunderstormRisk";
 
 const formatHighlight = (text: string) => text.replaceAll(";", " ·");
@@ -172,8 +172,6 @@ export function AnalysePage() {
             confidenceReason={data.confidence?.begründung}
           />
 
-          {/* Amtliche Warnungen */}
-          <OfficialWarningsSection />
 
           {/* KI-Auswertung */}
           {riskData && (
