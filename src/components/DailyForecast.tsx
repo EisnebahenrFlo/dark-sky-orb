@@ -1,6 +1,17 @@
 import { safeFixed } from "@/lib/safeFormat";
 import { useState } from "react";
-import { ChevronDown, Sunrise, Sunset, Wind, Navigation, Droplets, CloudRain, Snowflake, Sun, Zap } from "lucide-react";
+import {
+  ChevronDown,
+  Sunrise,
+  Sunset,
+  Wind,
+  Navigation,
+  Droplets,
+  CloudRain,
+  Snowflake,
+  Sun,
+  Zap,
+} from "lucide-react";
 import type { CurrentWeather, DailyData, HourlyData } from "@/lib/weather";
 import { weekdayLabel, windDirectionLabel } from "@/lib/weather";
 import { RealisticWeatherIcon } from "./RealisticWeatherIcon";
@@ -11,83 +22,102 @@ function timeOnly(iso: string) {
   return new Date(iso).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" });
 }
 
-function DayRow({ daily, i, hourly, current }: { daily: DailyData; i: number; hourly?: HourlyData; current?: CurrentWeather }) {
+function ThunderBadge({ risk }: { risk: number }) {
+  if (risk < 20) return null;
+  const { cls, label } =
+    risk >= 75
+      ? { cls: "bg-red-500 text-white", label: "Sehr hoch" }
+      : risk >= 50
+      ? { cls: "bg-orange-500 text-white", label: "Hoch" }
+      : { cls: "bg-amber-400 text-amber-950", label: "Möglich" };
+  return (
+    <span
+      className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[12px] font-semibold ${cls}`}
+      title={`Gewitter-Risiko: ${label}`}
+    >
+      <Zap size={11} strokeWidth={2.5} />
+      {label}
+    </span>
+  );
+}
+
+function DayRow({
+  daily,
+  i,
+  hourly,
+}: {
+  daily: DailyData;
+  i: number;
+  hourly?: HourlyData;
+  current?: CurrentWeather;
+}) {
   const [open, setOpen] = useState(false);
   const min = daily.temperature_2m_min[i] != null ? Math.round(daily.temperature_2m_min[i]) : null;
   const max = daily.temperature_2m_max[i] != null ? Math.round(daily.temperature_2m_max[i]) : null;
   const code = daily.weather_code[i];
   const pop = daily.precipitation_probability_max[i] ?? 0;
   const precip = daily.precipitation_sum[i] ?? 0;
-  
   const wind = daily.wind_speed_10m_max[i] != null ? Math.round(daily.wind_speed_10m_max[i]) : null;
   const dir = daily.wind_direction_10m_dominant[i];
-  const dayRisk = hourly
+
+  const thunder = hourly
     ? dailyThunderRiskFromHourly(hourly.time, hourly.cape, hourly.lifted_index, daily.time[i])
-    : null;
-  const riskScore = dayRisk?.risk ?? 0;
-  const thunderLabel =
-    riskScore >= 75 ? "Gewitter: Sehr hoch" : riskScore >= 50 ? "Gewitter: Hoch" : "Gewitter: Möglich";
-  const thunderColor =
-    riskScore >= 75 ? "#ef4444" : riskScore >= 50 ? "#f97316" : "#f59e0b";
-  const thunder = { risk: riskScore, label: dayRisk?.label ?? "Kein Risiko" };
-  
+    : { risk: 0, label: "Kein", color: "transparent" };
 
   return (
     <div className="glass overflow-hidden rounded-2xl">
       <button
         onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center gap-3 px-4 py-4 text-left transition hover:bg-white/[0.03] sm:gap-4 sm:px-6"
+        className="flex w-full items-center gap-4 px-4 py-4 text-left transition hover:bg-white/[0.03] sm:px-6"
       >
-        <div className="w-20 shrink-0 sm:w-28">
-          <div className="font-medium capitalize">{weekdayLabel(daily.time[i], i)}</div>
-          <div className="text-xs text-muted-foreground">
+        {/* Day + date */}
+        <div className="w-24 shrink-0 sm:w-28">
+          <div className="text-[15px] font-semibold capitalize leading-tight text-foreground">
+            {weekdayLabel(daily.time[i], i)}
+          </div>
+          <div className="text-[12px] text-muted-foreground">
             {new Date(daily.time[i]).toLocaleDateString("de-DE", { day: "2-digit", month: "short" })}
           </div>
         </div>
 
-        <RealisticWeatherIcon
-          code={code}
-          isDay={1}
-          size={28}
-          className="shrink-0"
-        />
-        
+        {/* Weather icon */}
+        <RealisticWeatherIcon code={code} isDay={1} size={28} className="shrink-0" />
 
-        {/* Indicators column: rain % + thunder level */}
-        <div className="flex w-[52px] shrink-0 flex-col items-end gap-px leading-tight">
-          {pop > 20 && (
+        {/* Middle: precipitation + wind + thunder */}
+        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-4 gap-y-1.5 text-[14px]">
+          {pop > 0 && (
             <span
-              className="text-[9.5px] tabular-nums"
-              style={{
-                fontWeight: pop > 70 ? 700 : 600,
-                color: pop > 70 ? "#1d4ed8" : "#3b82f6",
-              }}
+              className="tabular-nums font-medium"
+              style={{ color: pop > 70 ? "#1d4ed8" : "#3b82f6" }}
             >
               {pop}%
             </span>
           )}
-          {thunder.risk >= 20 && (
-            <div
-              className="flex items-center gap-[2px] text-[8.5px] font-semibold"
-              style={{ color: thunderColor }}
-              title={`Gewitter-Risiko: ${thunder.label}`}
-            >
-              <Zap size={9} strokeWidth={2} />
-              <span>{thunderLabel}</span>
-            </div>
+          {precip > 0 && (
+            <span className="inline-flex items-center gap-1 text-muted-foreground tabular-nums">
+              <Droplets className="h-3.5 w-3.5" strokeWidth={1.75} />
+              {safeFixed(precip, 1)} mm
+            </span>
           )}
+          {wind != null && (
+            <span className="inline-flex items-center gap-1 text-muted-foreground tabular-nums">
+              <Navigation
+                className="h-3.5 w-3.5"
+                strokeWidth={1.75}
+                style={{ transform: `rotate(${dir + 180}deg)` }}
+              />
+              {wind} km/h
+            </span>
+          )}
+          <ThunderBadge risk={thunder.risk} />
         </div>
 
-        <div className="flex flex-1 flex-wrap items-center gap-x-3 gap-y-1 text-sm">
-          <div className="hidden items-center gap-1 text-muted-foreground md:flex">
-            <Wind className="h-3.5 w-3.5" strokeWidth={1.5} />
-            <span className="tabular-nums">{wind != null ? `${wind} km/h` : "—"}</span>
-          </div>
-        </div>
-
+        {/* Temps */}
         <div className="flex items-baseline gap-3 font-display tabular-nums">
-          <span className="text-[12px] font-normal text-[#a0b0c0] dark:text-slate-500">{min != null ? `${min}°` : "—"}</span>
-          <span className="text-[14px] font-bold text-[#1a2a3a] dark:text-white">{max != null ? `${max}°` : "—"}</span>
+          <span className="text-[14px] text-muted-foreground">{min != null ? `${min}°` : "—"}</span>
+          <span className="text-[17px] font-bold text-foreground">
+            {max != null ? `${max}°` : "—"}
+          </span>
         </div>
 
         <ChevronDown
@@ -121,11 +151,7 @@ function DayRow({ daily, i, hourly, current }: { daily: DailyData; i: number; ho
             label="Schnee"
             value={`${safeFixed(daily.snowfall_sum[i], 1)} cm`}
           />
-          <Detail
-            icon={Droplets}
-            label="Niederschlagswahrsch."
-            value={`${pop}%`}
-          />
+          <Detail icon={Droplets} label="Niederschlagswahrsch." value={`${pop}%`} />
         </div>
       )}
     </div>
@@ -155,7 +181,15 @@ function Detail({
   );
 }
 
-export function DailyForecast({ daily, hourly, current }: { daily: DailyData; hourly?: HourlyData; current?: CurrentWeather }) {
+export function DailyForecast({
+  daily,
+  hourly,
+  current,
+}: {
+  daily: DailyData;
+  hourly?: HourlyData;
+  current?: CurrentWeather;
+}) {
   return (
     <section>
       <SectionHeader title="7-Tage-Übersicht" subtitle="Tippen für Details" />
