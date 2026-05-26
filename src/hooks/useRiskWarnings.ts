@@ -56,7 +56,7 @@ export function useRiskWarnings() {
   const [error, setError] = useState<string | null>(null);
   const [errorCode, setErrorCode] = useState<RiskWarningsErrorCode | null>(null);
   const [lastUpdated, setLastUpdated] = useState<number | null>(null);
-  const loadedKeyRef = useRef<string | null>(null);
+  
   const ctrlRef = useRef<AbortController | null>(null);
   const thunderstorm = useThunderstormRisk(48);
   const officialWarnings = useOfficialWarningsCtx();
