@@ -264,6 +264,8 @@ export default async function handler(req: any, res: any) {
   if (req.method !== 'POST') return errorResponse(res, 405, 'BAD_REQUEST', 'Method not allowed');
 
   const { weatherData, location, thunderstormScore, windowHours = 48 } = req.body ?? {};
+  const officialWarnings: any[] = req.body?.officialWarnings ?? [];
+  const nowcast: any = req.body?.nowcast ?? null;
   if (!weatherData || !location) return errorResponse(res, 400, 'BAD_REQUEST', 'Missing weatherData or location');
 
   const locLat = typeof location.latitude === 'number' ? location.latitude : location.lat;
