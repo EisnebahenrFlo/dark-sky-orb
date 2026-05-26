@@ -271,6 +271,9 @@ function getDayRepresentativeCode(
 }
 
 export async function fetchWeather(lat: number, lon: number, countryCode?: string): Promise<WeatherData> {
+  const apiKey = import.meta.env.VITE_OPEN_METEO_API_KEY;
+  const baseUrl = apiKey ? 'https://customer-api.open-meteo.com/v1' : 'https://api.open-meteo.com/v1';
+
   const shortParams = new URLSearchParams({
     latitude: String(lat),
     longitude: String(lon),
@@ -285,6 +288,10 @@ export async function fetchWeather(lat: number, lon: number, countryCode?: strin
     models: getWeatherModel(countryCode),
   });
 
+  if (apiKey) {
+    shortParams.append('apikey', apiKey);
+  }
+
   const longParams = new URLSearchParams({
     latitude: String(lat),
     longitude: String(lon),
@@ -296,9 +303,14 @@ export async function fetchWeather(lat: number, lon: number, countryCode?: strin
     models: "best_match",
   });
 
-  const shortRes = await fetch(`https://api.open-meteo.com/v1/forecast?${shortParams.toString()}`);
-  await new Promise(r => setTimeout(r, 500));
-  const longRes = await fetch(`https://api.open-meteo.com/v1/forecast?${longParams.toString()}`);
+  if (apiKey) {
+    longParams.append('apikey', apiKey);
+  }
+
+  const [shortRes, longRes] = await Promise.all([
+    fetch(`${baseUrl}/forecast?${shortParams.toString()}`),
+    fetch(`${baseUrl}/forecast?${longParams.toString()}`),
+  ]);
   if (!shortRes.ok || !longRes.ok) throw new Error("Wetterdaten fehlgeschlagen");
   const [shortJson, longJson] = (await Promise.all([shortRes.json(), longRes.json()])) as [
     WeatherData,
