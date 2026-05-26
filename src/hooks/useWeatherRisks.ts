@@ -95,7 +95,7 @@ export function useWeatherRisks(): UseWeatherRisksResult {
     const wmoCode = hourly?.weather_code?.[i] ?? 0;
 
     // GEWITTER — zentraler Hook
-    const gewitter = makeRisk("gewitter", thunderstorm.score ?? 0, false);
+    const gewitter = makeRisk("gewitter", thunderstorm.current.score ?? 0, false);
 
     // STARKREGEN (mm/h)
     const rain = precipitation;
@@ -190,7 +190,7 @@ export function useWeatherRisks(): UseWeatherRisksResult {
     });
 
     return sorted.slice(0, 4);
-  }, [data, thunderstorm.score]);
+  }, [data, thunderstorm.current.score]);
 
   return {
     risks,
