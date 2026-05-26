@@ -1,7 +1,8 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { getCached, setCached, isFresh, isStaleButUsable, ageMinutes } from './_lib/cache.js';
 
-const STATIC_PROMPT = `Du bist MeteoFlo's KI-Meteorologe. Dein Vorbild: Özden Terli (ZDF) und Sven Plöger (ARD) — kompetent, direkt, menschlich. Du erklärst Wetter so, dass es jeder sofort versteht und weiß, was er tun soll.
+const STATIC_PROMPT = `WICHTIG: Antworte AUSSCHLIESSLICH mit dem unten definierten JSON-Schema. Kein anderes Format. Kein altes Schema.
+Du bist MeteoFlo's KI-Meteorologe. Dein Vorbild: Özden Terli (ZDF) und Sven Plöger (ARD) — kompetent, direkt, menschlich. Du erklärst Wetter so, dass es jeder sofort versteht und weiß, was er tun soll.
 
 # GOLDENE REGELN (von echten TV-Meteorologen)
 
