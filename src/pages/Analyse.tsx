@@ -3,7 +3,6 @@ import {
   AlertCircle,
   Brain,
   CalendarClock,
-  Gauge,
   Globe,
   Layers,
   MapPin,
@@ -159,13 +158,14 @@ export function AnalysePage() {
 
       {data && (
         <div className={`relative space-y-5 transition-opacity ${loading ? "opacity-50" : ""}`}>
+          {/* Hero: highlight + confidence */}
           <HeroCard
             highlight={formatHighlight(data.highlight)}
             confidenceScore={data.confidence?.score ?? 0}
             confidenceReason={data.confidence?.begründung}
           />
 
-
+          {/* Großwetterlage */}
           <SectionCard
             icon={Globe}
             title="Großwetterlage"
@@ -174,33 +174,18 @@ export function AnalysePage() {
             {data.großwetterlage?.beschreibung}
           </SectionCard>
 
-          <SectionCard
-            icon={Layers}
-            title="Höhenstruktur 500 hPa"
-            subtitle={data.höhenstruktur_500hPa?.muster}
-          >
-            {data.höhenstruktur_500hPa?.beschreibung}
-          </SectionCard>
-
-          <SectionCard icon={Gauge} title="Bodendruck" subtitle={data.bodendruck?.muster}>
-            {data.bodendruck?.beschreibung}
-          </SectionCard>
-
-          <SectionCard icon={Wind} title="Luftmasse" subtitle={data.luftmasse?.klassifikation}>
-            {data.luftmasse?.begründung}
-          </SectionCard>
-
-          {data.fronten_aktivität?.vorhanden ? (
-            <SectionCard icon={Split} title="Fronten" subtitle={data.fronten_aktivität.typ}>
-              {data.fronten_aktivität.auswirkung}
-            </SectionCard>
-          ) : (
-            <SectionCard icon={Split} title="Fronten">
-              Keine markante Frontaktivität.
+          {/* Aktuell */}
+          {data.aktuell && (
+            <SectionCard icon={Wind} title="Aktuelle Lage">
+              <p>{data.aktuell.lage}</p>
+              {data.aktuell.luftmasse && (
+                <p className="mt-2 text-sm text-muted-foreground">{data.aktuell.luftmasse}</p>
+              )}
             </SectionCard>
           )}
 
-          <SectionCard icon={Zap} title="Konvektion">
+          {/* Konvektion */}
+          <SectionCard icon={Zap} title="Gewitterrisiko & Konvektion">
             <div className="flex flex-wrap items-center gap-2">
               <ConvectionBadge potenzial={data.konvektion?.potenzial ?? "kein"} />
               {data.konvektion?.zeitraum && (
@@ -213,22 +198,7 @@ export function AnalysePage() {
             )}
           </SectionCard>
 
-          {data.regionale_besonderheiten && data.regionale_besonderheiten.length > 0 && (
-            <SectionCard icon={MapPin} title="Regionale Besonderheiten">
-              <ul className="list-disc space-y-1 pl-5">
-                {data.regionale_besonderheiten.map((r, i) => (
-                  <li key={i}>{r}</li>
-                ))}
-              </ul>
-            </SectionCard>
-          )}
-
-          {data.jet_stream?.relevant && (
-            <SectionCard icon={Plane} title="Jet Stream">
-              {data.jet_stream.beschreibung}
-            </SectionCard>
-          )}
-
+          {/* Entwicklung */}
           <SectionCard icon={CalendarClock} title="Entwicklung">
             <div className="space-y-3">
               <div>
@@ -252,6 +222,65 @@ export function AnalysePage() {
             </div>
           </SectionCard>
 
+          {/* Regionale Besonderheiten — nur wenn vorhanden */}
+          {data.regionale_besonderheiten && data.regionale_besonderheiten.length > 0 && (
+            <SectionCard icon={MapPin} title="Regionale Besonderheiten">
+              <ul className="list-disc space-y-1 pl-5">
+                {data.regionale_besonderheiten.map((r, i) => (
+                  <li key={i}>{r}</li>
+                ))}
+              </ul>
+            </SectionCard>
+          )}
+
+          {/* Großwetterlage Detail — für Interessierte */}
+          {data.großwetterlage_detail && (
+            <SectionCard icon={Layers} title="Details für Wetter-Nerds">
+              <div className="space-y-2">
+                {data.großwetterlage_detail.höhenstruktur && (
+                  <p><span className="font-medium">Höhenstruktur: </span>{data.großwetterlage_detail.höhenstruktur}</p>
+                )}
+                {data.großwetterlage_detail.bodendruck && (
+                  <p><span className="font-medium">Bodendruck: </span>{data.großwetterlage_detail.bodendruck}</p>
+                )}
+                {data.großwetterlage_detail.fronten && (
+                  <p><span className="font-medium">Fronten: </span>{data.großwetterlage_detail.fronten}</p>
+                )}
+              </div>
+            </SectionCard>
+          )}
+
+          {/* Legacy-Fallback: alte Cache-Einträge mit altem Schema */}
+          {!data.großwetterlage_detail && !data.aktuell && (
+            <>
+              {data.höhenstruktur_500hPa && (
+                <SectionCard icon={Layers} title="Höhenstruktur 500 hPa" subtitle={data.höhenstruktur_500hPa.muster}>
+                  {data.höhenstruktur_500hPa.beschreibung}
+                </SectionCard>
+              )}
+              {data.bodendruck && (
+                <SectionCard icon={Layers} title="Bodendruck" subtitle={data.bodendruck.muster}>
+                  {data.bodendruck.beschreibung}
+                </SectionCard>
+              )}
+              {data.luftmasse && (
+                <SectionCard icon={Wind} title="Luftmasse" subtitle={data.luftmasse.klassifikation}>
+                  {data.luftmasse.begründung}
+                </SectionCard>
+              )}
+              {data.fronten_aktivität?.vorhanden ? (
+                <SectionCard icon={Split} title="Fronten" subtitle={data.fronten_aktivität.typ}>
+                  {data.fronten_aktivität.auswirkung}
+                </SectionCard>
+              ) : null}
+              {data.jet_stream?.relevant && (
+                <SectionCard icon={Plane} title="Jet Stream">
+                  {data.jet_stream.beschreibung}
+                </SectionCard>
+              )}
+            </>
+          )}
+
           <AnalysisDisclaimer />
 
           {data.stale && (
@@ -263,11 +292,8 @@ export function AnalysePage() {
           <div className="flex flex-wrap items-center justify-between gap-3 pt-2 text-xs text-muted-foreground">
             <div className="italic">
               {(() => {
-                // Prefer the original analysis time (derived from ageMinutes for cached results)
-                // over the cache-read timestamp. Falls back to lastUpdated for fresh fetches.
                 const ageMin = typeof data.ageMinutes === "number" ? data.ageMinutes : null;
-                const originTs =
-                  ageMin != null ? Date.now() - ageMin * 60000 : lastUpdated;
+                const originTs = ageMin != null ? Date.now() - ageMin * 60000 : lastUpdated;
                 if (!originTs) return "—";
                 const label = `Letzte Analyse: ${relMin(originTs)}`;
                 const showFreshCacheHint = data.cached && ageMin != null && ageMin <= 30;
@@ -284,6 +310,7 @@ export function AnalysePage() {
           </div>
         </div>
       )}
+
 
       <div className="mt-6 text-center text-xs text-muted-foreground">
         Datenquelle: {getWeatherModelLabel(location.country_code)}
