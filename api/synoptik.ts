@@ -210,7 +210,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     `Wetterdaten:\n${JSON.stringify(weatherData, null, 2)}`;
 
   const apiResult = await callAnthropicWithRetry({
-    model: 'claude-sonnet-4-20250514',
+    model: 'claude-haiku-4-5-20251001',
     max_tokens: 3000,
     messages: [
       {
