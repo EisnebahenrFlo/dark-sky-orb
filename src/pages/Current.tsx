@@ -4,7 +4,7 @@ import { SunPositionCard } from "@/components/current/SunPositionCard";
 import { WarningIndicatorCard } from "@/components/current/WarningIndicatorCard";
 import { UvIndexStat } from "@/components/current/UvIndexStat";
 import WeatherRiskGauges from "@/components/WeatherRiskGauges";
-import { Nowcast } from "@/components/Nowcast";
+
 import { PageState } from "@/components/PageState";
 
 export function CurrentPage({ onRefresh }: { onRefresh?: () => Promise<void> | void } = {}) {
