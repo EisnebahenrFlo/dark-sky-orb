@@ -271,6 +271,9 @@ function getDayRepresentativeCode(
 }
 
 export async function fetchWeather(lat: number, lon: number, countryCode?: string): Promise<WeatherData> {
+  const apiKey = import.meta.env.VITE_OPEN_METEO_API_KEY;
+  const baseUrl = apiKey ? 'https://customer-api.open-meteo.com/v1' : 'https://api.open-meteo.com/v1';
+
   const shortParams = new URLSearchParams({
     latitude: String(lat),
     longitude: String(lon),
@@ -284,6 +287,10 @@ export async function fetchWeather(lat: number, lon: number, countryCode?: strin
     timezone: "auto",
     models: getWeatherModel(countryCode),
   });
+
+  if (apiKey) {
+    shortParams.append('apikey', apiKey);
+  }
 
   const longParams = new URLSearchParams({
     latitude: String(lat),
