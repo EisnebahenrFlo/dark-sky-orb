@@ -272,8 +272,8 @@ function DayRow({
           />
           <Detail
             icon={CloudRain}
-            label="Regen"
-            value={`${safeFixed(daily.rain_sum[i], 1)} mm`}
+            label="Niederschlag"
+            value={`${safeFixed(precip, 1)} mm`}
             sub={`${daily.precipitation_hours[i] ?? 0} h Niederschlag`}
           />
           <Detail icon={Snowflake} label="Schnee" value={`${safeFixed(daily.snowfall_sum[i], 1)} cm`} />
