@@ -49,6 +49,24 @@ export function RealisticWeatherIcon({ code, isDay, size = 24, className }: Weat
 
 type Base = { size: number; uid: string; className?: string };
 
+/**
+ * Inline <style> applies in document scope, so we can theme cloud colors via
+ * the `html.dark` class set by ThemeProvider. Light & dark stops/strokes both
+ * live here — every CloudGradient/CloudShape just references the class names.
+ */
+const ICON_THEME_CSS = `
+  .rwi-cloud-front-0 { stop-color: #9CA3AF; }
+  .rwi-cloud-front-1 { stop-color: #6B7280; }
+  .rwi-cloud-back-0  { stop-color: #6B7280; }
+  .rwi-cloud-back-1  { stop-color: #4B5563; }
+  .rwi-cloud-stroke  { stroke: #6B7280; }
+  html.dark .rwi-cloud-front-0 { stop-color: #D1D5DB; }
+  html.dark .rwi-cloud-front-1 { stop-color: #9CA3AF; }
+  html.dark .rwi-cloud-back-0  { stop-color: #9CA3AF; }
+  html.dark .rwi-cloud-back-1  { stop-color: #6B7280; }
+  html.dark .rwi-cloud-stroke  { stroke: #9CA3AF; }
+`;
+
 function Frame({ size, className, children }: { size: number; className?: string; children: React.ReactNode }) {
   return (
     <svg
@@ -59,6 +77,7 @@ function Frame({ size, className, children }: { size: number; className?: string
       className={className}
       style={{ display: "inline-block", verticalAlign: "middle" }}
     >
+      <style>{ICON_THEME_CSS}</style>
       {children}
     </svg>
   );
@@ -67,11 +86,11 @@ function Frame({ size, className, children }: { size: number; className?: string
 /* ---------- shared paint helpers ---------- */
 
 function CloudGradient({ id, dark = false }: { id: string; dark?: boolean }) {
-  // Mittleres Grau — nie heller als #6B7280 im Light Mode.
+  // `dark` selects the back/layered shade — orthogonal to the page theme.
   return (
     <linearGradient id={id} x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stopColor={dark ? "#9CA3AF" : "#6B7280"} stopOpacity="1" />
-      <stop offset="100%" stopColor={dark ? "#6B7280" : "#4B5563"} stopOpacity="1" />
+      <stop offset="0%" className={dark ? "rwi-cloud-back-0" : "rwi-cloud-front-0"} stopOpacity="1" />
+      <stop offset="100%" className={dark ? "rwi-cloud-back-1" : "rwi-cloud-front-1"} stopOpacity="1" />
     </linearGradient>
   );
 }
@@ -96,11 +115,11 @@ function SunGradient({ id }: { id: string }) {
 }
 
 function MoonGradient({ id }: { id: string }) {
-  // Helleres, sattes Gelb für gute Sichtbarkeit.
+  // Sattes Orange-Gelb — gut sichtbar im Light Mode.
   return (
     <radialGradient id={id} cx="0.4" cy="0.4" r="0.7">
-      <stop offset="0%" stopColor="#FEF3C7" stopOpacity="1" />
-      <stop offset="100%" stopColor="#FCD34D" stopOpacity="1" />
+      <stop offset="0%" stopColor="#FCD34D" stopOpacity="1" />
+      <stop offset="100%" stopColor="#F59E0B" stopOpacity="1" />
     </radialGradient>
   );
 }
@@ -111,10 +130,11 @@ function CloudShape({ fill, x = 0, y = 0, scale = 1, shadow = true }: { fill: st
       <path
         d="M16 38 Q9 38 9 31 Q9 25 15 24 Q16 17 24 17 Q31 17 33 23 Q36 21 40 22 Q47 23 47 30 Q53 31 53 36 Q53 41 47 41 L17 41 Q16 41 16 38 Z"
         fill={fill}
-        stroke="#4B5563"
+        className="rwi-cloud-stroke"
         strokeWidth={0.75}
         style={shadow ? { filter: "drop-shadow(0 1px 1px rgba(0,0,0,0.15))" } : undefined}
       />
+
     </g>
   );
 }
