@@ -1,38 +1,70 @@
 import type { ReactNode } from "react";
 import { safeFixed } from "@/lib/safeFormat";
 import { Wind, Droplets, Gauge, CloudRain, Thermometer, Cloud, Navigation } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import type { CurrentWeather, GeoResult, MinutelyData } from "@/lib/weather";
 import { windDirectionLabel } from "@/lib/weather";
 import { getEffectiveWeather } from "@/lib/weatherDescription";
 import { summarizeNowcastPrecip } from "@/lib/nowcast";
 import { RelativeTime } from "./RelativeTime";
 import { WeatherHeroCanvas, getWeatherGroup, getHeroPalette } from "./WeatherHeroCanvas";
-
+import { RealisticWeatherIcon } from "./RealisticWeatherIcon";
 import { RefreshButton } from "./RefreshButton";
 
 interface Props { location: GeoResult; data: CurrentWeather; updatedAt: number; onRefresh?: () => Promise<void> | void }
 
-function Stat({ icon: Icon, label, value, sub }: { icon: typeof Wind; label: string; value: string; sub?: string }) {
+/**
+ * Kompakte Stat-Kachel mit dezenter Hintergrundgrafik.
+ * Wert dominant, Label klein, Icon als großes, transparentes Wasserzeichen.
+ */
+function Stat({
+  icon: Icon,
+  label,
+  value,
+  sub,
+  accent,
+}: {
+  icon: LucideIcon;
+  label: string;
+  value: string;
+  sub?: string;
+  accent?: string;
+}) {
   return (
-    <div className="glass rounded-2xl p-5">
-      <div className="mb-3 flex items-center gap-2 text-xs uppercase tracking-wider text-muted-foreground">
-        <Icon className="h-3.5 w-3.5" strokeWidth={1.5} />
-        {label}
+    <div className="glass relative overflow-hidden rounded-2xl p-4">
+      <Icon
+        className="pointer-events-none absolute -right-3 -bottom-3 h-20 w-20 opacity-[0.07]"
+        strokeWidth={1.25}
+        style={accent ? { color: accent } : undefined}
+        aria-hidden
+      />
+      <div className="relative">
+        <div className="mb-2 flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
+          <Icon className="h-3 w-3" strokeWidth={1.75} style={accent ? { color: accent } : undefined} />
+          {label}
+        </div>
+        <div className="font-display text-2xl font-semibold tabular-nums leading-none">{value}</div>
+        {sub && <div className="mt-1.5 text-[11px] text-muted-foreground">{sub}</div>}
       </div>
-      <div className="font-display text-3xl font-medium tabular-nums">{value}</div>
-      {sub && <div className="mt-1 text-xs text-muted-foreground">{sub}</div>}
     </div>
   );
 }
 
 export function WeatherHero({ location, data, updatedAt, onRefresh }: Props) {
-  const effective = getEffectiveWeather(data.weather_code, data.precipitation, data.cloud_cover, data.is_day, data.relative_humidity_2m, new Date(data.time).getHours());
+  const effective = getEffectiveWeather(
+    data.weather_code,
+    data.precipitation,
+    data.cloud_cover,
+    data.is_day,
+    data.relative_humidity_2m,
+    new Date(data.time).getHours(),
+  );
   const group = getWeatherGroup(data.weather_code, (data.is_day ? 1 : 0) as 0 | 1);
   const palette = getHeroPalette(group);
 
   return (
     <div
-      className="relative overflow-hidden rounded-3xl p-8 sm:p-12"
+      className="relative overflow-hidden rounded-3xl p-6 sm:p-12"
       style={{
         background: palette.background,
         color: palette.text,
@@ -43,74 +75,130 @@ export function WeatherHero({ location, data, updatedAt, onRefresh }: Props) {
       <WeatherHeroCanvas weatherCode={data.weather_code} isDay={(data.is_day ? 1 : 0) as 0 | 1} />
       {onRefresh && <RefreshButton variant="hero" onRefresh={onRefresh} />}
       <div style={{ position: "relative", zIndex: 10 }}>
-        <div className="text-sm uppercase tracking-[0.2em]" style={{ color: palette.subtext }}>
+        <div className="text-xs uppercase tracking-[0.2em] sm:text-sm" style={{ color: palette.subtext }}>
           {[location.admin1, location.country].filter(Boolean).join(" · ")}
         </div>
-        <h1 className="mt-1 font-display text-4xl font-semibold sm:text-5xl" style={{ color: palette.text }}>
+        <h1 className="mt-1 font-display text-3xl font-semibold sm:text-5xl" style={{ color: palette.text }}>
           {location.name}
         </h1>
 
-        <div className="mt-8 flex flex-wrap items-end gap-x-8 gap-y-4">
-          <div className="font-display text-7xl font-light tabular-nums sm:text-8xl" style={{ color: palette.text }}>
-            {Math.round(data.temperature_2m)}°
+        {/* Hero-Hauptzeile: großes Icon links, Temperatur + Beschreibung rechts */}
+        <div className="mt-6 flex items-center gap-4 sm:mt-8 sm:gap-8">
+          <div
+            className="shrink-0 drop-shadow-[0_4px_12px_rgba(0,0,0,0.18)]"
+            style={{ filter: "drop-shadow(0 6px 14px rgba(0,0,0,0.22))" }}
+          >
+            <RealisticWeatherIcon
+              code={data.weather_code}
+              isDay={(data.is_day ? 1 : 0) as 0 | 1}
+              size={120}
+            />
           </div>
-          <div>
-            <div className="text-lg font-medium" style={{ color: palette.text }}>{effective.description}</div>
-            <div className="text-sm" style={{ color: palette.subtext }}>
-              Gefühlt {Math.round(data.apparent_temperature)}°
+          <div className="min-w-0 flex-1">
+            <div
+              className="font-display text-6xl font-light leading-none tabular-nums sm:text-8xl"
+              style={{ color: palette.text }}
+            >
+              {Math.round(data.temperature_2m)}°
             </div>
-            <div className="text-[10px] opacity-60" style={{ color: palette.subtext }}>
-              Vorhersage Open-Meteo
+            <div className="mt-2 text-base font-medium sm:text-lg" style={{ color: palette.text }}>
+              {effective.description}
+            </div>
+            <div className="text-xs sm:text-sm" style={{ color: palette.subtext }}>
+              Gefühlt {Math.round(data.apparent_temperature)}°
             </div>
           </div>
         </div>
 
-        <div className="mt-6 text-xs" style={{ color: palette.subtext }}>
+        <div
+          className="mt-6 flex items-center justify-between text-[10px] sm:text-xs"
+          style={{ color: palette.subtext }}
+        >
           <RelativeTime timestamp={updatedAt} />
+          <span className="opacity-60">Open-Meteo</span>
         </div>
       </div>
     </div>
   );
 }
 
-export function WeatherHeroStats({ data, minutely15, children }: { data: CurrentWeather; minutely15?: MinutelyData; children?: ReactNode }) {
+export function WeatherHeroStats({
+  data,
+  minutely15,
+  children,
+}: {
+  data: CurrentWeather;
+  minutely15?: MinutelyData;
+  children?: ReactNode;
+}) {
   const nowcast = summarizeNowcastPrecip(minutely15, 8);
   const precipValue = nowcast.hasData
-    ? (nowcast.sum < 0.1 ? "Kein Regen" : `${safeFixed(nowcast.sum, 1)} mm`)
-    : (data.precipitation < 0.1 ? "—" : `${safeFixed(data.precipitation, 1)} mm`);
+    ? nowcast.sum < 0.1
+      ? "Kein Regen"
+      : `${safeFixed(nowcast.sum, 1)} mm`
+    : data.precipitation < 0.1
+      ? "—"
+      : `${safeFixed(data.precipitation, 1)} mm`;
   const precipSub = nowcast.hasData ? "nächste 2h" : "aktuelle Stunde";
+
   return (
     <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
       <Stat
         icon={Wind}
         label="Wind"
         value={`${Math.round(data.wind_speed_10m)} km/h`}
-        sub={`${windDirectionLabel(data.wind_direction_10m)} · Böen ${Math.round(data.wind_gusts_10m)} km/h`}
+        sub={`${windDirectionLabel(data.wind_direction_10m)} · Böen ${Math.round(data.wind_gusts_10m)}`}
+        accent="#38bdf8"
       />
-      <div className="glass flex flex-col items-start rounded-2xl p-5">
-        <div className="mb-3 flex items-center gap-2 text-xs uppercase tracking-wider text-muted-foreground">
-          <Navigation className="h-3.5 w-3.5" strokeWidth={1.5} /> Richtung
-        </div>
-        <div className="flex items-center gap-3">
-          <div
-            className="grid h-12 w-12 place-items-center rounded-full border border-border"
-            style={{ transform: `rotate(${data.wind_direction_10m}deg)` }}
-          >
-            <Navigation className="h-5 w-5 text-primary" strokeWidth={1.75} />
+      <div className="glass relative overflow-hidden rounded-2xl p-4">
+        {/* Windrose im Hintergrund */}
+        <svg
+          className="pointer-events-none absolute -right-4 -bottom-4 h-24 w-24 opacity-[0.10]"
+          viewBox="0 0 100 100"
+          aria-hidden
+        >
+          <circle cx="50" cy="50" r="42" fill="none" stroke="currentColor" strokeWidth="1" />
+          <circle cx="50" cy="50" r="28" fill="none" stroke="currentColor" strokeWidth="0.5" />
+          {[0, 45, 90, 135, 180, 225, 270, 315].map((deg) => (
+            <line
+              key={deg}
+              x1="50"
+              y1="50"
+              x2={50 + 42 * Math.cos(((deg - 90) * Math.PI) / 180)}
+              y2={50 + 42 * Math.sin(((deg - 90) * Math.PI) / 180)}
+              stroke="currentColor"
+              strokeWidth={deg % 90 === 0 ? 1 : 0.4}
+            />
+          ))}
+        </svg>
+        <div className="relative">
+          <div className="mb-2 flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
+            <Navigation className="h-3 w-3" strokeWidth={1.75} /> Richtung
           </div>
-          <div>
-            <div className="font-display text-2xl tabular-nums">{Math.round(data.wind_direction_10m)}°</div>
-            <div className="text-xs text-muted-foreground">{windDirectionLabel(data.wind_direction_10m)}</div>
+          <div className="flex items-center gap-2.5">
+            <div
+              className="grid h-9 w-9 place-items-center rounded-full border border-border bg-background/40"
+              style={{ transform: `rotate(${data.wind_direction_10m}deg)` }}
+            >
+              <Navigation className="h-4 w-4 text-primary" strokeWidth={2} />
+            </div>
+            <div>
+              <div className="font-display text-2xl font-semibold leading-none tabular-nums">
+                {Math.round(data.wind_direction_10m)}°
+              </div>
+              <div className="mt-1 text-[11px] text-muted-foreground">
+                {windDirectionLabel(data.wind_direction_10m)}
+              </div>
+            </div>
           </div>
         </div>
       </div>
-      <Stat icon={CloudRain} label="Niederschlag" value={precipValue} sub={precipSub} />
-      <Stat icon={Cloud} label="Bewölkung" value={`${data.cloud_cover}%`} />
-      <Stat icon={Droplets} label="Luftfeuchte" value={`${data.relative_humidity_2m}%`} />
-      <Stat icon={Gauge} label="Luftdruck" value={`${Math.round(data.pressure_msl)} hPa`} />
-      <Stat icon={Thermometer} label="Gefühlt" value={`${Math.round(data.apparent_temperature)}°`} />
+      <Stat icon={CloudRain} label="Niederschlag" value={precipValue} sub={precipSub} accent="#60a5fa" />
+      <Stat icon={Cloud} label="Bewölkung" value={`${data.cloud_cover}%`} accent="#94a3b8" />
+      <Stat icon={Droplets} label="Luftfeuchte" value={`${data.relative_humidity_2m}%`} accent="#06b6d4" />
+      <Stat icon={Gauge} label="Luftdruck" value={`${Math.round(data.pressure_msl)} hPa`} accent="#a78bfa" />
+      <Stat icon={Thermometer} label="Gefühlt" value={`${Math.round(data.apparent_temperature)}°`} accent="#fb923c" />
       {children}
     </div>
   );
 }
-
