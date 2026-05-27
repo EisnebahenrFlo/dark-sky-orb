@@ -6,6 +6,8 @@ import type { CurrentWeather, GeoResult, MinutelyData } from "@/lib/weather";
 import { windDirectionLabel } from "@/lib/weather";
 import { getEffectiveWeather } from "@/lib/weatherDescription";
 import { summarizeNowcastPrecip } from "@/lib/nowcast";
+import { useRainbowNowcast } from "@/hooks/useRainbowNowcast";
+import { formatClockTime } from "@/lib/rainbowNowcast";
 import { RelativeTime } from "./RelativeTime";
 import { WeatherHeroCanvas, getWeatherGroup, getHeroPalette } from "./WeatherHeroCanvas";
 import { RealisticWeatherIcon } from "./RealisticWeatherIcon";
@@ -132,14 +134,52 @@ export function WeatherHeroStats({
   children?: ReactNode;
 }) {
   const nowcast = summarizeNowcastPrecip(minutely15, 8);
-  const precipValue = nowcast.hasData
-    ? nowcast.sum < 0.1
-      ? "Kein Regen"
-      : `${safeFixed(nowcast.sum, 1)} mm`
-    : data.precipitation < 0.1
-      ? "—"
-      : `${safeFixed(data.precipitation, 1)} mm`;
-  const precipSub = nowcast.hasData ? "nächste 2h" : "aktuelle Stunde";
+  const rainbow = useRainbowNowcast();
+
+  // Prefer Rainbow.ai nowcast (matches the Nowcast tab) when available.
+  let precipValue: string;
+  let precipSub: string;
+  const rainbowItems = rainbow.data?.forecast;
+  if (rainbowItems && rainbowItems.length > 0) {
+    const nowSec = Date.now() / 1000;
+    const horizonSec = nowSec + 2 * 3600;
+    let sumMm = 0;
+    let firstStart: { ts: number; type: string } | null = null;
+    let currentlyRaining = false;
+    let currentType: string = "rain";
+    for (const it of rainbowItems) {
+      if (typeof it.timestampBegin !== "number") continue;
+      if (it.timestampBegin >= horizonSec) continue;
+      if (it.timestampEnd <= nowSec - 60) continue;
+      const rate = Number.isFinite(it.precipRate) ? Math.max(0, it.precipRate) : 0;
+      const durH = Math.max(0, (it.timestampEnd - it.timestampBegin) / 3600);
+      if (rate > 0 && it.precipType && it.precipType !== "none" && it.precipType !== "no_precipitation") {
+        sumMm += rate * durH;
+        if (!firstStart) firstStart = { ts: it.timestampBegin, type: it.precipType };
+        if (it.timestampBegin <= nowSec && it.timestampEnd > nowSec) {
+          currentlyRaining = true;
+          currentType = it.precipType;
+        }
+      }
+    }
+    const typeLabel = (t: string) => (t === "snow" ? "Schnee" : t === "ice" ? "Eis" : "Regen");
+    if (currentlyRaining) {
+      precipValue = `${safeFixed(sumMm, 1)} mm`;
+      precipSub = `${typeLabel(currentType)} · nächste 2h`;
+    } else if (firstStart && firstStart.ts > nowSec) {
+      precipValue = `${typeLabel(firstStart.type)} ab ${formatClockTime(firstStart.ts)}`;
+      precipSub = `Spitze ${safeFixed(sumMm, 1)} mm · nächste 2h`;
+    } else {
+      precipValue = "Kein Regen";
+      precipSub = "nächste 2h";
+    }
+  } else if (nowcast.hasData) {
+    precipValue = nowcast.sum < 0.1 ? "Kein Regen" : `${safeFixed(nowcast.sum, 1)} mm`;
+    precipSub = "nächste 2h";
+  } else {
+    precipValue = data.precipitation < 0.1 ? "—" : `${safeFixed(data.precipitation, 1)} mm`;
+    precipSub = "aktuelle Stunde";
+  }
 
   return (
     <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
