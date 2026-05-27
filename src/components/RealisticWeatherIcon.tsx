@@ -510,17 +510,27 @@ function ThunderHail({ size, uid, className }: Base) {
 
 function Moon({ size, uid, className }: Base) {
   const mg = `moonGrad_${uid}`;
+  const mask = `moonMask_${uid}`;
+  const shadow = `moonShadow_${uid}`;
   return (
     <Frame size={size} className={className}>
       <defs>
         <MoonGradient id={mg} />
+        <mask id={mask}>
+          <rect width="64" height="64" fill="black" />
+          <circle cx={34} cy={32} r={16} fill="white" />
+          <circle cx={40} cy={28} r={14} fill="black" />
+        </mask>
+        <filter id={shadow} x="-50%" y="-50%" width="200%" height="200%">
+          <feDropShadow dx="0" dy="1" stdDeviation="1" floodColor="#000" floodOpacity="0.35" />
+        </filter>
       </defs>
-      <circle cx={34} cy={32} r={16} fill={`url(#${mg})`} />
-      <circle cx={40} cy={28} r={14} fill="rgba(15,23,42,0.95)" />
+      <g filter={`url(#${shadow})`}>
+        <rect width="64" height="64" fill={`url(#${mg})`} mask={`url(#${mask})`} opacity="1" />
+      </g>
       {[[12, 14], [54, 18], [10, 48], [52, 50]].map(([cx, cy], i) => (
         <g key={i}>
-          <circle cx={cx} cy={cy} r={0.9} fill="#fde68a" />
-          <circle cx={cx} cy={cy} r={1.8} fill="rgba(253,230,138,0.25)" />
+          <circle cx={cx} cy={cy} r={1.2} fill="#FCD34D" opacity="1" />
         </g>
       ))}
     </Frame>
@@ -530,18 +540,22 @@ function Moon({ size, uid, className }: Base) {
 function CloudyNight({ size, uid, className }: Base) {
   const mg = `moonGrad_${uid}`;
   const cg = `cloudGrad_${uid}`;
+  const shadow = `moonShadow_${uid}`;
   return (
     <Frame size={size} className={className}>
       <defs>
         <MoonGradient id={mg} />
-        <linearGradient id={cg} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#64748b" />
-          <stop offset="100%" stopColor="#1e293b" />
-        </linearGradient>
+        <CloudGradient id={cg} dark />
+        <filter id={shadow} x="-50%" y="-50%" width="200%" height="200%">
+          <feDropShadow dx="0" dy="1" stdDeviation="1" floodColor="#000" floodOpacity="0.35" />
+        </filter>
       </defs>
-      <circle cx={46} cy={18} r={9} fill={`url(#${mg})`} />
-      <circle cx={50} cy={15} r={7.5} fill="rgba(15,23,42,0.95)" />
-      <CloudShape fill={`url(#${cg})`} y={6} />
+      {/* Mond deutlich sichtbar, oben rechts */}
+      <g filter={`url(#${shadow})`}>
+        <circle cx={46} cy={18} r={10} fill={`url(#${mg})`} opacity="1" />
+      </g>
+      {/* Wolke davor, lässt Mond teilweise sichtbar */}
+      <CloudShape fill={`url(#${cg})`} y={8} />
     </Frame>
   );
 }
