@@ -313,15 +313,24 @@ function Drops({ count, color = "url(#dropG)", rotate = 10, big = false }: { cou
       {positions.map((x, i) => {
         const y = 46 + (i % 2) * 4;
         return (
-          <ellipse
-            key={i}
-            cx={x + 4}
-            cy={y}
-            rx={big ? 1.6 : 1.2}
-            ry={big ? 3.2 : 2.4}
-            fill={color}
-            transform={`rotate(${rotate} ${x + 4} ${y})`}
-          />
+          <g key={i}>
+            <ellipse
+              cx={x + 4}
+              cy={y}
+              rx={big ? 2.1 : 1.6}
+              ry={big ? 4.2 : 3.2}
+              fill={color}
+              transform={`rotate(${rotate} ${x + 4} ${y})`}
+            />
+            <ellipse
+              cx={x + 4 - (big ? 0.6 : 0.45)}
+              cy={y - (big ? 1.2 : 0.9)}
+              rx={big ? 0.55 : 0.4}
+              ry={big ? 1.1 : 0.8}
+              fill="rgba(255,255,255,0.55)"
+              transform={`rotate(${rotate} ${x + 4} ${y})`}
+            />
+          </g>
         );
       })}
     </g>
