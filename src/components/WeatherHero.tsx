@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { safeFixed } from "@/lib/safeFormat";
 import { Wind, Droplets, Gauge, CloudRain, Thermometer, Cloud, Navigation } from "lucide-react";
-import type { CurrentWeather, GeoResult } from "@/lib/weather";
+import type { CurrentWeather, GeoResult, MinutelyData } from "@/lib/weather";
 import { windDirectionLabel } from "@/lib/weather";
 import { getEffectiveWeather } from "@/lib/weatherDescription";
 import { RelativeTime } from "./RelativeTime";
