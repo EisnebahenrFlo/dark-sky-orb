@@ -4,12 +4,14 @@ import {
   Brain,
   CalendarClock,
   CheckCircle2,
+  ChevronDown,
   Globe,
   Layers,
   MapPin,
   Wind,
   Zap,
 } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { useSynoptikAnalysisCtx } from "@/contexts/SynoptikAnalysisContext";
 import type { SynoptikErrorCode } from "@/hooks/useSynoptikAnalysis";
 import { getWeatherModelLabel } from "@/lib/weather";
@@ -252,26 +254,7 @@ function AnalyseTab() {
           </SectionCard>
 
           <SectionCard icon={CalendarClock} title="Entwicklung">
-            <div className="space-y-3">
-              <div>
-                <div className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                  Nächste 24h
-                </div>
-                <p className="mt-1">{data.entwicklung?.next_24h}</p>
-              </div>
-              <div className="border-t border-border pt-3">
-                <div className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                  Nächste 48h
-                </div>
-                <p className="mt-1">{data.entwicklung?.next_48h}</p>
-              </div>
-              <div className="border-t border-border pt-3">
-                <div className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                  Trend 3–7 Tage
-                </div>
-                <p className="mt-1">{data.entwicklung?.trend_3_7d}</p>
-              </div>
-            </div>
+            <EntwicklungTabs entwicklung={data.entwicklung} />
           </SectionCard>
 
           {data.regionale_besonderheiten && data.regionale_besonderheiten.length > 0 && (
@@ -285,28 +268,7 @@ function AnalyseTab() {
           )}
 
           {data.großwetterlage_detail && (
-            <SectionCard icon={Layers} title="Details für Wetter-Nerds">
-              <div className="space-y-2">
-                {data.großwetterlage_detail.höhenstruktur && (
-                  <p>
-                    <span className="font-medium">Höhenstruktur: </span>
-                    {data.großwetterlage_detail.höhenstruktur}
-                  </p>
-                )}
-                {data.großwetterlage_detail.bodendruck && (
-                  <p>
-                    <span className="font-medium">Bodendruck: </span>
-                    {data.großwetterlage_detail.bodendruck}
-                  </p>
-                )}
-                {data.großwetterlage_detail.fronten && (
-                  <p>
-                    <span className="font-medium">Fronten: </span>
-                    {data.großwetterlage_detail.fronten}
-                  </p>
-                )}
-              </div>
-            </SectionCard>
+            <WetterNerdsCard detail={data.großwetterlage_detail} />
           )}
 
           <AnalysisDisclaimer />
@@ -385,6 +347,112 @@ export function AnalysePage() {
       </div>
 
       {tab === "warnungen" ? <WarnungenTab /> : <AnalyseTab />}
+    </div>
+  );
+}
+
+type EntwicklungWindow = "24h" | "48h" | "3-7d";
+
+function EntwicklungTabs({
+  entwicklung,
+}: {
+  entwicklung?: { next_24h?: string; next_48h?: string; trend_3_7d?: string };
+}) {
+  const [tab, setTab] = useState<EntwicklungWindow>("24h");
+  const options: { v: EntwicklungWindow; label: string }[] = [
+    { v: "24h", label: "24 H" },
+    { v: "48h", label: "48 H" },
+    { v: "3-7d", label: "3–7 T" },
+  ];
+  const text =
+    tab === "24h"
+      ? entwicklung?.next_24h
+      : tab === "48h"
+        ? entwicklung?.next_48h
+        : entwicklung?.trend_3_7d;
+
+  return (
+    <div className="space-y-3">
+      <div className="inline-flex rounded-lg border border-border bg-muted/40 p-0.5">
+        {options.map(({ v, label }) => {
+          const active = tab === v;
+          return (
+            <button
+              key={v}
+              type="button"
+              onClick={() => setTab(v)}
+              className={cn(
+                "rounded-md px-3 py-1 text-xs font-semibold transition-colors",
+                active
+                  ? "bg-card text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground",
+              )}
+            >
+              {label}
+            </button>
+          );
+        })}
+      </div>
+      <p className="text-sm leading-relaxed text-foreground/85">{text ?? "—"}</p>
+    </div>
+  );
+}
+
+function WetterNerdsCard({
+  detail,
+}: {
+  detail: { höhenstruktur?: string; bodendruck?: string; fronten?: string };
+}) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="rounded-2xl border border-border bg-card shadow-sm">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className="flex w-full items-center gap-3 p-5 text-left sm:p-6"
+        aria-expanded={open}
+      >
+        <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-muted text-accent">
+          <Layers className="h-5 w-5" strokeWidth={1.75} />
+        </div>
+        <div className="flex-1">
+          <h3 className="font-display text-base font-semibold tracking-tight text-foreground sm:text-lg">
+            Details für Wetter-Nerds
+          </h3>
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            Höhenstruktur, Bodendruck, Fronten
+          </p>
+        </div>
+        <ChevronDown
+          className={cn(
+            "h-5 w-5 shrink-0 text-muted-foreground transition-transform",
+            open && "rotate-180",
+          )}
+          strokeWidth={1.75}
+        />
+      </button>
+      {open && (
+        <div className="space-y-2 border-t border-border px-5 pb-5 pt-4 text-sm leading-relaxed text-foreground/85 sm:px-6 sm:pb-6">
+          {detail.höhenstruktur && (
+            <p>
+              <span className="font-medium text-foreground">Höhenstruktur: </span>
+              {detail.höhenstruktur}
+            </p>
+          )}
+          {detail.bodendruck && (
+            <p>
+              <span className="font-medium text-foreground">Bodendruck: </span>
+              {detail.bodendruck}
+            </p>
+          )}
+          {detail.fronten && (
+            <p>
+              <span className="font-medium text-foreground">Fronten: </span>
+              {detail.fronten}
+            </p>
+          )}
+        </div>
+      )}
     </div>
   );
 }
