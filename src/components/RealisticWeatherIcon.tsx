@@ -151,10 +151,9 @@ function CloudShape({ fill, x = 0, y = 0, scale = 1, shadow = true }: { fill: st
         d="M16 38 Q9 38 9 31 Q9 25 15 24 Q16 17 24 17 Q31 17 33 23 Q36 21 40 22 Q47 23 47 30 Q53 31 53 36 Q53 41 47 41 L17 41 Q16 41 16 38 Z"
         fill={fill}
         className="rwi-cloud-stroke"
-        strokeWidth={0.75}
-        style={shadow ? { filter: "drop-shadow(0 1px 1px rgba(0,0,0,0.15))" } : undefined}
+        strokeWidth={1}
+        style={shadow ? { filter: "drop-shadow(0 1px 1px rgba(0,0,0,0.18))" } : undefined}
       />
-
     </g>
   );
 }
