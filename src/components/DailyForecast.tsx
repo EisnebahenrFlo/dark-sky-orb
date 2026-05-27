@@ -109,7 +109,7 @@ function DayRow({
               {wind} km/h
             </span>
           )}
-          <ThunderBadge risk={thunder.risk} />
+          <ThunderBadge score={thunderScore} />
         </div>
 
         {/* Temps */}
