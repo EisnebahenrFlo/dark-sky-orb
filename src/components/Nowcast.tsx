@@ -4,6 +4,7 @@ import { CloudSun } from "lucide-react";
 import { precipKind, formatTime, type MinutelyData } from "@/lib/weather";
 import { EffectiveWeatherIcon } from "./WeatherIcon";
 import { SectionHeader } from "./SectionHeader";
+import { LiveBadge } from "./LiveBadge";
 import { useTheme } from "@/hooks/useTheme";
 
 function kindColors(isDark: boolean): Record<string, string> {
