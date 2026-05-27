@@ -459,7 +459,7 @@ export default async function handler(req: any, res: any) {
   const dynamicPart =
     `# DATEN\n` +
     `Standort: ${JSON.stringify(location)}\n` +
-    `Berechneter Gewitter-Score (Frontend, exakt übernehmen): score=${frontendScore}, level="${level}", color="${color}"\n` +
+    `Berechneter Gewitter-Score (serverseitig, exakt übernehmen): score=${serverScore}, level="${level}", color="${color}"\n` +
     `Konvektive Metriken (${windowHours}h-Fenster): ${JSON.stringify(convectiveContext, null, 2)}\n` +
     `Hinweis-Warnungen aus Schwellenwerten (nur Anhaltspunkt): ${JSON.stringify(warnings, null, 2)}\n` +
     `Rohe Stundenwerte nächste ${windowHours}h: ${JSON.stringify(rawHourly)}\n` +
