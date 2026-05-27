@@ -25,9 +25,20 @@ export function getEffectiveWeather(
 ): WeatherInfo {
   const dayNum = typeof isDay === "boolean" ? (isDay ? 1 : 0) : isDay;
   const effective = getEffectiveCode(weatherCode, precipitation, cloudCover, humidity, hour, cloudCoverLow);
+  // Bei Nacht dürfen "Sonnig"/"Heiter" nicht erscheinen — feste Nachtlabels für klare/bewölkte Codes.
+  const nightLabels: Record<number, string> = {
+    0: "Klar",
+    1: "Überwiegend klar",
+    2: "Teilweise bewölkt",
+    3: "Bedeckt",
+  };
+  const description =
+    dayNum === 0 && effective in nightLabels
+      ? nightLabels[effective]
+      : getContextualDescription(effective, hour, humidity, cloudCoverLow);
   return {
     icon: getWeatherIcon(effective, dayNum),
-    description: getContextualDescription(effective, hour, humidity, cloudCoverLow),
+    description,
     wmoCode: effective,
   };
 }

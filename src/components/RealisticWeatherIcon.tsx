@@ -65,10 +65,11 @@ function Frame({ size, className, children }: { size: number; className?: string
 /* ---------- shared paint helpers ---------- */
 
 function CloudGradient({ id, dark = false }: { id: string; dark?: boolean }) {
+  // Mittleres Grau für gute Sichtbarkeit in Light & Dark Mode.
   return (
     <linearGradient id={id} x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stopColor={dark ? "#9aa6b8" : "#ffffff"} />
-      <stop offset="100%" stopColor={dark ? "#5b6678" : "#b8c2d1"} />
+      <stop offset="0%" stopColor={dark ? "#9CA3AF" : "#D1D5DB"} stopOpacity="1" />
+      <stop offset="100%" stopColor={dark ? "#6B7280" : "#9CA3AF"} stopOpacity="1" />
     </linearGradient>
   );
 }
@@ -76,8 +77,8 @@ function CloudGradient({ id, dark = false }: { id: string; dark?: boolean }) {
 function DropGradient({ id }: { id: string }) {
   return (
     <linearGradient id={id} x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stopColor="#7dd3fc" />
-      <stop offset="100%" stopColor="#1d4ed8" />
+      <stop offset="0%" stopColor="#7dd3fc" stopOpacity="1" />
+      <stop offset="100%" stopColor="#1d4ed8" stopOpacity="1" />
     </linearGradient>
   );
 }
@@ -85,18 +86,19 @@ function DropGradient({ id }: { id: string }) {
 function SunGradient({ id }: { id: string }) {
   return (
     <radialGradient id={id} cx="0.5" cy="0.5" r="0.5">
-      <stop offset="0%" stopColor="#ffffff" />
-      <stop offset="55%" stopColor="#fde68a" />
-      <stop offset="100%" stopColor="#f59e0b" />
+      <stop offset="0%" stopColor="#ffffff" stopOpacity="1" />
+      <stop offset="55%" stopColor="#fde68a" stopOpacity="1" />
+      <stop offset="100%" stopColor="#f59e0b" stopOpacity="1" />
     </radialGradient>
   );
 }
 
 function MoonGradient({ id }: { id: string }) {
+  // Helleres, sattes Gelb für gute Sichtbarkeit.
   return (
     <radialGradient id={id} cx="0.4" cy="0.4" r="0.7">
-      <stop offset="0%" stopColor="#fef9c3" />
-      <stop offset="100%" stopColor="#cbd5e1" />
+      <stop offset="0%" stopColor="#FEF3C7" stopOpacity="1" />
+      <stop offset="100%" stopColor="#FCD34D" stopOpacity="1" />
     </radialGradient>
   );
 }
@@ -508,17 +510,27 @@ function ThunderHail({ size, uid, className }: Base) {
 
 function Moon({ size, uid, className }: Base) {
   const mg = `moonGrad_${uid}`;
+  const mask = `moonMask_${uid}`;
+  const shadow = `moonShadow_${uid}`;
   return (
     <Frame size={size} className={className}>
       <defs>
         <MoonGradient id={mg} />
+        <mask id={mask}>
+          <rect width="64" height="64" fill="black" />
+          <circle cx={34} cy={32} r={16} fill="white" />
+          <circle cx={40} cy={28} r={14} fill="black" />
+        </mask>
+        <filter id={shadow} x="-50%" y="-50%" width="200%" height="200%">
+          <feDropShadow dx="0" dy="1" stdDeviation="1" floodColor="#000" floodOpacity="0.35" />
+        </filter>
       </defs>
-      <circle cx={34} cy={32} r={16} fill={`url(#${mg})`} />
-      <circle cx={40} cy={28} r={14} fill="rgba(15,23,42,0.95)" />
+      <g filter={`url(#${shadow})`}>
+        <rect width="64" height="64" fill={`url(#${mg})`} mask={`url(#${mask})`} opacity="1" />
+      </g>
       {[[12, 14], [54, 18], [10, 48], [52, 50]].map(([cx, cy], i) => (
         <g key={i}>
-          <circle cx={cx} cy={cy} r={0.9} fill="#fde68a" />
-          <circle cx={cx} cy={cy} r={1.8} fill="rgba(253,230,138,0.25)" />
+          <circle cx={cx} cy={cy} r={1.2} fill="#FCD34D" opacity="1" />
         </g>
       ))}
     </Frame>
@@ -528,18 +540,22 @@ function Moon({ size, uid, className }: Base) {
 function CloudyNight({ size, uid, className }: Base) {
   const mg = `moonGrad_${uid}`;
   const cg = `cloudGrad_${uid}`;
+  const shadow = `moonShadow_${uid}`;
   return (
     <Frame size={size} className={className}>
       <defs>
         <MoonGradient id={mg} />
-        <linearGradient id={cg} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#64748b" />
-          <stop offset="100%" stopColor="#1e293b" />
-        </linearGradient>
+        <CloudGradient id={cg} dark />
+        <filter id={shadow} x="-50%" y="-50%" width="200%" height="200%">
+          <feDropShadow dx="0" dy="1" stdDeviation="1" floodColor="#000" floodOpacity="0.35" />
+        </filter>
       </defs>
-      <circle cx={46} cy={18} r={9} fill={`url(#${mg})`} />
-      <circle cx={50} cy={15} r={7.5} fill="rgba(15,23,42,0.95)" />
-      <CloudShape fill={`url(#${cg})`} y={6} />
+      {/* Mond deutlich sichtbar, oben rechts */}
+      <g filter={`url(#${shadow})`}>
+        <circle cx={46} cy={18} r={10} fill={`url(#${mg})`} opacity="1" />
+      </g>
+      {/* Wolke davor, lässt Mond teilweise sichtbar */}
+      <CloudShape fill={`url(#${cg})`} y={8} />
     </Frame>
   );
 }
