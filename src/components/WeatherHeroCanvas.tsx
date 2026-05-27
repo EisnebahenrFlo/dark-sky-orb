@@ -543,10 +543,7 @@ export function WeatherHeroCanvas({ weatherCode, isDay }: WeatherHeroCanvasProps
       }
 
       // Edge vignette for depth & readability
-      drawVignette(
-        ctx, w, h,
-        dark || group === "NIGHT" || group === "CLOUDY_NIGHT" ? 0.32 : 0.18,
-      );
+      drawVignette(ctx, w, h, heavyVignette ? 0.32 : 0.18);
     };
 
     raf = requestAnimationFrame(render);
