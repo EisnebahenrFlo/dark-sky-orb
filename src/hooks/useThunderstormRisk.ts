@@ -58,12 +58,12 @@ export function scoreFromLPI(lpi: number | null | undefined): number {
 
 export function scoreFromCAPE(cape: number | null | undefined): number {
   if (cape == null || Number.isNaN(cape) || cape <= 0) return 0;
-  // Basis-Score nach DWD-orientierten CAPE-Schwellen (gilt wenn LI fehlt)
-  if (cape >= 2500) return 75;
-  if (cape >= 1500) return 55;
+  if (cape >= 2500) return 80;
+  if (cape >= 1500) return 65;
+  if (cape >= 1000) return 50;
   if (cape >= 500) return 35;
   if (cape >= 300) return 20;
-  return Math.round((cape / 300) * 20);
+  return 0;
 }
 
 /**
@@ -126,31 +126,24 @@ const EMPTY: ThunderstormRisk = makeRisk(0, "lpi");
 function computeHourScore(
   lpiVal: number | null | undefined,
   capeVal: number | null | undefined,
-  liVal: number | null | undefined,
-  cinVal: number | null | undefined,
+  _liVal: number | null | undefined,
+  _cinVal: number | null | undefined,
   gustVal: number | null | undefined,
-  isoTime: string,
+  _isoTime: string,
 ): { score: number; source: "lpi" | "cape" } {
-  // Basis: CAPE-Score
-  const baseScore = scoreFromCAPE(capeVal);
+  const basis = scoreFromCAPE(capeVal);
 
-  // Additive Boni
   let bonus = 0;
   const lpi = typeof lpiVal === "number" && !Number.isNaN(lpiVal) ? lpiVal : 0;
   if (lpi > 5) bonus += 15;
   else if (lpi > 0) bonus += 10;
 
-  const cape = typeof capeVal === "number" && !Number.isNaN(capeVal) ? capeVal : 0;
   const gust = typeof gustVal === "number" && !Number.isNaN(gustVal) ? gustVal : 0;
-  if (gust > 50 && cape > 300) bonus += 5;
+  if (gust > 50) bonus += 5;
 
-  const rawScore = baseScore + bonus;
+  const score = Math.min(100, basis + bonus);
   const source: "lpi" | "cape" = lpi > 0 ? "lpi" : "cape";
-
-  // Modifier: LI/CIN/Tageszeit weiterhin multiplikativ
-  const modifiedScore = rawScore * liFactor(liVal) * cinFactor(cinVal) * daytimeFactor(isoTime);
-
-  return { score: modifiedScore, source };
+  return { score, source };
 }
 
 export function computeThunderstormRiskSeries(
