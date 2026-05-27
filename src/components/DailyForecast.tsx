@@ -16,24 +16,24 @@ import type { CurrentWeather, DailyData, HourlyData } from "@/lib/weather";
 import { weekdayLabel, windDirectionLabel } from "@/lib/weather";
 import { RealisticWeatherIcon } from "./RealisticWeatherIcon";
 import { SectionHeader } from "./SectionHeader";
-import { dailyThunderRiskFromHourly } from "@/lib/thunderRisk";
+import { computeThunderstormRiskSeries } from "@/hooks/useThunderstormRisk";
 
 function timeOnly(iso: string) {
   return new Date(iso).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" });
 }
 
-function ThunderBadge({ risk }: { risk: number }) {
-  if (risk < 20) return null;
+function ThunderBadge({ score }: { score: number }) {
+  if (score < 20) return null;
   const { cls, label } =
-    risk >= 75
+    score >= 75
       ? { cls: "bg-red-500 text-white", label: "Sehr hoch" }
-      : risk >= 50
+      : score >= 50
       ? { cls: "bg-orange-500 text-white", label: "Hoch" }
       : { cls: "bg-amber-400 text-amber-950", label: "Möglich" };
   return (
     <span
       className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[12px] font-semibold ${cls}`}
-      title={`Gewitter-Risiko: ${label}`}
+      title={`Gewitter: ${label}`}
     >
       <Zap size={11} strokeWidth={2.5} />
       {label}
@@ -45,11 +45,13 @@ function DayRow({
   daily,
   i,
   hourly,
+  thunderScore,
 }: {
   daily: DailyData;
   i: number;
   hourly?: HourlyData;
   current?: CurrentWeather;
+  thunderScore: number;
 }) {
   const [open, setOpen] = useState(false);
   const min = daily.temperature_2m_min[i] != null ? Math.round(daily.temperature_2m_min[i]) : null;
@@ -60,9 +62,7 @@ function DayRow({
   const wind = daily.wind_speed_10m_max[i] != null ? Math.round(daily.wind_speed_10m_max[i]) : null;
   const dir = daily.wind_direction_10m_dominant[i];
 
-  const thunder = hourly
-    ? dailyThunderRiskFromHourly(hourly.time, hourly.cape, hourly.lifted_index, daily.time[i])
-    : { risk: 0, label: "Kein", color: "transparent" };
+
 
   return (
     <div className="glass overflow-hidden rounded-2xl">
@@ -109,7 +109,7 @@ function DayRow({
               {wind} km/h
             </span>
           )}
-          <ThunderBadge risk={thunder.risk} />
+          <ThunderBadge score={thunderScore} />
         </div>
 
         {/* Temps */}
@@ -190,13 +190,24 @@ export function DailyForecast({
   hourly?: HourlyData;
   current?: CurrentWeather;
 }) {
+  const riskSeries = hourly ? computeThunderstormRiskSeries(hourly) : null;
   return (
     <section>
       <SectionHeader title="7-Tage-Übersicht" subtitle="Tippen für Details" />
       <div className="space-y-2">
-        {daily.time.map((_, i) => (
-          <DayRow key={i} daily={daily} i={i} hourly={hourly} current={current} />
-        ))}
+        {daily.time.map((dateIso, i) => {
+          const score = riskSeries?.byDay[dateIso.slice(0, 10)]?.score ?? 0;
+          return (
+            <DayRow
+              key={i}
+              daily={daily}
+              i={i}
+              hourly={hourly}
+              current={current}
+              thunderScore={score}
+            />
+          );
+        })}
       </div>
     </section>
   );
