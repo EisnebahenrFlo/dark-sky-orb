@@ -58,6 +58,9 @@ export function WeatherHero({ location, data, updatedAt, onRefresh }: Props) {
             <div className="text-sm" style={{ color: palette.subtext }}>
               Gefühlt {Math.round(data.apparent_temperature)}°
             </div>
+            <div className="text-[10px] opacity-60" style={{ color: palette.subtext }}>
+              Vorhersage Open-Meteo
+            </div>
           </div>
         </div>
 
