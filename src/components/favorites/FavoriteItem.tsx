@@ -2,7 +2,8 @@ import { useState } from "react";
 import { ArrowUp, ArrowDown, Trash2, Loader2 } from "lucide-react";
 import type { Favorite } from "@/lib/favoritesStorage";
 import type { FavoriteCurrent } from "@/hooks/useFavoriteWeather";
-import { EffectiveWeatherIcon } from "@/components/WeatherIcon";
+import { RealisticWeatherIcon } from "@/components/RealisticWeatherIcon";
+import { getEffectiveCode } from "@/components/WeatherIcon";
 import { haptic } from "@/lib/utils";
 import {
   AlertDialog,
@@ -100,13 +101,12 @@ export function FavoriteItem({
                 <span className="font-display text-base font-medium tabular-nums">
                   {Math.round(weather.temperature)}°
                 </span>
-                <EffectiveWeatherIcon
-                  code={weather.weatherCode}
-                  precipitation={weather.precipitation}
-                  cloudCover={weather.cloudCover}
-                  isDay={weather.isDay}
-                  className="h-5 w-5 text-primary"
+                <RealisticWeatherIcon
+                  code={getEffectiveCode(weather.weatherCode, weather.precipitation, weather.cloudCover)}
+                  isDay={(weather.isDay ? 1 : 0) as 0 | 1}
+                  size={22}
                 />
+
               </>
             ) : (
               <span className="text-xs text-muted-foreground">—</span>

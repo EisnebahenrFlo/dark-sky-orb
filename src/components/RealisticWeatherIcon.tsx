@@ -18,8 +18,10 @@ export function RealisticWeatherIcon({ code, isDay, size = 24, className }: Weat
 
   // Night variants
   if (isDay === 0) {
-    if (code === 0 || code === 1) return <Moon {...props} />;
-    if (code === 2 || code === 3) return <CloudyNight {...props} />;
+    if (code === 0) return <Moon {...props} />;
+    if (code === 1) return <MoonLightCloud {...props} />;
+    if (code === 2) return <CloudyNight {...props} />;
+    if (code === 3) return <Overcast {...props} />;
   }
 
   if (code === 0) return <Sun {...props} />;
@@ -65,11 +67,11 @@ function Frame({ size, className, children }: { size: number; className?: string
 /* ---------- shared paint helpers ---------- */
 
 function CloudGradient({ id, dark = false }: { id: string; dark?: boolean }) {
-  // Mittleres Grau für gute Sichtbarkeit in Light & Dark Mode.
+  // Mittleres Grau — nie heller als #6B7280 im Light Mode.
   return (
     <linearGradient id={id} x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stopColor={dark ? "#9CA3AF" : "#D1D5DB"} stopOpacity="1" />
-      <stop offset="100%" stopColor={dark ? "#6B7280" : "#9CA3AF"} stopOpacity="1" />
+      <stop offset="0%" stopColor={dark ? "#9CA3AF" : "#6B7280"} stopOpacity="1" />
+      <stop offset="100%" stopColor={dark ? "#6B7280" : "#4B5563"} stopOpacity="1" />
     </linearGradient>
   );
 }
@@ -109,6 +111,8 @@ function CloudShape({ fill, x = 0, y = 0, scale = 1, shadow = true }: { fill: st
       <path
         d="M16 38 Q9 38 9 31 Q9 25 15 24 Q16 17 24 17 Q31 17 33 23 Q36 21 40 22 Q47 23 47 30 Q53 31 53 36 Q53 41 47 41 L17 41 Q16 41 16 38 Z"
         fill={fill}
+        stroke="#4B5563"
+        strokeWidth={0.75}
         style={shadow ? { filter: "drop-shadow(0 1px 1px rgba(0,0,0,0.15))" } : undefined}
       />
     </g>
@@ -512,14 +516,15 @@ function Moon({ size, uid, className }: Base) {
   const mg = `moonGrad_${uid}`;
   const mask = `moonMask_${uid}`;
   const shadow = `moonShadow_${uid}`;
+  // r=20 in 64-viewbox → Durchmesser 40 ≈ 62% der Icon-Größe.
   return (
     <Frame size={size} className={className}>
       <defs>
         <MoonGradient id={mg} />
         <mask id={mask}>
           <rect width="64" height="64" fill="black" />
-          <circle cx={34} cy={32} r={16} fill="white" />
-          <circle cx={40} cy={28} r={14} fill="black" />
+          <circle cx={32} cy={32} r={20} fill="white" />
+          <circle cx={40} cy={26} r={17} fill="black" />
         </mask>
         <filter id={shadow} x="-50%" y="-50%" width="200%" height="200%">
           <feDropShadow dx="0" dy="1" stdDeviation="1" floodColor="#000" floodOpacity="0.35" />
@@ -528,11 +533,37 @@ function Moon({ size, uid, className }: Base) {
       <g filter={`url(#${shadow})`}>
         <rect width="64" height="64" fill={`url(#${mg})`} mask={`url(#${mask})`} opacity="1" />
       </g>
-      {[[12, 14], [54, 18], [10, 48], [52, 50]].map(([cx, cy], i) => (
-        <g key={i}>
-          <circle cx={cx} cy={cy} r={1.2} fill="#FCD34D" opacity="1" />
-        </g>
+      {[[10, 12], [56, 16], [8, 52], [54, 54]].map(([cx, cy], i) => (
+        <circle key={i} cx={cx} cy={cy} r={1.2} fill="#FCD34D" opacity="1" />
       ))}
+    </Frame>
+  );
+}
+
+function MoonLightCloud({ size, uid, className }: Base) {
+  const mg = `moonGrad_${uid}`;
+  const mask = `moonMask_${uid}`;
+  const cg = `cloudGrad_${uid}`;
+  const shadow = `moonShadow_${uid}`;
+  // Mond dominant, kleine Wolke davor unten rechts.
+  return (
+    <Frame size={size} className={className}>
+      <defs>
+        <MoonGradient id={mg} />
+        <CloudGradient id={cg} dark />
+        <mask id={mask}>
+          <rect width="64" height="64" fill="black" />
+          <circle cx={28} cy={28} r={18} fill="white" />
+          <circle cx={36} cy={22} r={15} fill="black" />
+        </mask>
+        <filter id={shadow} x="-50%" y="-50%" width="200%" height="200%">
+          <feDropShadow dx="0" dy="1" stdDeviation="1" floodColor="#000" floodOpacity="0.35" />
+        </filter>
+      </defs>
+      <g filter={`url(#${shadow})`}>
+        <rect width="64" height="64" fill={`url(#${mg})`} mask={`url(#${mask})`} opacity="1" />
+      </g>
+      <CloudShape fill={`url(#${cg})`} x={12} y={18} scale={0.6} />
     </Frame>
   );
 }
@@ -552,7 +583,7 @@ function CloudyNight({ size, uid, className }: Base) {
       </defs>
       {/* Mond deutlich sichtbar, oben rechts */}
       <g filter={`url(#${shadow})`}>
-        <circle cx={46} cy={18} r={10} fill={`url(#${mg})`} opacity="1" />
+        <circle cx={44} cy={20} r={13} fill={`url(#${mg})`} opacity="1" />
       </g>
       {/* Wolke davor, lässt Mond teilweise sichtbar */}
       <CloudShape fill={`url(#${cg})`} y={8} />
