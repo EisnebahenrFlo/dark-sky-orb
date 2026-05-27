@@ -42,7 +42,10 @@ export function MapPage() {
 
       <div className="mb-2 flex items-start justify-between gap-3 px-1">
         <div className="flex flex-col gap-1">
-          <h2 className="font-display text-lg font-medium tracking-tight">Karte</h2>
+          <div className="flex items-center gap-2">
+            <h2 className="font-display text-lg font-medium tracking-tight">Karte</h2>
+            <LiveBadge />
+          </div>
           <span className="text-xs uppercase tracking-wider text-muted-foreground">
             {tab === "radar" ? "Niederschlagsradar" : "Live-Blitze"}
           </span>
