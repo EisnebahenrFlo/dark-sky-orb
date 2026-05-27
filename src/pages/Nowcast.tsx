@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Info, Radio, CloudSun, TrendingUp } from "lucide-react";
+import { Info, Radio, CloudSun } from "lucide-react";
 import type { HourlyData } from "@/lib/weather";
 import { Nowcast } from "@/components/Nowcast";
 import { PageState } from "@/components/PageState";
@@ -9,26 +9,57 @@ import {
   type RainbowNowcastResponse,
 } from "@/hooks/useRainbowNowcast";
 import {
-  buildMarkers,
+  buildCells,
   buildPoints,
-  buildSegments,
   buildSummary,
-  computeRateCeiling,
   findPeak,
   formatOffset,
   formatRate,
   intensityLabel,
-  type NowcastSegment,
+  type IntensityBucket,
+  type NowcastCell,
   type PrecipKind,
 } from "@/lib/rainbowNowcast";
 
 type Range = 8 | 24;
 
-const TYPE_COLORS: Record<PrecipKind, { fill: string; stroke: string }> = {
-  rain: { fill: "#B5D4F4", stroke: "#378ADD" },
-  snow: { fill: "#CECBF6", stroke: "#7F77DD" },
-  ice: { fill: "#F4C0D1", stroke: "#D4537E" },
-  none: { fill: "transparent", stroke: "var(--color-border-tertiary, var(--border))" },
+const VB_W = 600;
+const VB_H = 100;
+
+// Apple-Weather-style intensity colors. Per kind × bucket.
+const BUCKET_COLORS: Record<PrecipKind, Record<IntensityBucket, string>> = {
+  rain: {
+    none: "transparent",
+    drizzle: "oklch(0.92 0.04 235)",
+    light: "oklch(0.82 0.10 235)",
+    moderate: "oklch(0.68 0.16 235)",
+    heavy: "oklch(0.55 0.20 250)",
+    extreme: "oklch(0.42 0.22 265)",
+  },
+  snow: {
+    none: "transparent",
+    drizzle: "oklch(0.94 0.03 290)",
+    light: "oklch(0.85 0.06 290)",
+    moderate: "oklch(0.72 0.10 290)",
+    heavy: "oklch(0.60 0.14 290)",
+    extreme: "oklch(0.50 0.18 290)",
+  },
+  ice: {
+    none: "transparent",
+    drizzle: "oklch(0.92 0.05 10)",
+    light: "oklch(0.82 0.10 10)",
+    moderate: "oklch(0.70 0.16 10)",
+    heavy: "oklch(0.58 0.20 10)",
+    extreme: "oklch(0.48 0.22 10)",
+  },
+  none: {
+    none: "transparent",
+    drizzle: "transparent",
+    light: "transparent",
+    moderate: "transparent",
+    heavy: "transparent",
+    extreme: "transparent",
+  },
 };
 
 const TYPE_LABEL: Record<PrecipKind, string> = {
@@ -45,234 +76,183 @@ const TYPE_EMOJI: Record<PrecipKind, string> = {
   none: "",
 };
 
-const VB_W = 600;
-const VB_H = 100;
-const Y_AXIS_PAD = 32; // reserved for y-axis labels inside viewBox
-
-function areaPath(seg: NowcastSegment): string {
-  if (seg.points.length === 0) return "";
-  const pts = seg.points;
-  const first = pts[0];
-  const last = pts[pts.length - 1];
-  const top = pts.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x.toFixed(2)} ${p.y.toFixed(2)}`).join(" ");
-  return `${top} L ${last.x.toFixed(2)} ${VB_H} L ${first.x.toFixed(2)} ${VB_H} Z`;
+function cellColor(cell: NowcastCell): string {
+  if (cell.missing) return "var(--muted)";
+  if (cell.bucket === "none") return "transparent";
+  return BUCKET_COLORS[cell.type][cell.bucket];
 }
 
-function linePath(seg: NowcastSegment): string {
-  if (seg.points.length === 0) return "";
-  return seg.points
-    .map((p, i) => `${i === 0 ? "M" : "L"} ${p.x.toFixed(2)} ${p.y.toFixed(2)}`)
-    .join(" ");
+interface AxisTick {
+  minOffset: number;
+  label: string;
 }
 
-function timeTicks(minutes: number): number[] {
-  if (minutes <= 120) return [0, 30, 60, 90, 120];
-  return [0, 60, 120, 180, 240, 300, 360];
+function buildAxisTicks(minutes: number): AxisTick[] {
+  const step = minutes <= 120 ? 30 : 60;
+  const out: AxisTick[] = [];
+  for (let m = 0; m <= minutes; m += step) {
+    out.push({ minOffset: m, label: formatOffset(m) });
+  }
+  return out;
 }
 
-function RainbowChart({ data, minutes }: { data: RainbowNowcastResponse; minutes: number }) {
+function IntensityStrip({ data, minutes }: { data: RainbowNowcastResponse; minutes: number }) {
   const nowSec = Date.now() / 1000;
-  // First pass: discover peak with default ceiling to derive a true-data ceiling.
-  const probe = buildPoints(data.forecast ?? [], nowSec, minutes, VB_W, VB_H, 100);
-  const ceiling = computeRateCeiling(probe);
-  const points = buildPoints(data.forecast ?? [], nowSec, minutes, VB_W, VB_H, ceiling);
-  const segments = buildSegments(points);
-  const markers = buildMarkers(points, minutes, VB_W);
+  const cells = buildCells(data.forecast ?? [], nowSec, minutes, 10);
+  // Reuse buildPoints for summary + peak (they expect points, not cells).
+  const points = buildPoints(data.forecast ?? [], nowSec, minutes, VB_W, VB_H, 100);
   const summary = buildSummary(points, minutes);
   const peak = findPeak(points);
-  const ticks = timeTicks(minutes);
+  const ticks = buildAxisTicks(minutes);
 
   const presentTypes = Array.from(
-    new Set(points.filter((p) => p.type !== "none" && p.rate > 0).map((p) => p.type)),
+    new Set(cells.filter((c) => c.bucket !== "none").map((c) => c.type)),
   ) as PrecipKind[];
+  const noPrecip = presentTypes.length === 0;
 
-  const noPrecip = points.length === 0 || presentTypes.length === 0;
-
-  // Y-axis scale labels: 0, mid, top
-  const yLabels = [ceiling, ceiling / 2, 0];
+  // Total expected mm in the window (sum rate × slot duration).
+  const slotHours = 10 / 60;
+  const totalMm = cells.reduce((s, c) => s + c.rate * slotHours, 0);
 
   return (
     <div className="glass rounded-3xl p-5 sm:p-6">
-      <div className="mb-2 flex items-start justify-between gap-3">
-        <div
-          className={`text-sm ${summary.warn ? "font-medium text-orange-500" : "font-medium text-foreground"}`}
-        >
-          {summary.text}
-        </div>
-        {peak && (
-          <div className="flex shrink-0 items-center gap-1 rounded-full border border-border bg-background/60 px-2 py-0.5 text-[10px] font-medium tabular-nums text-foreground">
-            <TrendingUp className="h-3 w-3 text-primary" strokeWidth={2} />
-            Spitze {formatRate(peak.rate)} · {intensityLabel(peak.rate)}
-          </div>
-        )}
-      </div>
-
-      {presentTypes.length > 1 && (
-        <div className="mb-3 flex flex-wrap gap-2 text-xs">
-          {presentTypes.map((t) => (
-            <span
-              key={t}
-              className="inline-flex items-center gap-1 rounded-full px-2 py-0.5"
-              style={{ backgroundColor: `${TYPE_COLORS[t].fill}80`, color: TYPE_COLORS[t].stroke }}
-            >
-              {TYPE_EMOJI[t]} {TYPE_LABEL[t]}
-            </span>
-          ))}
-        </div>
-      )}
-
-      <div className="relative w-full overflow-hidden">
-        {noPrecip ? (
-          <div className="grid h-44 place-items-center text-center text-muted-foreground">
-            <div>
-              <CloudSun className="mx-auto h-10 w-10" strokeWidth={1.5} aria-hidden="true" />
-              <div className="mt-2 text-sm">Kein Niederschlag erwartet</div>
-            </div>
-          </div>
-        ) : (
-          <svg
-            viewBox={`-${Y_AXIS_PAD} 0 ${VB_W + Y_AXIS_PAD} ${VB_H + 16}`}
-            preserveAspectRatio="none"
-            width="100%"
-            height="auto"
-            className="block h-44 w-full max-w-full"
-            aria-label="Niederschlagsverlauf"
+      {/* Headline */}
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <div
+            className={`text-base font-semibold leading-tight ${summary.warn ? "text-orange-500" : "text-foreground"}`}
           >
-            {/* Horizontal gridlines + Y-axis labels */}
-            {yLabels.map((val, i) => {
-              const y = (i / (yLabels.length - 1)) * VB_H;
-              return (
-                <g key={i}>
-                  <line
-                    x1={0}
-                    y1={y}
-                    x2={VB_W}
-                    y2={y}
-                    stroke="currentColor"
-                    strokeOpacity={i === yLabels.length - 1 ? 0.35 : 0.12}
-                    strokeWidth={i === yLabels.length - 1 ? 1.2 : 1}
-                    strokeDasharray={i === yLabels.length - 1 ? "" : "3 4"}
-                    className="text-border"
-                  />
-                  <text
-                    x={-6}
-                    y={y + 3}
-                    textAnchor="end"
-                    fontSize={9}
-                    className="fill-muted-foreground tabular-nums"
-                  >
-                    {val < 1 ? val.toFixed(1).replace(".", ",") : Math.round(val)}
-                  </text>
-                </g>
-              );
-            })}
-            {/* Unit label */}
-            <text x={-6} y={-2} textAnchor="end" fontSize={8} className="fill-muted-foreground">
-              mm/h
-            </text>
-
-            {/* "Jetzt" dashed vertical */}
-            <line
-              x1={0}
-              y1={0}
-              x2={0}
-              y2={VB_H}
-              stroke="currentColor"
-              strokeOpacity={0.5}
-              strokeWidth={0.8}
-              strokeDasharray="2 3"
-              className="text-muted-foreground"
-            />
-
-            {/* Segments */}
-            {segments.map((seg, i) => {
-              const c = TYPE_COLORS[seg.type];
-              if (seg.type === "none") {
-                return (
-                  <path
-                    key={i}
-                    d={linePath(seg)}
-                    fill="none"
-                    stroke={c.stroke}
-                    strokeWidth={1}
-                    strokeLinecap="round"
-                  />
-                );
-              }
-              return (
-                <g key={i}>
-                  <path d={areaPath(seg)} fill={c.fill} fillOpacity={0.55} stroke="none" />
-                  <path
-                    d={linePath(seg)}
-                    fill="none"
-                    stroke={c.stroke}
-                    strokeWidth={2}
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </g>
-              );
-            })}
-
-            {/* Peak marker */}
-            {peak && (
-              <g>
-                <circle cx={peak.x ?? 0} cy={peak.y ?? 0} r={3.5} fill="var(--background)" stroke={TYPE_COLORS[peak.type].stroke} strokeWidth={2} />
-              </g>
+            {summary.text}
+          </div>
+          <div className="mt-0.5 text-xs text-muted-foreground">
+            {noPrecip
+              ? "Radar zeigt nichts in Reichweite"
+              : `Spitze ${formatRate(peak?.rate ?? 0)} · ${intensityLabel(peak?.rate ?? 0)}`}
+            {!noPrecip && totalMm >= 0.1 && (
+              <>
+                {" · "}
+                <span className="tabular-nums">{totalMm.toFixed(1).replace(".", ",")} mm gesamt</span>
+              </>
             )}
-
-            {/* Begin / End markers */}
-            {markers.map((m, i) => (
-              <g key={i}>
-                <line
-                  x1={m.x}
-                  y1={0}
-                  x2={m.x}
-                  y2={VB_H}
-                  stroke="currentColor"
-                  strokeOpacity={0.45}
-                  strokeWidth={0.8}
-                  strokeDasharray="2 2"
-                  className="text-muted-foreground"
-                />
-                <text
-                  x={m.x + 4}
-                  y={11}
-                  fontSize={10}
-                  fontWeight={600}
-                  className="fill-foreground"
-                >
-                  {m.label}
-                </text>
-              </g>
-            ))}
-          </svg>
-        )}
-
-        {/* Time axis labels */}
-        <div className="relative mt-1 h-4 w-full overflow-visible pl-7 pr-2">
-          {ticks.map((t, i) => {
-            const leftPct = (t / minutes) * 100;
-            const isFirst = i === 0;
-            const isLast = i === ticks.length - 1;
-            return (
+          </div>
+        </div>
+        {presentTypes.length > 0 && (
+          <div className="flex shrink-0 flex-wrap items-center justify-end gap-1">
+            {presentTypes.map((t) => (
               <span
                 key={t}
-                className={`absolute text-[10px] text-muted-foreground tabular-nums ${
-                  isFirst
-                    ? "text-left"
-                    : isLast
-                      ? "-translate-x-full text-right"
-                      : "-translate-x-1/2"
-                }`}
-                style={{ left: `calc(${leftPct}% + ${(1 - leftPct / 100) * 0}px)` }}
+                className="inline-flex items-center gap-1 rounded-full bg-muted/60 px-2 py-0.5 text-[10px] font-medium text-foreground"
               >
-                {formatOffset(t)}
+                {TYPE_EMOJI[t]} {TYPE_LABEL[t]}
               </span>
-            );
-          })}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
+
+      {/* Strip */}
+      {noPrecip ? (
+        <div className="mt-5 grid h-32 place-items-center text-center text-muted-foreground">
+          <div>
+            <CloudSun className="mx-auto h-10 w-10" strokeWidth={1.5} aria-hidden="true" />
+            <div className="mt-2 text-sm">Kein Niederschlag erwartet</div>
+            <div className="mt-0.5 text-[11px] opacity-70">
+              Nächste {minutes < 60 ? `${minutes} Minuten` : `${minutes / 60} Stunden`}
+            </div>
+          </div>
+        </div>
+      ) : (
+        <>
+          <div className="mt-5">
+            {/* Cells */}
+            <div
+              className="flex h-12 w-full overflow-hidden rounded-xl border border-border/60 bg-muted/30"
+              role="img"
+              aria-label="Niederschlagsintensität pro 10 Minuten"
+            >
+              {cells.map((c, i) => (
+                <div
+                  key={i}
+                  className="relative flex-1 transition-opacity"
+                  style={{
+                    background: cellColor(c),
+                    opacity: c.missing ? 0.35 : 1,
+                  }}
+                  title={
+                    c.missing
+                      ? `+${c.minOffset} Min · keine Daten`
+                      : c.bucket === "none"
+                        ? `+${c.minOffset} Min · trocken`
+                        : `+${c.minOffset} Min · ${formatRate(c.rate)} · ${intensityLabel(c.rate)}`
+                  }
+                />
+              ))}
+            </div>
+
+            {/* "Jetzt" indicator above first cell */}
+            <div className="relative -mt-12 h-12 pointer-events-none">
+              <div className="absolute left-0 top-0 h-12 w-0.5 bg-foreground/60" />
+              <div className="absolute left-1 top-1 rounded-sm bg-foreground/85 px-1 py-px text-[9px] font-semibold uppercase tracking-wider text-background">
+                Jetzt
+              </div>
+              {/* Peak marker */}
+              {peak && (
+                <div
+                  className="absolute -top-1 h-2 w-2 -translate-x-1/2 rounded-full border-2 border-background bg-primary shadow-sm"
+                  style={{ left: `${Math.min(99, Math.max(1, (peak.minOffset / minutes) * 100))}%` }}
+                  aria-label={`Spitze bei ${formatOffset(Math.round(peak.minOffset))}`}
+                />
+              )}
+            </div>
+          </div>
+
+          {/* Time axis */}
+          <div className="relative mt-2 h-4 w-full">
+            {ticks.map((t, i) => {
+              const leftPct = (t.minOffset / minutes) * 100;
+              const isFirst = i === 0;
+              const isLast = i === ticks.length - 1;
+              return (
+                <span
+                  key={t.minOffset}
+                  className={`absolute text-[10px] text-muted-foreground tabular-nums ${
+                    isFirst
+                      ? "text-left"
+                      : isLast
+                        ? "-translate-x-full text-right"
+                        : "-translate-x-1/2"
+                  }`}
+                  style={{ left: `${leftPct}%` }}
+                >
+                  {t.label}
+                </span>
+              );
+            })}
+          </div>
+
+          {/* Intensity legend */}
+          <div className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] text-muted-foreground">
+            <span className="opacity-70">Intensität:</span>
+            {(["drizzle", "light", "moderate", "heavy", "extreme"] as IntensityBucket[]).map((b) => (
+              <span key={b} className="inline-flex items-center gap-1">
+                <span
+                  className="inline-block h-2 w-3 rounded-sm border border-border/40"
+                  style={{ background: BUCKET_COLORS.rain[b] }}
+                />
+                {b === "drizzle"
+                  ? "Niesel"
+                  : b === "light"
+                    ? "leicht"
+                    : b === "moderate"
+                      ? "mäßig"
+                      : b === "heavy"
+                        ? "stark"
+                        : "sehr stark"}
+              </span>
+            ))}
+          </div>
+        </>
+      )}
 
       <div className="mt-3 text-center text-[11px] text-muted-foreground">
         Echtzeit-Radar · Rainbow.ai · Aktualisierung alle 10 Min
@@ -376,7 +356,7 @@ export function NowcastPage() {
 
               {rainbow.data && !rainbow.isError ? (
                 <>
-                  <RainbowChart data={rainbow.data} minutes={minutes} />
+                  <IntensityStrip data={rainbow.data} minutes={minutes} />
                   {!hasRain && <NowcastContextBox hourly={data.hourly} />}
                 </>
               ) : rainbow.isLoading ? (
