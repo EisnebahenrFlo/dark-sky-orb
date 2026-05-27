@@ -72,7 +72,8 @@ function makeRisk(id: RiskId, rawScore: number, isEstimate: boolean): RiskItem {
 
 export function useWeatherRisks(): UseWeatherRisksResult {
   const { data, isLoading, error } = useWeather();
-  const thunderstorm = useThunderstormRisk();
+  const thunderstorm = useThunderstormRisk(48);
+  const thunderstormScore = thunderstorm.current.score;
 
   const risks = useMemo<RiskItem[]>(() => {
     const hourly = data?.hourly;
@@ -96,7 +97,7 @@ export function useWeatherRisks(): UseWeatherRisksResult {
     const wmoCode = hourly?.weather_code?.[i] ?? 0;
 
     // GEWITTER — zentraler Hook
-    const gewitter = makeRisk("gewitter", thunderstorm.current.score ?? 0, false);
+    const gewitter = makeRisk("gewitter", thunderstormScore ?? 0, false);
 
     // STARKREGEN (mm/h)
     const rain = precipitation;
@@ -174,15 +175,7 @@ export function useWeatherRisks(): UseWeatherRisksResult {
               : 85 + Math.min(15, ((50 - vis) / 50) * 15);
     const nebel = makeRisk("nebel", nebelScore, false);
 
-    const all: RiskItem[] = [
-      gewitter,
-      starkregen,
-      hagel,
-      sturm,
-      schneesturm,
-      glatteis,
-      nebel,
-    ];
+    const all: RiskItem[] = [gewitter, starkregen, hagel, sturm, schneesturm, glatteis, nebel];
 
     // Top 4 nach Score, mit fester Tiebreaker-Reihenfolge
     const sorted = [...all].sort((a, b) => {
@@ -191,7 +184,7 @@ export function useWeatherRisks(): UseWeatherRisksResult {
     });
 
     return sorted.slice(0, 4);
-  }, [data, thunderstorm.current.score]);
+  }, [data, thunderstormScore]);
 
   return {
     risks,
