@@ -77,7 +77,7 @@ export function HourlyRow({ row, showPrecipColumn = true }: { row: HourlyRowData
         <RealisticWeatherIcon
           code={row.code}
           isDay={(row.isDay ? 1 : 0) as 0 | 1}
-          size={26}
+          size={32}
           className="shrink-0"
         />
         <span className="hidden truncate text-xs text-muted-foreground sm:inline">
