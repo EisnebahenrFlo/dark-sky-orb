@@ -1,31 +1,35 @@
 // Vercel Serverless Function – KI-Warnungen
 // Gewitter-Score kommt FERTIG BERECHNET vom Frontend (useThunderstormRisk).
 // Claude formuliert nur — er rechnet nicht.
-import { getCached, setCached, isFresh, ageMinutes } from './_lib/cache.js';
+import { getCached, setCached, isFresh, ageMinutes } from "./_lib/cache.js";
 
 // Stufen-System (Score-basiert, NICHT abhängig von amtlichen Warnungen):
 //   20–34  → warnung  (yellow)
 //   35–54  → markant  (orange)
 //   55–74  → unwetter (red)
 //   75–100 → extrem   (purple)
-type Stufe = 'warnung' | 'markant' | 'unwetter' | 'extrem';
+type Stufe = "warnung" | "markant" | "unwetter" | "extrem";
 
-function stufeColor(stufe: Stufe): 'yellow' | 'orange' | 'red' | 'purple' {
+function stufeColor(stufe: Stufe): "yellow" | "orange" | "red" | "purple" {
   switch (stufe) {
-    case 'warnung': return 'yellow';
-    case 'markant': return 'orange';
-    case 'unwetter': return 'red';
-    case 'extrem': return 'purple';
+    case "warnung":
+      return "yellow";
+    case "markant":
+      return "orange";
+    case "unwetter":
+      return "red";
+    case "extrem":
+      return "purple";
   }
 }
 
 type ErrorCode =
-  | 'TIMEOUT'
-  | 'RATE_LIMIT'
-  | 'API_ERROR'
-  | 'PARSE_ERROR'
-  | 'INVALID_RESPONSE'
-  | 'BAD_REQUEST';
+  | "TIMEOUT"
+  | "RATE_LIMIT"
+  | "API_ERROR"
+  | "PARSE_ERROR"
+  | "INVALID_RESPONSE"
+  | "BAD_REQUEST";
 
 const FRESH_MS = 15 * 60 * 1000;
 const RETRY_DELAYS_MS = [500, 1500, 4500];
@@ -35,13 +39,17 @@ function errorResponse(res: any, status: number, code: ErrorCode, error: string,
   return res.status(status).json({ error, code, ...(details ? { details } : {}) });
 }
 
-function sleep(ms: number) { return new Promise((r) => setTimeout(r, ms)); }
+function sleep(ms: number) {
+  return new Promise((r) => setTimeout(r, ms));
+}
 
 function getIndices(hourly: any, hours: number): number[] {
   const now = Date.now();
   return hourly.time
     .map((t: string, i: number) => ({ t: new Date(t).getTime(), i }))
-    .filter((item: { t: number; i: number }) => item.t >= now && item.t <= now + hours * 3600 * 1000)
+    .filter(
+      (item: { t: number; i: number }) => item.t >= now && item.t <= now + hours * 3600 * 1000,
+    )
     .map((item: { t: number; i: number }) => item.i);
 }
 
@@ -63,10 +71,10 @@ function computeHourScore(
 ): number {
   const basis = scoreFromCAPE(capeVal);
   let bonus = 0;
-  const lpi = typeof lpiVal === 'number' && !Number.isNaN(lpiVal) ? lpiVal : 0;
+  const lpi = typeof lpiVal === "number" && !Number.isNaN(lpiVal) ? lpiVal : 0;
   if (lpi > 5) bonus += 15;
   else if (lpi > 0) bonus += 10;
-  const gust = typeof gustVal === 'number' && !Number.isNaN(gustVal) ? gustVal : 0;
+  const gust = typeof gustVal === "number" && !Number.isNaN(gustVal) ? gustVal : 0;
   if (gust > 50) bonus += 5;
   return Math.min(100, basis + bonus);
 }
@@ -89,85 +97,106 @@ function computeServerStormScore(weatherData: any, hours = 6): number {
 }
 
 function stufeFromScore(score: number): Stufe {
-  if (score >= 75) return 'extrem';
-  if (score >= 55) return 'unwetter';
-  if (score >= 35) return 'markant';
-  return 'warnung';
+  if (score >= 75) return "extrem";
+  if (score >= 55) return "unwetter";
+  if (score >= 35) return "markant";
+  return "warnung";
 }
 
-function detectWarnings(weatherData: any, windowHours: number, officialWarnings: any[] = [], stormScore = 0) {
+function detectWarnings(
+  weatherData: any,
+  windowHours: number,
+  officialWarnings: any[] = [],
+  stormScore = 0,
+) {
   const warnings: any[] = [];
   const hourly = weatherData.hourly;
   if (!hourly?.time) return warnings;
   const idx = getIndices(hourly, windowHours);
   if (idx.length === 0) return warnings;
 
-  const getMax = (arr: number[] | undefined, key: 'max' | 'min' = 'max') =>
-    idx.reduce((acc: number, i: number) => {
-      const v = arr?.[i] ?? (key === 'max' ? -Infinity : Infinity);
-      return key === 'max' ? Math.max(acc, v) : Math.min(acc, v);
-    }, key === 'max' ? -Infinity : Infinity);
+  const getMax = (arr: number[] | undefined, key: "max" | "min" = "max") =>
+    idx.reduce(
+      (acc: number, i: number) => {
+        const v = arr?.[i] ?? (key === "max" ? -Infinity : Infinity);
+        return key === "max" ? Math.max(acc, v) : Math.min(acc, v);
+      },
+      key === "max" ? -Infinity : Infinity,
+    );
 
   // Wind: Böen >=60 warnung, >=75 markant, >=90 unwetter, >=118 extrem
   const maxGust = getMax(hourly.wind_gusts_10m);
   if (maxGust >= 60) {
-    const stufe: Stufe = maxGust >= 118 ? 'extrem' : maxGust >= 90 ? 'unwetter' : maxGust >= 75 ? 'markant' : 'warnung';
-    warnings.push({ typ: 'wind', stufe, max_value: Math.round(maxGust), unit: 'km/h' });
+    const stufe: Stufe =
+      maxGust >= 118
+        ? "extrem"
+        : maxGust >= 90
+          ? "unwetter"
+          : maxGust >= 75
+            ? "markant"
+            : "warnung";
+    warnings.push({ typ: "wind", stufe, max_value: Math.round(maxGust), unit: "km/h" });
   }
 
   // Starkregen: >=10mm/h oder >=15mm/12h warnung, >=25mm/h markant, >=40mm/h unwetter
   const max1h = getMax(hourly.precipitation);
   const sum12 = idx.reduce((s: number, i: number) => s + (hourly.precipitation?.[i] ?? 0), 0);
   if (max1h >= 10 || sum12 >= 15) {
-    const stufe: Stufe = max1h >= 40 ? 'unwetter' : max1h >= 25 ? 'markant' : 'warnung';
-    warnings.push({ typ: 'regen', stufe, max_1h: Math.round(max1h * 10) / 10, sum: Math.round(sum12 * 10) / 10, unit: 'mm' });
+    const stufe: Stufe = max1h >= 40 ? "unwetter" : max1h >= 25 ? "markant" : "warnung";
+    warnings.push({
+      typ: "regen",
+      stufe,
+      max_1h: Math.round(max1h * 10) / 10,
+      sum: Math.round(sum12 * 10) / 10,
+      unit: "mm",
+    });
   }
 
   // Schnee: >=5cm/12h warnung, >=10 markant, >=20 unwetter
   const snow = idx.reduce((s: number, i: number) => s + (hourly.snowfall?.[i] ?? 0), 0);
   if (snow >= 5) {
-    const stufe: Stufe = snow >= 20 ? 'unwetter' : snow >= 10 ? 'markant' : 'warnung';
-    warnings.push({ typ: 'schnee', stufe, sum: Math.round(snow * 10) / 10, unit: 'cm' });
+    const stufe: Stufe = snow >= 20 ? "unwetter" : snow >= 10 ? "markant" : "warnung";
+    warnings.push({ typ: "schnee", stufe, sum: Math.round(snow * 10) / 10, unit: "cm" });
   }
 
   // Gewitter: stufe leitet sich aus dem serverseitig berechneten Score ab (>=20).
   // Ausgelöst, wenn Score-Schwelle erreicht ODER amtliche Gewitterwarnung aktiv.
   const maxCape = idx.reduce((m: number, i: number) => Math.max(m, hourly.cape?.[i] ?? 0), 0);
   const hasOfficialThunderstorm = officialWarnings?.some(
-    (w: any) => typeof w?.type === 'string' && w.type.toLowerCase().includes('thunderstorm'),
+    (w: any) => typeof w?.type === "string" && w.type.toLowerCase().includes("thunderstorm"),
   );
   if (stormScore >= 20 || hasOfficialThunderstorm) {
     const stufe: Stufe = stufeFromScore(stormScore);
     warnings.push({
-      typ: 'gewitter',
+      typ: "gewitter",
       stufe,
       score: stormScore,
       cape_max: Math.round(maxCape),
       official: !!hasOfficialThunderstorm,
-      unit: 'J/kg',
+      unit: "J/kg",
     });
   }
 
   // Hitze: >=30°C warnung, >=35 markant, >=38 unwetter
   const maxTemp = getMax(hourly.temperature_2m);
   if (maxTemp >= 30) {
-    const stufe: Stufe = maxTemp >= 38 ? 'unwetter' : maxTemp >= 35 ? 'markant' : 'warnung';
-    warnings.push({ typ: 'hitze', stufe, max_value: Math.round(maxTemp), unit: '°C' });
+    const stufe: Stufe = maxTemp >= 38 ? "unwetter" : maxTemp >= 35 ? "markant" : "warnung";
+    warnings.push({ typ: "hitze", stufe, max_value: Math.round(maxTemp), unit: "°C" });
   }
 
   // Frost: <=-5°C warnung, <=-10°C markant
-  const minTemp = getMax(hourly.temperature_2m, 'min');
+  const minTemp = getMax(hourly.temperature_2m, "min");
   if (minTemp <= -5) {
-    const stufe: Stufe = minTemp <= -10 ? 'markant' : 'warnung';
-    warnings.push({ typ: 'frost', stufe, min_value: Math.round(minTemp), unit: '°C' });
+    const stufe: Stufe = minTemp <= -10 ? "markant" : "warnung";
+    warnings.push({ typ: "frost", stufe, min_value: Math.round(minTemp), unit: "°C" });
   }
 
   // Glätte: <=0°C mit Niederschlag → warnung
-  const glazeRisk = idx.some((i: number) =>
-    (hourly.temperature_2m?.[i] ?? 999) <= 0 &&
-    (hourly.precipitation?.[i] ?? 0) > 0.1
+  const glazeRisk = idx.some(
+    (i: number) =>
+      (hourly.temperature_2m?.[i] ?? 999) <= 0 && (hourly.precipitation?.[i] ?? 0) > 0.1,
   );
-  if (glazeRisk) warnings.push({ typ: 'glätte', stufe: 'warnung' as Stufe });
+  if (glazeRisk) warnings.push({ typ: "glätte", stufe: "warnung" as Stufe });
 
   // Color je Warnung anhängen
   return warnings.map((w) => ({ ...w, color: stufeColor(w.stufe) }));
@@ -180,41 +209,45 @@ function buildConvectiveContext(weatherData: any, windowHours: number) {
   const idx = getIndices(hourly, windowHours);
   if (idx.length === 0) return {};
 
-  let maxCape = 0, minLI = 999, minCIN = 0, maxLPI = 0, maxShear = 0;
+  let maxCape = 0,
+    minLI = 999,
+    minCIN = 0,
+    maxLPI = 0,
+    maxShear = 0;
   for (const i of idx) {
-    maxCape  = Math.max(maxCape,  hourly.cape?.[i] ?? 0);
-    minLI    = Math.min(minLI,    hourly.lifted_index?.[i] ?? 999);
-    minCIN   = Math.min(minCIN,   hourly.convective_inhibition?.[i] ?? 0);
-    maxLPI   = Math.max(maxLPI,   hourly.lightning_potential?.[i] ?? 0);
-    const w10  = hourly.wind_speed_10m?.[i] ?? 0;
+    maxCape = Math.max(maxCape, hourly.cape?.[i] ?? 0);
+    minLI = Math.min(minLI, hourly.lifted_index?.[i] ?? 999);
+    minCIN = Math.min(minCIN, hourly.convective_inhibition?.[i] ?? 0);
+    maxLPI = Math.max(maxLPI, hourly.lightning_potential?.[i] ?? 0);
+    const w10 = hourly.wind_speed_10m?.[i] ?? 0;
     const w500 = hourly.wind_speed_500hPa?.[i] ?? w10;
     maxShear = Math.max(maxShear, Math.abs(w500 - w10));
   }
 
   return {
-    cape_max_jkg:     Math.round(maxCape),
+    cape_max_jkg: Math.round(maxCape),
     lifted_index_min: Math.round(minLI * 10) / 10,
-    cin_min_jkg:      Math.round(minCIN),
-    lpi_max_jkg:      Math.round(maxLPI * 10) / 10,
-    wind_shear_max:   Math.round(maxShear),
+    cin_min_jkg: Math.round(minCIN),
+    lpi_max_jkg: Math.round(maxLPI * 10) / 10,
+    wind_shear_max: Math.round(maxShear),
   };
 }
 
 function scoreLevelLabel(score: number): string {
-  if (score >= 86) return 'extrem';
-  if (score >= 61) return 'sehr_hoch';
-  if (score >= 31) return 'hoch';
-  if (score >= 11) return 'mäßig';
-  if (score >= 1)  return 'schwach';
-  return 'kein';
+  if (score >= 86) return "extrem";
+  if (score >= 61) return "sehr_hoch";
+  if (score >= 31) return "hoch";
+  if (score >= 11) return "mäßig";
+  if (score >= 1) return "schwach";
+  return "kein";
 }
 
 function scoreToColor(score: number): string {
-  if (score >= 86) return 'purple';
-  if (score >= 61) return 'red';
-  if (score >= 31) return 'orange';
-  if (score >= 11) return 'yellow';
-  return 'green';
+  if (score >= 86) return "purple";
+  if (score >= 61) return "red";
+  if (score >= 31) return "orange";
+  if (score >= 11) return "yellow";
+  return "green";
 }
 
 const STATIC_PROMPT = `Du bist erfahrener Meteorologe und Wetter-Sicherheits-Kommunikator für DACH und Italien.
@@ -301,23 +334,26 @@ Farbcodes Warnungen (aus Input übernehmen): warnung=yellow, markant=orange, unw
 
 # DATEN FOLGEN IM NÄCHSTEN BLOCK`;
 
-async function callAnthropicWithRetry(body: unknown): Promise<
-  | { ok: true; data: any }
-  | { ok: false; code: ErrorCode; status: number; details: string }
+async function callAnthropicWithRetry(
+  body: unknown,
+): Promise<
+  { ok: true; data: any } | { ok: false; code: ErrorCode; status: number; details: string }
 > {
   let lastErr: { code: ErrorCode; status: number; details: string } = {
-    code: 'API_ERROR', status: 500, details: 'unknown',
+    code: "API_ERROR",
+    status: 500,
+    details: "unknown",
   };
   for (let attempt = 1; attempt <= 3; attempt++) {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
     try {
-      const resp = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
+      const resp = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': process.env.ANTHROPIC_API_KEY!,
-          'anthropic-version': '2023-06-01',
+          "Content-Type": "application/json",
+          "x-api-key": process.env.ANTHROPIC_API_KEY!,
+          "anthropic-version": "2023-06-01",
         },
         body: JSON.stringify(body),
         signal: controller.signal,
@@ -330,19 +366,19 @@ async function callAnthropicWithRetry(body: unknown): Promise<
       const text = await resp.text();
       const status = resp.status;
       const retryable = status === 429 || status >= 500;
-      const code: ErrorCode = status === 429 ? 'RATE_LIMIT' : 'API_ERROR';
+      const code: ErrorCode = status === 429 ? "RATE_LIMIT" : "API_ERROR";
       lastErr = { code, status, details: text.slice(0, 500) };
       if (!retryable) return { ok: false, ...lastErr };
-      console.warn('[risk-warnings] anthropic retry', attempt, status);
+      console.warn("[risk-warnings] anthropic retry", attempt, status);
     } catch (e: any) {
       clearTimeout(timeoutId);
-      const isTimeout = e?.name === 'AbortError';
+      const isTimeout = e?.name === "AbortError";
       lastErr = {
-        code: isTimeout ? 'TIMEOUT' : 'API_ERROR',
+        code: isTimeout ? "TIMEOUT" : "API_ERROR",
         status: isTimeout ? 504 : 500,
         details: String(e?.message ?? e),
       };
-      console.warn('[risk-warnings] anthropic retry', attempt, isTimeout ? 'TIMEOUT' : 'NETWORK');
+      console.warn("[risk-warnings] anthropic retry", attempt, isTimeout ? "TIMEOUT" : "NETWORK");
     }
     if (attempt < 3) await sleep(RETRY_DELAYS_MS[attempt - 1]);
   }
@@ -353,8 +389,8 @@ function extractJson(text: string): any {
   const trimmed = text.trim();
   const fenced = trimmed.match(/```json\s*([\s\S]*?)\s*```/i);
   if (fenced) return JSON.parse(fenced[1].trim());
-  const first = trimmed.indexOf('{');
-  const last = trimmed.lastIndexOf('}');
+  const first = trimmed.indexOf("{");
+  const last = trimmed.lastIndexOf("}");
   if (first !== -1 && last !== -1 && last > first) {
     return JSON.parse(trimmed.slice(first, last + 1).trim());
   }
@@ -362,61 +398,68 @@ function extractJson(text: string): any {
 }
 
 function validateSchema(r: any): string | null {
-  if (!r || typeof r !== 'object') return 'not an object';
-  if (!r.gewitter_risiko_6h || typeof r.gewitter_risiko_6h.score !== 'number') return 'gewitter_risiko_6h.score missing';
-  if (!Array.isArray(r.warnungen_12h)) return 'warnungen_12h not an array';
-  if (typeof r.summary !== 'string') return 'summary missing';
-  if (typeof r.disclaimer !== 'string') return 'disclaimer missing';
+  if (!r || typeof r !== "object") return "not an object";
+  if (!r.gewitter_risiko_6h || typeof r.gewitter_risiko_6h.score !== "number")
+    return "gewitter_risiko_6h.score missing";
+  if (!Array.isArray(r.warnungen_12h)) return "warnungen_12h not an array";
+  if (typeof r.summary !== "string") return "summary missing";
+  if (typeof r.disclaimer !== "string") return "disclaimer missing";
   return null;
 }
 
 function warningTitle(w: any): string {
   const key = `${w.typ}/${w.stufe}`;
   const titles: Record<string, string> = {
-    'gewitter/warnung': 'Gewitter möglich',
-    'gewitter/markant': 'Starkes Gewitter möglich',
-    'gewitter/unwetter': 'Unwetterwarnung Gewitter',
-    'gewitter/extrem': 'Extremes Unwetter',
-    'wind/warnung': 'Windböen erwartet',
-    'wind/markant': 'Markante Windböen',
-    'wind/unwetter': 'Sturmwarnung',
-    'wind/extrem': 'Orkanwarnung',
-    'regen/warnung': 'Regen möglich',
-    'regen/markant': 'Starkregen',
-    'regen/unwetter': 'Unwetterwarnung Starkregen',
-    'schnee/warnung': 'Schneefall möglich',
-    'schnee/markant': 'Markanter Schneefall',
-    'schnee/unwetter': 'Unwetterwarnung Schnee',
-    'frost/warnung': 'Frost möglich',
-    'frost/markant': 'Strenger Frost',
-    'glätte/warnung': 'Glättegefahr',
-    'hitze/warnung': 'Hitze erwartet',
-    'hitze/markant': 'Markante Hitze',
-    'hitze/unwetter': 'Extreme Hitze',
+    "gewitter/warnung": "Gewitter möglich",
+    "gewitter/markant": "Starkes Gewitter möglich",
+    "gewitter/unwetter": "Unwetterwarnung Gewitter",
+    "gewitter/extrem": "Extremes Unwetter",
+    "wind/warnung": "Windböen erwartet",
+    "wind/markant": "Markante Windböen",
+    "wind/unwetter": "Sturmwarnung",
+    "wind/extrem": "Orkanwarnung",
+    "regen/warnung": "Regen möglich",
+    "regen/markant": "Starkregen",
+    "regen/unwetter": "Unwetterwarnung Starkregen",
+    "schnee/warnung": "Schneefall möglich",
+    "schnee/markant": "Markanter Schneefall",
+    "schnee/unwetter": "Unwetterwarnung Schnee",
+    "frost/warnung": "Frost möglich",
+    "frost/markant": "Strenger Frost",
+    "glätte/warnung": "Glättegefahr",
+    "hitze/warnung": "Hitze erwartet",
+    "hitze/markant": "Markante Hitze",
+    "hitze/unwetter": "Extreme Hitze",
   };
-  return titles[key] ?? 'Wetterhinweis';
+  return titles[key] ?? "Wetterhinweis";
 }
 
 function warningIcon(typ: string): string {
-  if (typ === 'wind') return 'Wind';
-  if (typ === 'regen') return 'CloudRain';
-  if (typ === 'gewitter') return 'Zap';
-  if (typ === 'schnee') return 'Snowflake';
-  if (typ === 'hitze' || typ === 'frost') return 'Thermometer';
-  return 'AlertTriangle';
+  if (typ === "wind") return "Wind";
+  if (typ === "regen") return "CloudRain";
+  if (typ === "gewitter") return "Zap";
+  if (typ === "schnee") return "Snowflake";
+  if (typ === "hitze" || typ === "frost") return "Thermometer";
+  return "AlertTriangle";
 }
 
 function warningDescription(w: any): string {
-  if (w.typ === 'gewitter') {
+  if (w.typ === "gewitter") {
     return `Gewitter-Score ${w.score ?? 0}/100, CAPE bis ${w.cape_max ?? 0} J/kg. Achte auf Blitzschlag, Starkregen und kurzfristige Böen.`;
   }
-  if (w.typ === 'wind') return `Böen bis ${w.max_value ?? 0} km/h möglich. Lose Gegenstände sichern.`;
-  if (w.typ === 'regen') return `Bis ${w.max_1h ?? 0} mm in einer Stunde oder ${w.sum ?? 0} mm im Zeitraum möglich. Unterführungen und überflutete Bereiche meiden.`;
-  if (w.typ === 'schnee') return `Bis ${w.sum ?? 0} cm Schnee möglich. Plane längere Wegezeiten ein.`;
-  if (w.typ === 'hitze') return `Temperaturen bis ${w.max_value ?? 0} °C möglich. Risikogruppen schützen und genug trinken.`;
-  if (w.typ === 'frost') return `Temperaturen bis ${w.min_value ?? 0} °C möglich. Frostempfindliche Bereiche schützen.`;
-  if (w.typ === 'glätte') return 'Glätte durch Niederschlag bei niedrigen Temperaturen möglich. Besonders auf Brücken vorsichtig fahren.';
-  return 'Wetterrisiko im Vorhersagezeitraum möglich. Beobachte die Entwicklung aufmerksam.';
+  if (w.typ === "wind")
+    return `Böen bis ${w.max_value ?? 0} km/h möglich. Lose Gegenstände sichern.`;
+  if (w.typ === "regen")
+    return `Bis ${w.max_1h ?? 0} mm in einer Stunde oder ${w.sum ?? 0} mm im Zeitraum möglich. Unterführungen und überflutete Bereiche meiden.`;
+  if (w.typ === "schnee")
+    return `Bis ${w.sum ?? 0} cm Schnee möglich. Plane längere Wegezeiten ein.`;
+  if (w.typ === "hitze")
+    return `Temperaturen bis ${w.max_value ?? 0} °C möglich. Risikogruppen schützen und genug trinken.`;
+  if (w.typ === "frost")
+    return `Temperaturen bis ${w.min_value ?? 0} °C möglich. Frostempfindliche Bereiche schützen.`;
+  if (w.typ === "glätte")
+    return "Glätte durch Niederschlag bei niedrigen Temperaturen möglich. Besonders auf Brücken vorsichtig fahren.";
+  return "Wetterrisiko im Vorhersagezeitraum möglich. Beobachte die Entwicklung aufmerksam.";
 }
 
 function materializeWarnings(warnings: any[], aiWarnings: any[] = []) {
@@ -436,95 +479,122 @@ function materializeWarnings(warnings: any[], aiWarnings: any[] = []) {
   });
 }
 
-function fallbackResponse(warnings: any[], serverScore: number, level: string, color: string, convectiveContext: any, windowHours: number) {
+function fallbackResponse(
+  warnings: any[],
+  serverScore: number,
+  level: string,
+  color: string,
+  convectiveContext: any,
+  windowHours: number,
+) {
   const cape = convectiveContext?.cape_max_jkg ?? 0;
   const lpi = convectiveContext?.lpi_max_jkg ?? 0;
-  const begründung = serverScore > 0
-    ? `Der lokale Gewitter-Score liegt bei ${serverScore}/100. CAPE bis ${cape} J/kg${lpi > 0 ? ` und LPI bis ${lpi}` : ''} stützen die Einschätzung.`
-    : 'Die lokalen Gewitterparameter liegen aktuell unter der Warnschwelle.';
+  const begründung =
+    serverScore > 0
+      ? `Der lokale Gewitter-Score liegt bei ${serverScore}/100. CAPE bis ${cape} J/kg${lpi > 0 ? ` und LPI bis ${lpi}` : ""} stützen die Einschätzung.`
+      : "Die lokalen Gewitterparameter liegen aktuell unter der Warnschwelle.";
   return {
     gewitter_risiko_6h: {
       level,
       score: serverScore,
       begründung,
       zeitfenster: `nächste ${windowHours} h`,
-      konvektionstyp: serverScore >= 35 ? 'Multizellen möglich' : serverScore >= 20 ? 'Einzelzellen möglich' : 'keine relevante Konvektion',
+      konvektionstyp:
+        serverScore >= 35
+          ? "Multizellen möglich"
+          : serverScore >= 20
+            ? "Einzelzellen möglich"
+            : "keine relevante Konvektion",
       color,
     },
     warnungen_12h: materializeWarnings(warnings),
-    summary: warnings.length > 0
-      ? 'Es liegen lokal berechnete Wetterhinweise vor. Die KI-Formulierung war vorübergehend nicht verfügbar.'
-      : 'Aktuell liegen keine lokal berechneten kritischen Risiken vor.',
-    disclaimer: 'Experimentelle KI-Auswertung. Keine amtliche Warnung. Bei akuter Gefahr DWD/ZAMG/MeteoSwiss/Protezione Civile konsultieren.',
+    summary:
+      warnings.length > 0
+        ? "Es liegen lokal berechnete Wetterhinweise vor. Die KI-Formulierung war vorübergehend nicht verfügbar."
+        : "Aktuell liegen keine lokal berechneten kritischen Risiken vor.",
+    disclaimer:
+      "Experimentelle KI-Auswertung. Keine amtliche Warnung. Bei akuter Gefahr DWD/ZAMG/MeteoSwiss/Protezione Civile konsultieren.",
   };
 }
 
 export default async function handler(req: any, res: any) {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-  if (req.method === 'OPTIONS') return res.status(200).end();
-  if (req.method !== 'POST') return errorResponse(res, 405, 'BAD_REQUEST', 'Method not allowed');
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+  if (req.method === "OPTIONS") return res.status(200).end();
+  if (req.method !== "POST") return errorResponse(res, 405, "BAD_REQUEST", "Method not allowed");
 
   const { weatherData, location, windowHours = 48, thunderstormScore } = req.body ?? {};
   const officialWarnings: any[] = req.body?.officialWarnings ?? [];
   const nowcast: any = req.body?.nowcast ?? null;
-  if (!weatherData || !location) return errorResponse(res, 400, 'BAD_REQUEST', 'Missing weatherData or location');
+  if (!weatherData || !location)
+    return errorResponse(res, 400, "BAD_REQUEST", "Missing weatherData or location");
 
-  const locLat = typeof location.latitude === 'number' ? location.latitude : location.lat;
-  const locLon = typeof location.longitude === 'number' ? location.longitude : location.lon;
+  const locLat = typeof location.latitude === "number" ? location.latitude : location.lat;
+  const locLon = typeof location.longitude === "number" ? location.longitude : location.lon;
   const dataLat = weatherData?.latitude;
   const dataLon = weatherData?.longitude;
 
-  if (typeof locLat !== 'number' || typeof locLon !== 'number') {
-    return errorResponse(res, 400, 'BAD_REQUEST', 'location missing latitude/longitude');
+  if (typeof locLat !== "number" || typeof locLon !== "number") {
+    return errorResponse(res, 400, "BAD_REQUEST", "location missing latitude/longitude");
   }
-  if (typeof dataLat === 'number' && typeof dataLon === 'number') {
+  if (typeof dataLat === "number" && typeof dataLon === "number") {
     if (Math.abs(dataLat - locLat) > 1.0 || Math.abs(dataLon - locLon) > 1.0) {
-      return errorResponse(res, 400, 'BAD_REQUEST', 'location and weatherData mismatch',
-        `location ${locLat},${locLon} vs data ${dataLat},${dataLon}`);
+      return errorResponse(
+        res,
+        400,
+        "BAD_REQUEST",
+        "location and weatherData mismatch",
+        `location ${locLat},${locLon} vs data ${dataLat},${dataLon}`,
+      );
     }
   }
 
   // Single Source of Truth: lokaler useThunderstormRisk-Score vom Client.
   // Fallback auf serverseitige Berechnung, falls kein Wert übergeben wurde.
-  const clientScore = typeof thunderstormScore === 'number' && Number.isFinite(thunderstormScore)
-    ? Math.max(0, Math.min(100, Math.round(thunderstormScore)))
-    : null;
+  const clientScore =
+    typeof thunderstormScore === "number" && Number.isFinite(thunderstormScore)
+      ? Math.max(0, Math.min(100, Math.round(thunderstormScore)))
+      : null;
   const serverScore: number = clientScore ?? computeServerStormScore(weatherData, 6);
   const level = scoreLevelLabel(serverScore);
   const color = scoreToColor(serverScore);
 
-  const dLat = typeof dataLat === 'number' ? Math.round(dataLat * 10) : 'x';
-  const dLon = typeof dataLon === 'number' ? Math.round(dataLon * 10) : 'x';
+  const dLat = typeof dataLat === "number" ? Math.round(dataLat * 10) : "x";
+  const dLon = typeof dataLon === "number" ? Math.round(dataLon * 10) : "x";
   const bucket = Math.floor(Date.now() / FRESH_MS);
   const cacheKey = `warnings_v4:${Math.round(locLat * 10)}_${Math.round(locLon * 10)}_${dLat}_${dLon}_s${serverScore}_${bucket}`;
-  const locLabel = `${location?.name ?? '?'} (${locLat},${locLon})`;
+  const locLabel = `${location?.name ?? "?"} (${locLat},${locLon})`;
 
   // Cache lookup
   const cached = await getCached<any>(cacheKey);
   if (cached && isFresh(cached.timestamp, FRESH_MS)) {
-    console.log('[risk-warnings] cache HIT (fresh)', { location: locLabel });
+    console.log("[risk-warnings] cache HIT (fresh)", { location: locLabel });
     return res.status(200).json({
       ...cached.data,
-      cached: true, fromCache: true, stale: false,
+      cached: true,
+      fromCache: true,
+      stale: false,
       cacheAge: ageMinutes(cached.timestamp),
     });
   }
-  console.log('[risk-warnings] cache MISS', { location: locLabel, hasStale: !!cached });
+  console.log("[risk-warnings] cache MISS", { location: locLabel, hasStale: !!cached });
 
   // Warnungen berechnen
   const warnings = detectWarnings(weatherData, windowHours, officialWarnings, serverScore);
   const convectiveContext = buildConvectiveContext(weatherData, windowHours);
 
-  console.log('[risk-warnings] INPUT', JSON.stringify({
-    location: location?.name,
-    cape_max: Math.max(...(weatherData.hourly.cape?.slice(0, 12) ?? [0])),
-    gust_max: Math.max(...(weatherData.hourly.wind_gusts_10m?.slice(0, 12) ?? [0])),
-    storm_score: serverScore,
-    storm_level: level,
-    warnings_detected: warnings.map((w: any) => `${w.typ}_${w.stufe}_${w.max_value}${w.unit}`),
-  }));
+  console.log(
+    "[risk-warnings] INPUT",
+    JSON.stringify({
+      location: location?.name,
+      cape_max: Math.max(...(weatherData.hourly.cape?.slice(0, 12) ?? [0])),
+      gust_max: Math.max(...(weatherData.hourly.wind_gusts_10m?.slice(0, 12) ?? [0])),
+      storm_score: serverScore,
+      storm_level: level,
+      warnings_detected: warnings.map((w: any) => `${w.typ}_${w.stufe}_${w.max_value}${w.unit}`),
+    }),
+  );
 
   // Rohe Stundenwerte für die nächsten windowHours an Claude weiterreichen
   const rawHourly = (() => {
@@ -532,8 +602,7 @@ export default async function handler(req: any, res: any) {
     if (!h?.time) return null;
     const idx = getIndices(h, windowHours);
     if (idx.length === 0) return null;
-    const pick = (arr: any[] | undefined) =>
-      arr ? idx.map((i: number) => arr[i] ?? null) : null;
+    const pick = (arr: any[] | undefined) => (arr ? idx.map((i: number) => arr[i] ?? null) : null);
     return {
       time: idx.map((i: number) => h.time[i]),
       temperature_2m: pick(h.temperature_2m),
@@ -559,39 +628,70 @@ export default async function handler(req: any, res: any) {
     `Rainbow Nowcast (Niederschlag nächste 2h): ${JSON.stringify(nowcast, null, 2)}`;
 
   const apiResult = await callAnthropicWithRetry({
-    model: 'claude-haiku-4-5-20251001',
+    model: "claude-haiku-4-5-20251001",
     max_tokens: 1500,
-    messages: [{
-      role: 'user',
-      content: [
-        { type: 'text', text: STATIC_PROMPT, cache_control: { type: 'ephemeral' } },
-        { type: 'text', text: dynamicPart },
-      ],
-    }],
+    messages: [
+      {
+        role: "user",
+        content: [
+          { type: "text", text: STATIC_PROMPT, cache_control: { type: "ephemeral" } },
+          { type: "text", text: dynamicPart },
+        ],
+      },
+    ],
   });
 
   if (!apiResult.ok) {
-    console.error('[risk-warnings] anthropic failed', {
-      location: locLabel, code: apiResult.code, status: apiResult.status,
+    console.error("[risk-warnings] anthropic failed", {
+      location: locLabel,
+      code: apiResult.code,
+      status: apiResult.status,
     });
-    const fallback = fallbackResponse(warnings, serverScore, level, color, convectiveContext, windowHours);
-    return res.status(200).json({ ...fallback, cached: false, fromCache: false, stale: false, fallback: true });
+    const fallback = fallbackResponse(
+      warnings,
+      serverScore,
+      level,
+      color,
+      convectiveContext,
+      windowHours,
+    );
+    return res
+      .status(200)
+      .json({ ...fallback, cached: false, fromCache: false, stale: false, fallback: true });
   }
 
-  const textContent: string = apiResult.data?.content?.[0]?.text ?? '';
+  const textContent: string = apiResult.data?.content?.[0]?.text ?? "";
   let parsed: any;
   try {
     parsed = extractJson(textContent);
   } catch (parseError) {
-    console.error('[risk-warnings] parse error', { location: locLabel, err: String(parseError) });
-    const fallback = fallbackResponse(warnings, serverScore, level, color, convectiveContext, windowHours);
-    return res.status(200).json({ ...fallback, cached: false, fromCache: false, stale: false, fallback: true });
+    console.error("[risk-warnings] parse error", { location: locLabel, err: String(parseError) });
+    const fallback = fallbackResponse(
+      warnings,
+      serverScore,
+      level,
+      color,
+      convectiveContext,
+      windowHours,
+    );
+    return res
+      .status(200)
+      .json({ ...fallback, cached: false, fromCache: false, stale: false, fallback: true });
   }
 
   const schemaErr = validateSchema(parsed);
   if (schemaErr) {
-    const fallback = fallbackResponse(warnings, serverScore, level, color, convectiveContext, windowHours);
-    return res.status(200).json({ ...fallback, cached: false, fromCache: false, stale: false, fallback: true });
+    const fallback = fallbackResponse(
+      warnings,
+      serverScore,
+      level,
+      color,
+      convectiveContext,
+      windowHours,
+    );
+    return res
+      .status(200)
+      .json({ ...fallback, cached: false, fromCache: false, stale: false, fallback: true });
   }
 
   // Server-Score erzwingen (Claude darf ihn nicht verändern)
@@ -601,6 +701,6 @@ export default async function handler(req: any, res: any) {
   parsed.warnungen_12h = materializeWarnings(warnings, parsed.warnungen_12h);
 
   await setCached(cacheKey, parsed, 24 * 60 * 60);
-  console.log('[risk-warnings] cache SET', { location: locLabel });
+  console.log("[risk-warnings] cache SET", { location: locLabel });
   return res.status(200).json({ ...parsed, cached: false, fromCache: false, stale: false });
 }
