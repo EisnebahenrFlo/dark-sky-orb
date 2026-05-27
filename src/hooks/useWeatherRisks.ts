@@ -72,7 +72,7 @@ function makeRisk(id: RiskId, rawScore: number, isEstimate: boolean): RiskItem {
 
 export function useWeatherRisks(): UseWeatherRisksResult {
   const { data, isLoading, error } = useWeather();
-  const thunderstorm = useThunderstormRisk();
+  const thunderstorm = useThunderstormRisk(48);
 
   const risks = useMemo<RiskItem[]>(() => {
     const hourly = data?.hourly;
