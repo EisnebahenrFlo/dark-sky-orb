@@ -3,6 +3,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Loader2, Map as MapIcon } from "lucide-react";
 import { useWeather } from "@/contexts/WeatherContext";
 import { RefreshButton } from "@/components/RefreshButton";
+import { LiveBadge } from "@/components/LiveBadge";
 const RadarMap = lazy(() => import("@/components/RadarMap"));
 const LightningMap = lazy(() => import("@/components/lightning/LightningMap"));
 
