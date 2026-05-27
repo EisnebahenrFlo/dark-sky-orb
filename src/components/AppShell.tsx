@@ -45,31 +45,45 @@ export function AppShell() {
   ).length;
   const aiWarningCount = riskData?.warnungen_12h?.length ?? 0;
 
-  // Analyse tab visual state
-  let analyseBg: string | null = null;
+  // Analyse tab visual state — semantic "warning level" we map to tokens below.
+  type WarnLevel = "none" | "ai" | "official" | "critical";
+  let warnLevel: WarnLevel = "none";
   let analyseIcon: LucideIcon = HelpCircle;
   let analyseBadge: number | null = null;
   if (officialWarningCount >= 2) {
-    analyseBg = "#ff3b30";
+    warnLevel = "critical";
     analyseIcon = AlertTriangle;
     analyseBadge = officialWarningCount;
   } else if (officialWarningCount === 1) {
-    analyseBg = "#ff9500";
+    warnLevel = "official";
     analyseIcon = AlertTriangle;
   } else if (aiWarningCount > 0) {
-    analyseBg = "#ff9500";
+    warnLevel = "ai";
     analyseIcon = AlertTriangle;
   }
+
+  // Warning styling — uses oklch tokens that adapt to light/dark via CSS variables.
+  const warnStyles: Record<Exclude<WarnLevel, "none">, { bg: string; fg: string; ring: string }> = {
+    critical: {
+      bg: "bg-red-500 dark:bg-red-500",
+      fg: "text-white",
+      ring: "ring-red-500/30",
+    },
+    official: {
+      bg: "bg-orange-500 dark:bg-orange-500",
+      fg: "text-white",
+      ring: "ring-orange-500/30",
+    },
+    ai: {
+      bg: "bg-amber-500/90 dark:bg-amber-500/90",
+      fg: "text-white",
+      ring: "ring-amber-500/30",
+    },
+  };
 
   const tabs: TabDef[] = STATIC_TABS.map((t) =>
     t.to === "/analyse" ? { ...t, icon: analyseIcon } : t,
   );
-
-  const tabBgFor = (to: TabDef["to"], active: boolean): string | undefined => {
-    if (to === "/analyse" && analyseBg) return analyseBg;
-    if (active) return undefined; // handled by primary bg class
-    return undefined;
-  };
 
   return (
     <div className="mx-auto min-h-screen w-full max-w-6xl px-4 pb-28 pt-6 transition-colors duration-200 sm:px-6 sm:pb-12 sm:pt-10">
