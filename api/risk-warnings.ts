@@ -3,13 +3,21 @@
 // Claude formuliert nur — er rechnet nicht.
 import { getCached, setCached, isFresh, isStaleButUsable, ageMinutes } from './_lib/cache.js';
 
-const THRESHOLDS = {
-  wind_gust_markant: 60, wind_gust_severe: 90, wind_gust_extreme: 118,
-  precip_1h_markant: 15, precip_1h_severe: 25, precip_1h_extreme: 40,
-  precip_12h_markant: 25, precip_12h_severe: 40, precip_12h_extreme: 70,
-  snow_12h_markant: 10, snow_12h_severe: 20,
-  glaze_temp: -1,
-};
+// Stufen-System (Score-basiert, NICHT abhängig von amtlichen Warnungen):
+//   20–34  → warnung  (yellow)
+//   35–54  → markant  (orange)
+//   55–74  → unwetter (red)
+//   75–100 → extrem   (purple)
+type Stufe = 'warnung' | 'markant' | 'unwetter' | 'extrem';
+
+function stufeColor(stufe: Stufe): 'yellow' | 'orange' | 'red' | 'purple' {
+  switch (stufe) {
+    case 'warnung': return 'yellow';
+    case 'markant': return 'orange';
+    case 'unwetter': return 'red';
+    case 'extrem': return 'purple';
+  }
+}
 
 type ErrorCode =
   | 'TIMEOUT'
