@@ -77,102 +77,110 @@ export function getHeroPalette(group: Group): HeroPalette {
   }
 }
 
-/* ---------------- canvas particle helpers ---------------- */
+/* ---------------- particle types ---------------- */
 
-interface Drop { x: number; y: number; len: number; speed: number; }
-interface Flake { x: number; y: number; r: number; vy: number; sway: number; phase: number; }
-interface Cloud { x: number; y: number; scale: number; speed: number; alpha: number; }
-interface Star { x: number; y: number; r: number; phase: number; }
+interface Drop { x: number; y: number; len: number; speed: number; depth: 0 | 1 | 2; }
+interface Flake { x: number; y: number; r: number; vy: number; sway: number; phase: number; depth: 0 | 1 | 2; }
+interface CloudPuff { x: number; y: number; rx: number; ry: number; speed: number; alpha: number; tint: number; }
+interface Star { x: number; y: number; r: number; phase: number; flickerAt: number; }
 interface Hail { x: number; y: number; r: number; vy: number; }
 
 function rand(min: number, max: number) { return min + Math.random() * (max - min); }
 
-function drawCloud(ctx: CanvasRenderingContext2D, x: number, y: number, scale: number, alpha: number, color: string) {
-  ctx.save();
-  ctx.translate(x, y);
-  ctx.scale(scale, scale);
-  ctx.globalAlpha = alpha;
-  ctx.fillStyle = color;
-  ctx.beginPath();
-  ctx.arc(0, 0, 28, Math.PI, 0);
-  ctx.arc(28, -8, 22, Math.PI, 0);
-  ctx.arc(56, 0, 26, Math.PI, 0);
-  ctx.lineTo(56, 18);
-  ctx.lineTo(-28, 18);
-  ctx.closePath();
-  ctx.fill();
-  ctx.restore();
-}
+/* ---------------- atmosphere helpers ---------------- */
 
-function drawSun(ctx: CanvasRenderingContext2D, x: number, y: number, r: number, pulse: number, rot: number) {
-  const grad = ctx.createRadialGradient(x, y, r * 0.2, x, y, r * 2.2);
-  grad.addColorStop(0, "rgba(255,240,180,0.9)");
-  grad.addColorStop(0.4, "rgba(255,200,80,0.35)");
-  grad.addColorStop(1, "rgba(255,160,40,0)");
+/** Soft radial cloud puff using a radial gradient. Light or dark variant. */
+function drawCloudPuff(
+  ctx: CanvasRenderingContext2D,
+  c: CloudPuff,
+  dark: boolean,
+) {
+  const grad = ctx.createRadialGradient(c.x, c.y, 0, c.x, c.y, c.rx);
+  if (dark) {
+    // tint = 0..1, lower = darker
+    const base = 30 + c.tint * 30;
+    grad.addColorStop(0, `rgba(${base},${base + 8},${base + 16},${c.alpha})`);
+    grad.addColorStop(0.55, `rgba(${base},${base + 8},${base + 16},${c.alpha * 0.45})`);
+    grad.addColorStop(1, `rgba(${base},${base + 8},${base + 16},0)`);
+  } else {
+    const base = 235 + c.tint * 15;
+    grad.addColorStop(0, `rgba(${base},${base + 4},255,${c.alpha})`);
+    grad.addColorStop(0.55, `rgba(${base},${base + 4},255,${c.alpha * 0.4})`);
+    grad.addColorStop(1, `rgba(${base},${base + 4},255,0)`);
+  }
   ctx.fillStyle = grad;
   ctx.beginPath();
-  ctx.arc(x, y, r * 2.2 * (1 + pulse * 0.1), 0, Math.PI * 2);
+  ctx.ellipse(c.x, c.y, c.rx, c.ry, 0, 0, Math.PI * 2);
   ctx.fill();
+}
 
-  ctx.save();
-  ctx.translate(x, y);
-  ctx.rotate(rot);
-  ctx.strokeStyle = "rgba(255,220,120,0.7)";
-  ctx.lineWidth = 3;
-  ctx.lineCap = "round";
-  for (let i = 0; i < 12; i++) {
-    ctx.beginPath();
-    const a = (i * Math.PI * 2) / 12;
-    const inner = r * 1.15;
-    const outer = r * 1.55 + Math.sin(pulse + i) * 4;
-    ctx.moveTo(Math.cos(a) * inner, Math.sin(a) * inner);
-    ctx.lineTo(Math.cos(a) * outer, Math.sin(a) * outer);
-    ctx.stroke();
+/** Top arc of warm/cool light - subtle ambient lift behind the icon area. */
+function drawLightArc(
+  ctx: CanvasRenderingContext2D,
+  w: number,
+  h: number,
+  warm: boolean,
+) {
+  const cx = w * 0.5;
+  const cy = -h * 0.3;
+  const r = Math.max(w, h) * 1.1;
+  const grad = ctx.createRadialGradient(cx, cy, r * 0.3, cx, cy, r);
+  if (warm) {
+    grad.addColorStop(0, "rgba(255,225,170,0.18)");
+    grad.addColorStop(0.6, "rgba(255,200,140,0.05)");
+    grad.addColorStop(1, "rgba(255,200,140,0)");
+  } else {
+    grad.addColorStop(0, "rgba(190,210,255,0.14)");
+    grad.addColorStop(0.6, "rgba(150,180,230,0.04)");
+    grad.addColorStop(1, "rgba(150,180,230,0)");
   }
-  ctx.restore();
-
-  const core = ctx.createRadialGradient(x - r * 0.25, y - r * 0.25, r * 0.1, x, y, r);
-  core.addColorStop(0, "#fffbe6");
-  core.addColorStop(1, "#f59e0b");
-  ctx.fillStyle = core;
-  ctx.beginPath();
-  ctx.arc(x, y, r, 0, Math.PI * 2);
-  ctx.fill();
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, w, h);
 }
 
-function drawMoon(ctx: CanvasRenderingContext2D, x: number, y: number, r: number, bgColor: string) {
-  ctx.fillStyle = "#f8fafc";
-  ctx.beginPath();
-  ctx.arc(x, y, r, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.fillStyle = bgColor;
-  ctx.beginPath();
-  ctx.arc(x + r * 0.35, y - r * 0.15, r * 0.92, 0, Math.PI * 2);
-  ctx.fill();
+/** Edge-only vignette for depth, never darkens the center where text sits. */
+function drawVignette(ctx: CanvasRenderingContext2D, w: number, h: number, strength: number) {
+  const grad = ctx.createRadialGradient(w * 0.5, h * 0.55, Math.min(w, h) * 0.45, w * 0.5, h * 0.55, Math.max(w, h) * 0.85);
+  grad.addColorStop(0, "rgba(0,0,0,0)");
+  grad.addColorStop(1, `rgba(0,0,0,${strength})`);
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, w, h);
 }
 
-function drawRainDrop(ctx: CanvasRenderingContext2D, d: Drop, angle: number, heavy = false) {
-  const grad = ctx.createLinearGradient(d.x, d.y, d.x + Math.sin(angle) * d.len, d.y + Math.cos(angle) * d.len);
-  grad.addColorStop(0, "rgba(160,210,255,0)");
-  grad.addColorStop(1, heavy ? "#3b82f6" : "#93c5fd");
+function drawRainDrop(ctx: CanvasRenderingContext2D, d: Drop, angle: number, heavy: boolean) {
+  const dx = Math.sin(angle) * d.len;
+  const dy = Math.cos(angle) * d.len;
+  const grad = ctx.createLinearGradient(d.x, d.y, d.x + dx, d.y + dy);
+  // Depth-based opacity & color
+  const tailAlpha = d.depth === 0 ? 0.35 : d.depth === 1 ? 0.7 : 0.95;
+  grad.addColorStop(0, "rgba(180,215,255,0)");
+  grad.addColorStop(1, heavy
+    ? `rgba(120,170,240,${tailAlpha})`
+    : `rgba(160,200,250,${tailAlpha})`);
   ctx.strokeStyle = grad;
-  ctx.lineWidth = heavy ? 1.6 : 1.1;
+  ctx.lineWidth = d.depth === 0 ? 0.7 : d.depth === 1 ? 1.1 : (heavy ? 1.8 : 1.4);
   ctx.lineCap = "round";
   ctx.beginPath();
   ctx.moveTo(d.x, d.y);
-  ctx.lineTo(d.x + Math.sin(angle) * d.len, d.y + Math.cos(angle) * d.len);
+  ctx.lineTo(d.x + dx, d.y + dy);
   ctx.stroke();
 }
 
 function drawFlake(ctx: CanvasRenderingContext2D, f: Flake) {
-  ctx.fillStyle = "rgba(255,255,255,0.95)";
+  // Soft bokeh-ish flake using radial gradient
+  const grad = ctx.createRadialGradient(f.x, f.y, 0, f.x, f.y, f.r * 2.2);
+  const alpha = f.depth === 0 ? 0.45 : f.depth === 1 ? 0.75 : 0.95;
+  grad.addColorStop(0, `rgba(255,255,255,${alpha})`);
+  grad.addColorStop(0.5, `rgba(235,245,255,${alpha * 0.5})`);
+  grad.addColorStop(1, "rgba(235,245,255,0)");
+  ctx.fillStyle = grad;
   ctx.beginPath();
-  ctx.arc(f.x, f.y, f.r, 0, Math.PI * 2);
+  ctx.arc(f.x, f.y, f.r * 2.2, 0, Math.PI * 2);
   ctx.fill();
 }
 
 function drawIceCrystal(ctx: CanvasRenderingContext2D, x: number, y: number, r: number) {
-  ctx.strokeStyle = "rgba(186,230,253,0.9)";
+  ctx.strokeStyle = "rgba(186,230,253,0.85)";
   ctx.lineWidth = 1;
   ctx.beginPath();
   for (let i = 0; i < 3; i++) {
@@ -181,6 +189,29 @@ function drawIceCrystal(ctx: CanvasRenderingContext2D, x: number, y: number, r: 
     ctx.lineTo(x + Math.cos(a) * r, y + Math.sin(a) * r);
   }
   ctx.stroke();
+}
+
+/** Star with soft halo for bokeh depth. */
+function drawStar(ctx: CanvasRenderingContext2D, s: Star, t: number) {
+  const tw = 0.5 + 0.5 * Math.sin(t * 0.04 + s.phase);
+  // occasional flicker (brief brighten)
+  const flicker = Math.abs((t % 600) - s.flickerAt) < 4 ? 0.5 : 0;
+  const alpha = 0.35 + tw * 0.5 + flicker;
+
+  // halo
+  const halo = ctx.createRadialGradient(s.x, s.y, 0, s.x, s.y, s.r * 4);
+  halo.addColorStop(0, `rgba(255,255,255,${alpha * 0.35})`);
+  halo.addColorStop(1, "rgba(255,255,255,0)");
+  ctx.fillStyle = halo;
+  ctx.beginPath();
+  ctx.arc(s.x, s.y, s.r * 4, 0, Math.PI * 2);
+  ctx.fill();
+
+  // core
+  ctx.fillStyle = `rgba(255,255,255,${Math.min(1, alpha + 0.2)})`;
+  ctx.beginPath();
+  ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+  ctx.fill();
 }
 
 /* ---------------- main component ---------------- */
@@ -195,8 +226,134 @@ export function WeatherHeroCanvas({ weatherCode, isDay }: WeatherHeroCanvasProps
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
+    const reduced = typeof window !== "undefined"
+      && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+
     let w = 0, h = 0;
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
+
+    let drops: Drop[] = [];
+    let flakes: Flake[] = [];
+    let clouds: CloudPuff[] = [];
+    let stars: Star[] = [];
+    let hail: Hail[] = [];
+    let fogShift = 0;
+    let flashTimer = 0;
+    let nextFlash = 60 + Math.random() * 120;
+    let boltPath: { x: number; y: number }[] = [];
+
+    const buildBolt = () => {
+      const path: { x: number; y: number }[] = [];
+      let x = w * (0.35 + Math.random() * 0.3);
+      let y = h * 0.05;
+      path.push({ x, y });
+      while (y < h * 0.9) {
+        y += rand(h * 0.08, h * 0.18);
+        x += rand(-w * 0.08, w * 0.08);
+        path.push({ x, y });
+      }
+      return path;
+    };
+
+    const init = () => {
+      drops = []; flakes = []; clouds = []; stars = []; hail = [];
+
+      const cloudPuffCount =
+        group === "PARTLY_CLOUDY" ? 6 :
+        group === "CLOUDY" || group === "CLOUDY_NIGHT" ? 10 :
+        group === "FOG" || group === "FOG_ICE" ? 8 :
+        group === "SHOWER" || group === "SHOWER_SNOW" ? 7 :
+        group === "THUNDER" || group === "THUNDER_HAIL" ? 10 :
+        group === "RAIN" || group === "HEAVY_RAIN" || group === "DRIZZLE" ||
+        group === "FREEZING_DRIZZLE" || group === "FREEZING_RAIN" ||
+        group === "SNOW" || group === "SNOW_HEAVY" || group === "SNOW_GRAINS" ? 8 : 0;
+
+      for (let i = 0; i < cloudPuffCount; i++) {
+        const baseY = group === "FOG" || group === "FOG_ICE"
+          ? rand(h * 0.3, h * 0.75)
+          : rand(h * 0.05, h * 0.45);
+        const rx = rand(80, 180);
+        clouds.push({
+          x: rand(-rx, w + rx),
+          y: baseY,
+          rx,
+          ry: rx * rand(0.45, 0.65),
+          speed: rand(0.04, 0.22),
+          alpha: rand(0.35, 0.7),
+          tint: Math.random(),
+        });
+      }
+
+      const dropCount =
+        group === "DRIZZLE" ? 36 :
+        group === "FREEZING_DRIZZLE" ? 26 :
+        group === "RAIN" ? 55 :
+        group === "HEAVY_RAIN" ? 80 :
+        group === "FREEZING_RAIN" ? 40 :
+        group === "SHOWER" ? 36 :
+        group === "THUNDER" || group === "THUNDER_HAIL" ? 60 :
+        group === "SNOW_GRAINS" ? 20 : 0;
+
+      for (let i = 0; i < dropCount; i++) {
+        const depth = (Math.random() < 0.4 ? 0 : Math.random() < 0.7 ? 1 : 2) as 0 | 1 | 2;
+        const lenBase = group === "HEAVY_RAIN" ? 22 : 16;
+        const speedMax = group === "HEAVY_RAIN" ? 14 : group === "DRIZZLE" ? 5 : 10;
+        const depthScale = depth === 0 ? 0.55 : depth === 1 ? 0.85 : 1.15;
+        drops.push({
+          x: rand(0, w),
+          y: rand(-h, h),
+          len: rand(6, lenBase) * depthScale,
+          speed: rand(4, speedMax) * depthScale,
+          depth,
+        });
+      }
+
+      const flakeCount =
+        group === "SNOW" ? 38 :
+        group === "SNOW_HEAVY" ? 70 :
+        group === "SNOW_GRAINS" ? 28 :
+        group === "SHOWER_SNOW" ? 34 :
+        group === "FREEZING_DRIZZLE" || group === "FREEZING_RAIN" ? 14 : 0;
+
+      for (let i = 0; i < flakeCount; i++) {
+        const depth = (Math.random() < 0.4 ? 0 : Math.random() < 0.75 ? 1 : 2) as 0 | 1 | 2;
+        const rMax = group === "SNOW_HEAVY" ? 3 : 2.2;
+        const depthScale = depth === 0 ? 0.6 : depth === 1 ? 0.95 : 1.3;
+        flakes.push({
+          x: rand(0, w),
+          y: rand(-h, h),
+          r: rand(0.9, rMax) * depthScale,
+          vy: rand(0.3, 1.3) * depthScale,
+          sway: rand(0.5, 1.5),
+          phase: rand(0, Math.PI * 2),
+          depth,
+        });
+      }
+
+      if (group === "THUNDER_HAIL") {
+        for (let i = 0; i < 20; i++) {
+          hail.push({
+            x: rand(0, w),
+            y: rand(-h, h),
+            r: rand(1.5, 2.6),
+            vy: rand(5, 9),
+          });
+        }
+      }
+
+      if (group === "NIGHT" || group === "CLOUDY_NIGHT") {
+        const starCount = group === "NIGHT" ? 70 : 32;
+        for (let i = 0; i < starCount; i++) {
+          stars.push({
+            x: rand(0, w),
+            y: rand(0, h * 0.75),
+            r: rand(0.4, 1.6),
+            phase: rand(0, Math.PI * 2),
+            flickerAt: rand(0, 600),
+          });
+        }
+      }
+    };
 
     const resize = () => {
       const rect = canvas.getBoundingClientRect();
@@ -208,176 +365,104 @@ export function WeatherHeroCanvas({ weatherCode, isDay }: WeatherHeroCanvasProps
       init();
     };
 
-    let drops: Drop[] = [];
-    let flakes: Flake[] = [];
-    let clouds: Cloud[] = [];
-    let stars: Star[] = [];
-    let hail: Hail[] = [];
-    let fogShift = 0;
-    let flashTimer = 0;
-    let nextFlash = 60 + Math.random() * 120;
-
-    const palette = getHeroPalette(group);
-    const bgColorBase = palette.background.match(/#[0-9a-fA-F]{6}/)?.[0] ?? "#1a2a3a";
-
-    const init = () => {
-      drops = []; flakes = []; clouds = []; stars = []; hail = [];
-
-      const cloudCount =
-        group === "PARTLY_CLOUDY" ? 2 :
-        group === "CLOUDY" || group === "CLOUDY_NIGHT" ? 4 :
-        group === "FOG" || group === "FOG_ICE" ? 3 :
-        group === "SHOWER" || group === "SHOWER_SNOW" ? 3 :
-        group === "THUNDER" || group === "THUNDER_HAIL" ? 4 :
-        group === "RAIN" || group === "HEAVY_RAIN" || group === "DRIZZLE" ||
-        group === "FREEZING_DRIZZLE" || group === "FREEZING_RAIN" ||
-        group === "SNOW" || group === "SNOW_HEAVY" || group === "SNOW_GRAINS" ? 3 : 0;
-
-      for (let i = 0; i < cloudCount; i++) {
-        clouds.push({
-          x: rand(-50, w),
-          y: rand(h * 0.05, h * 0.45),
-          scale: rand(0.5, 1.2),
-          speed: rand(0.05, 0.25),
-          alpha: rand(0.3, 0.75),
-        });
-      }
-
-      const dropCount =
-        group === "DRIZZLE" ? 30 :
-        group === "FREEZING_DRIZZLE" ? 22 :
-        group === "RAIN" ? 45 :
-        group === "HEAVY_RAIN" ? 65 :
-        group === "FREEZING_RAIN" ? 35 :
-        group === "SHOWER" ? 30 :
-        group === "THUNDER" || group === "THUNDER_HAIL" ? 50 :
-        group === "SNOW_GRAINS" ? 18 : 0;
-
-      for (let i = 0; i < dropCount; i++) {
-        drops.push({
-          x: rand(0, w),
-          y: rand(-h, h),
-          len: rand(8, group === "HEAVY_RAIN" ? 22 : 16),
-          speed: rand(6, group === "HEAVY_RAIN" ? 14 : group === "DRIZZLE" ? 5 : 10),
-        });
-      }
-
-      const flakeCount =
-        group === "SNOW" ? 35 :
-        group === "SNOW_HEAVY" ? 60 :
-        group === "SNOW_GRAINS" ? 25 :
-        group === "SHOWER_SNOW" ? 30 :
-        group === "FREEZING_DRIZZLE" || group === "FREEZING_RAIN" ? 12 : 0;
-
-      for (let i = 0; i < flakeCount; i++) {
-        flakes.push({
-          x: rand(0, w),
-          y: rand(-h, h),
-          r: rand(1.2, group === "SNOW_HEAVY" ? 3 : 2.2),
-          vy: rand(0.4, 1.4),
-          sway: rand(0.5, 1.5),
-          phase: rand(0, Math.PI * 2),
-        });
-      }
-
-      if (group === "THUNDER_HAIL") {
-        for (let i = 0; i < 18; i++) {
-          hail.push({
-            x: rand(0, w),
-            y: rand(-h, h),
-            r: rand(1.5, 2.5),
-            vy: rand(5, 9),
-          });
-        }
-      }
-
-      if (group === "NIGHT" || group === "CLOUDY_NIGHT") {
-        const starCount = group === "NIGHT" ? 60 : 30;
-        for (let i = 0; i < starCount; i++) {
-          stars.push({
-            x: rand(0, w),
-            y: rand(0, h * 0.7),
-            r: rand(0.4, 1.5),
-            phase: rand(0, Math.PI * 2),
-          });
-        }
-      }
-    };
-
     let raf = 0;
     let t = 0;
+    let visible = true;
 
     const ro = new ResizeObserver(resize);
     ro.observe(canvas);
+
+    const io = new IntersectionObserver(
+      (entries) => {
+        for (const e of entries) visible = e.isIntersecting;
+      },
+      { threshold: 0 },
+    );
+    io.observe(canvas);
+
+    const onVisibility = () => {
+      visible = !document.hidden;
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+
     resize();
 
+    const dark: boolean =
+      group === "CLOUDY" || group === "CLOUDY_NIGHT" || group === "HEAVY_RAIN" ||
+      group === "THUNDER" || group === "THUNDER_HAIL" || group === "SHOWER";
+    const isNightGroup: boolean = group === "NIGHT" || group === "CLOUDY_NIGHT";
+    const heavyVignette: boolean = dark || isNightGroup;
+
+    const warmArc: boolean = group === "SUNNY" || group === "PARTLY_CLOUDY";
+    const coolArc: boolean =
+      isNightGroup ||
+      group === "THUNDER" || group === "THUNDER_HAIL" ||
+      group === "HEAVY_RAIN" || group === "SHOWER";
+
+    const renderStaticFrame = () => {
+      ctx.clearRect(0, 0, w, h);
+      if (warmArc || coolArc) drawLightArc(ctx, w, h, warmArc);
+      for (const c of clouds) drawCloudPuff(ctx, c, dark);
+      if (group === "NIGHT" || group === "CLOUDY_NIGHT") {
+        for (const s of stars) drawStar(ctx, s, 0);
+      }
+      drawVignette(ctx, w, h, heavyVignette ? 0.32 : 0.18);
+    };
+
+    if (reduced) {
+      renderStaticFrame();
+      return () => {
+        ro.disconnect();
+        io.disconnect();
+        document.removeEventListener("visibilitychange", onVisibility);
+      };
+    }
+
     const render = () => {
+      raf = requestAnimationFrame(render);
+      if (!visible) return;
       t += 1;
       ctx.clearRect(0, 0, w, h);
 
-      // Night sky stars
+      // ambient top light arc
+      if (warmArc || coolArc) drawLightArc(ctx, w, h, warmArc);
+
+      // Night sky stars (background layer)
       if (group === "NIGHT" || group === "CLOUDY_NIGHT") {
-        for (const s of stars) {
-          const tw = 0.5 + 0.5 * Math.sin(t * 0.05 + s.phase);
-          ctx.fillStyle = `rgba(255,255,255,${0.3 + tw * 0.6})`;
-          ctx.beginPath();
-          ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
-          ctx.fill();
-        }
+        for (const s of stars) drawStar(ctx, s, t);
       }
 
-      // Sun
-      if (group === "SUNNY") {
-        const pulse = Math.sin(t * 0.04) * 0.5 + 0.5;
-        drawSun(ctx, w * 0.78, h * 0.35, Math.min(w, h) * 0.16, pulse, t * 0.005);
-      }
-      if (group === "PARTLY_CLOUDY") {
-        drawSun(ctx, w * 0.82, h * 0.28, Math.min(w, h) * 0.11, 0.3, t * 0.004);
-      }
-      if (group === "SHOWER" || group === "SHOWER_SNOW") {
-        drawSun(ctx, w * 0.85, h * 0.22, Math.min(w, h) * 0.08, 0.2, t * 0.004);
-      }
-
-      // Moon
-      if (group === "NIGHT") {
-        drawMoon(ctx, w * 0.8, h * 0.3, Math.min(w, h) * 0.11, bgColorBase);
-      }
-      if (group === "CLOUDY_NIGHT") {
-        drawMoon(ctx, w * 0.82, h * 0.25, Math.min(w, h) * 0.08, bgColorBase);
-      }
-
-      // Clouds
+      // Clouds (volumetric puffs)
       for (const c of clouds) {
         c.x += c.speed;
-        if (c.x - 80 > w) c.x = -80;
-        const dark = group === "CLOUDY" || group === "CLOUDY_NIGHT" || group === "HEAVY_RAIN" ||
-                     group === "THUNDER" || group === "THUNDER_HAIL" || group === "SHOWER";
-        drawCloud(ctx, c.x, c.y, c.scale, c.alpha, dark ? "#1e293b" : "#ffffff");
+        if (c.x - c.rx > w) c.x = -c.rx;
+        drawCloudPuff(ctx, c, dark);
       }
 
       // Fog bands
       if (group === "FOG" || group === "FOG_ICE") {
         fogShift += 0.3;
-        const baseColor = group === "FOG_ICE" ? "186,230,253" : "203,213,225";
-        for (let i = 0; i < 5; i++) {
-          const y = h * (0.3 + i * 0.12);
-          const offset = Math.sin((t + i * 40) * 0.01) * 20 + fogShift * (i % 2 ? -1 : 1);
+        const baseColor = group === "FOG_ICE" ? "186,230,253" : "215,225,240";
+        for (let i = 0; i < 6; i++) {
+          const y = h * (0.25 + i * 0.11);
+          const offset = Math.sin((t + i * 40) * 0.01) * 24 + fogShift * (i % 2 ? -1 : 1);
           const grad = ctx.createLinearGradient(0, y, w, y);
           grad.addColorStop(0, `rgba(${baseColor},0)`);
-          grad.addColorStop(0.5, `rgba(${baseColor},0.45)`);
+          grad.addColorStop(0.5, `rgba(${baseColor},0.4)`);
           grad.addColorStop(1, `rgba(${baseColor},0)`);
           ctx.fillStyle = grad;
-          ctx.fillRect(offset, y, w, 14);
+          ctx.fillRect(offset, y, w, 18);
         }
       }
 
-      // Rain drops
+      // Rain drops (parallax depths)
       const rainAngle =
         group === "HEAVY_RAIN" || group === "THUNDER" || group === "THUNDER_HAIL" ? 0.25 :
         group === "DRIZZLE" || group === "FREEZING_DRIZZLE" ? 0.1 : 0.18;
+      const heavy = group === "HEAVY_RAIN" || group === "THUNDER" || group === "THUNDER_HAIL";
       if (drops.length) {
         for (const d of drops) {
-          drawRainDrop(ctx, d, rainAngle, group === "HEAVY_RAIN" || group === "THUNDER" || group === "THUNDER_HAIL");
+          drawRainDrop(ctx, d, rainAngle, heavy);
           d.y += d.speed;
           d.x += Math.sin(rainAngle) * d.speed * 0.5;
           if (d.y > h) {
@@ -387,7 +472,7 @@ export function WeatherHeroCanvas({ weatherCode, isDay }: WeatherHeroCanvasProps
         }
       }
 
-      // Snow
+      // Snow (parallax depths)
       for (const f of flakes) {
         f.y += f.vy;
         f.x += Math.sin(t * 0.02 + f.phase) * f.sway * 0.3;
@@ -398,7 +483,7 @@ export function WeatherHeroCanvas({ weatherCode, isDay }: WeatherHeroCanvasProps
         drawFlake(ctx, f);
       }
 
-      // Ice crystals for freezing variants
+      // Ice crystals
       if (group === "FREEZING_DRIZZLE" || group === "FREEZING_RAIN" || group === "FOG_ICE") {
         for (let i = 0; i < 6; i++) {
           drawIceCrystal(ctx, (t * 0.4 + i * 80) % (w + 40) - 20, h * 0.5 + Math.sin(i + t * 0.02) * 30, 4);
@@ -409,8 +494,8 @@ export function WeatherHeroCanvas({ weatherCode, isDay }: WeatherHeroCanvasProps
       for (const h0 of hail) {
         h0.y += h0.vy;
         if (h0.y > h) { h0.y = -10; h0.x = rand(0, w); }
-        ctx.fillStyle = "rgba(199,210,254,0.95)";
-        ctx.strokeStyle = "#4338ca";
+        ctx.fillStyle = "rgba(220,228,255,0.95)";
+        ctx.strokeStyle = "rgba(80,90,160,0.8)";
         ctx.lineWidth = 1;
         ctx.beginPath();
         ctx.arc(h0.x, h0.y, h0.r, 0, Math.PI * 2);
@@ -418,35 +503,47 @@ export function WeatherHeroCanvas({ weatherCode, isDay }: WeatherHeroCanvasProps
         ctx.stroke();
       }
 
-      // Lightning flash
+      // Lightning: local glow around bolt instead of full-screen flash
       if (group === "THUNDER" || group === "THUNDER_HAIL") {
         flashTimer++;
         if (flashTimer > nextFlash) {
           const phase = flashTimer - nextFlash;
-          if (phase < 8) {
-            ctx.fillStyle = `rgba(255,255,240,${0.7 - phase * 0.08})`;
+          if (phase === 1 || boltPath.length === 0) boltPath = buildBolt();
+          if (phase < 10) {
+            const fade = 1 - phase / 10;
+            // local warm glow ellipse along bolt
+            const midX = boltPath[Math.floor(boltPath.length / 2)]?.x ?? w * 0.5;
+            const glow = ctx.createRadialGradient(midX, h * 0.45, 0, midX, h * 0.45, Math.max(w, h) * 0.55);
+            glow.addColorStop(0, `rgba(255,245,210,${0.45 * fade})`);
+            glow.addColorStop(0.4, `rgba(255,230,170,${0.18 * fade})`);
+            glow.addColorStop(1, "rgba(255,220,150,0)");
+            ctx.fillStyle = glow;
             ctx.fillRect(0, 0, w, h);
+
             // bolt
             ctx.strokeStyle = "#fffbe6";
-            ctx.lineWidth = group === "THUNDER_HAIL" ? 3 : 2;
+            ctx.lineWidth = group === "THUNDER_HAIL" ? 2.6 : 2;
             ctx.shadowColor = "#fde047";
-            ctx.shadowBlur = 18;
+            ctx.shadowBlur = 22 * fade + 6;
+            ctx.lineCap = "round";
+            ctx.lineJoin = "round";
             ctx.beginPath();
-            const bx = w * 0.5;
-            ctx.moveTo(bx, h * 0.1);
-            ctx.lineTo(bx - 15, h * 0.4);
-            ctx.lineTo(bx + 8, h * 0.45);
-            ctx.lineTo(bx - 18, h * 0.85);
+            for (let i = 0; i < boltPath.length; i++) {
+              const p = boltPath[i];
+              if (i === 0) ctx.moveTo(p.x, p.y); else ctx.lineTo(p.x, p.y);
+            }
             ctx.stroke();
             ctx.shadowBlur = 0;
           } else {
             flashTimer = 0;
-            nextFlash = 80 + Math.random() * 200;
+            nextFlash = 80 + Math.random() * 220;
+            boltPath = [];
           }
         }
       }
 
-      raf = requestAnimationFrame(render);
+      // Edge vignette for depth & readability
+      drawVignette(ctx, w, h, heavyVignette ? 0.32 : 0.18);
     };
 
     raf = requestAnimationFrame(render);
@@ -454,6 +551,8 @@ export function WeatherHeroCanvas({ weatherCode, isDay }: WeatherHeroCanvasProps
     return () => {
       cancelAnimationFrame(raf);
       ro.disconnect();
+      io.disconnect();
+      document.removeEventListener("visibilitychange", onVisibility);
     };
   }, [group]);
 
