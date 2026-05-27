@@ -46,7 +46,56 @@ function getIndices(hourly: any, hours: number): number[] {
     .map((item: { t: number; i: number }) => item.i);
 }
 
-function detectWarnings(weatherData: any, windowHours: number, officialWarnings: any[] = []) {
+// ---- Server-seitige Score-Berechnung (kopiert aus src/hooks/useThunderstormRisk.ts) ----
+function scoreFromCAPE(cape: number | null | undefined): number {
+  if (cape == null || Number.isNaN(cape) || cape <= 0) return 0;
+  if (cape >= 2500) return 80;
+  if (cape >= 1500) return 65;
+  if (cape >= 1000) return 50;
+  if (cape >= 500) return 35;
+  if (cape >= 300) return 20;
+  return 0;
+}
+
+function computeHourScore(
+  capeVal: number | null | undefined,
+  lpiVal: number | null | undefined,
+  gustVal: number | null | undefined,
+): number {
+  const basis = scoreFromCAPE(capeVal);
+  let bonus = 0;
+  const lpi = typeof lpiVal === 'number' && !Number.isNaN(lpiVal) ? lpiVal : 0;
+  if (lpi > 5) bonus += 15;
+  else if (lpi > 0) bonus += 10;
+  const gust = typeof gustVal === 'number' && !Number.isNaN(gustVal) ? gustVal : 0;
+  if (gust > 50) bonus += 5;
+  return Math.min(100, basis + bonus);
+}
+
+// Peak-Score über die nächsten N Stunden ab jetzt
+function computeServerStormScore(weatherData: any, hours = 6): number {
+  const h = weatherData?.hourly;
+  if (!h?.time) return 0;
+  const nowMs = Date.now();
+  let peak = 0;
+  let counted = 0;
+  for (let i = 0; i < h.time.length && counted < hours; i++) {
+    const t = new Date(h.time[i]).getTime();
+    if (t < nowMs) continue;
+    const s = computeHourScore(h.cape?.[i], h.lightning_potential?.[i], h.wind_gusts_10m?.[i]);
+    if (s > peak) peak = s;
+    counted++;
+  }
+  return peak;
+}
+
+function stufeFromScore(score: number): Stufe {
+  if (score >= 75) return 'extrem';
+  if (score >= 55) return 'unwetter';
+  if (score >= 35) return 'markant';
+  return 'warnung';
+}
+
   const warnings: any[] = [];
   const hourly = weatherData.hourly;
   if (!hourly?.time) return warnings;
