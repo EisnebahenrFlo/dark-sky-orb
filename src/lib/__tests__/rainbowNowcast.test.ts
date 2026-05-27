@@ -60,14 +60,14 @@ describe("buildPoints", () => {
 
   it("filters by window, sorts, clamps and scales", () => {
     const items = [
-      mk(180, 1), // outside 120min window
+      mk(180, 1), // outside 120min window → dropped
       mk(30, 2),
       mk(0, 0.5),
-      mk(-5, 4), // 5min ago — included by -60s..end window
+      { ...mk(0, 4), timestampBegin: NOW - 30 }, // 30s ago — inside -60s..end window
     ];
     const pts = buildPoints(items, NOW, 120, VB_W, VB_H, 5);
     expect(pts).toHaveLength(3);
-    expect(pts.map((p) => p.minOffset)).toEqual([0, 0, 30]); // -5min clamped to 0
+    expect(pts.map((p) => p.minOffset)).toEqual([0, 0, 30]); // -30s clamped to 0
     expect(pts[2].x).toBeCloseTo((30 / 120) * VB_W);
     // rate 2 of ceiling 5 → y = 100 - 40 = 60
     expect(pts[2].y).toBeCloseTo(60);
