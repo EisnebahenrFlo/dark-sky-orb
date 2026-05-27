@@ -13,11 +13,12 @@ import {
   ResponsiveContainer,
   CartesianGrid,
 } from "recharts";
-import { Wind, Droplets, Thermometer, X } from "lucide-react";
-import { getWeatherIcon } from "@/components/WeatherIcon";
+import { Thermometer, CloudRain, Wind as WindIcon, Sun } from "lucide-react";
 import type { HourlyData, DailyData } from "@/lib/weather";
 
 const HOURS = 24;
+
+type Metric = "temp" | "precip" | "wind" | "uv";
 
 function fmtHour(iso: string) {
   return new Date(iso).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" });
@@ -36,8 +37,6 @@ interface Row {
   iso: string;
   temp: number;
   feels: number;
-  diffWarm: number | null;
-  diffCold: number | null;
   pop: number;
   precip: number;
   wind: number;
@@ -48,78 +47,61 @@ interface Row {
   isDay: number;
 }
 
-function InfoBar({ row, onClose }: { row: Row; onClose: () => void }) {
-  const WeatherIcon = getWeatherIcon(row.code, row.isDay);
-  return (
-    <div className="pointer-events-auto absolute left-1/2 top-2 z-20 -translate-x-1/2 rounded-full border border-border/40 bg-popover/95 px-3 py-1.5 shadow-xl backdrop-blur">
-      <div className="flex items-center gap-3 text-xs tabular-nums">
-        <WeatherIcon className="h-4 w-4" strokeWidth={1.5} />
-        <span className="font-medium">{row.time}</span>
-        <span className="inline-flex items-center gap-1">
-          <Thermometer className="h-3.5 w-3.5 opacity-70" />
-          {row.temp}° <span className="opacity-60">({row.feels}°)</span>
-        </span>
-        <span className="inline-flex items-center gap-1">
-          <Droplets className="h-3.5 w-3.5 opacity-70" />
-          {row.pop}%
-        </span>
-        <span className="inline-flex items-center gap-1">
-          <Wind className="h-3.5 w-3.5 opacity-70" />
-          {row.wind}/{row.gust}
-        </span>
-        <span className="opacity-70">UV {row.uv.toFixed(1)}</span>
-        <button
-          onClick={onClose}
-          className="ml-1 rounded-full p-0.5 hover:bg-muted"
-          aria-label="Schließen"
-        >
-          <X className="h-3.5 w-3.5" />
-        </button>
-      </div>
-    </div>
-  );
-}
+const Y_WIDTH = 38;
+const MARGIN = { top: 8, right: 12, left: 4, bottom: 4 };
 
-const Y_WIDTH = 44;
-const MARGIN = { top: 6, right: 10, left: 15, bottom: 0 };
-
-function UnifiedTooltip({ active, payload, label }: any) {
+function TooltipBox({ active, payload, label, metric }: any) {
   if (!active || !payload?.length) return null;
   const p = payload[0]?.payload as Row | undefined;
   if (!p) return null;
   return (
-    <div
-      className="pointer-events-none absolute right-2 top-2 z-10 rounded-lg border border-border/40 bg-popover/95 px-2 py-1.5 text-xs shadow-xl backdrop-blur dark:border-white/5"
-      style={{ maxWidth: 160 }}
-    >
-      <div className="mb-1 font-medium tabular-nums">{label}</div>
-      <div className="grid grid-cols-[auto_auto] gap-x-2 gap-y-0.5 tabular-nums">
-        <span className="text-muted-foreground">Temp</span>
-        <span>{p.temp}° <span className="text-muted-foreground">({p.feels}°)</span></span>
-        <span className="text-muted-foreground">Regen</span>
-        <span>{p.pop}% · {p.precip.toFixed(1)}mm</span>
-        <span className="text-muted-foreground">Wind</span>
-        <span>{p.wind}/{p.gust} km/h</span>
-        <span className="text-muted-foreground">UV</span>
-        <span>{p.uv.toFixed(1)}</span>
+    <div className="rounded-lg border border-border/60 bg-popover/95 px-2.5 py-1.5 text-xs shadow-xl backdrop-blur">
+      <div className="mb-1 font-medium tabular-nums text-foreground">{label}</div>
+      <div className="grid grid-cols-[auto_auto] gap-x-3 gap-y-0.5 tabular-nums">
+        {metric === "temp" && (
+          <>
+            <span className="text-muted-foreground">Temp</span>
+            <span className="text-foreground">{p.temp}°</span>
+            <span className="text-muted-foreground">Gefühlt</span>
+            <span className="text-foreground">{p.feels}°</span>
+          </>
+        )}
+        {metric === "precip" && (
+          <>
+            <span className="text-muted-foreground">Wahrsch.</span>
+            <span className="text-foreground">{p.pop}%</span>
+            <span className="text-muted-foreground">Menge</span>
+            <span className="text-foreground">{p.precip.toFixed(1)} mm</span>
+          </>
+        )}
+        {metric === "wind" && (
+          <>
+            <span className="text-muted-foreground">Wind</span>
+            <span className="text-foreground">{p.wind} km/h</span>
+            <span className="text-muted-foreground">Böen</span>
+            <span className="text-foreground">{p.gust} km/h</span>
+          </>
+        )}
+        {metric === "uv" && (
+          <>
+            <span className="text-muted-foreground">UV-Index</span>
+            <span className="text-foreground">{p.uv.toFixed(1)}</span>
+          </>
+        )}
       </div>
     </div>
   );
 }
 
-
 function Legend({ items }: { items: Array<{ kind: "dot" | "dash" | "bar"; color: string; label: string }> }) {
   return (
-    <div className="flex flex-wrap items-center gap-x-[10px] gap-y-1 px-1 pb-1 text-xs opacity-60">
+    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-muted-foreground">
       {items.map((it, i) => (
         <span key={i} className="inline-flex items-center gap-1.5">
           {it.kind === "dot" && <span className="inline-block h-1.5 w-1.5 rounded-full" style={{ background: it.color }} />}
-          {it.kind === "bar" && <span className="inline-block h-2 w-1.5 rounded-sm" style={{ background: it.color }} />}
+          {it.kind === "bar" && <span className="inline-block h-2.5 w-1.5 rounded-sm" style={{ background: it.color }} />}
           {it.kind === "dash" && (
-            <span
-              className="inline-block h-0 w-3"
-              style={{ borderTop: `1.5px dashed ${it.color}` }}
-            />
+            <span className="inline-block h-0 w-3.5" style={{ borderTop: `1.5px dashed ${it.color}` }} />
           )}
           <span>{it.label}</span>
         </span>
@@ -127,6 +109,13 @@ function Legend({ items }: { items: Array<{ kind: "dot" | "dash" | "bar"; color:
     </div>
   );
 }
+
+const METRICS: Array<{ id: Metric; label: string; short: string; icon: React.ComponentType<{ className?: string }>; color: string }> = [
+  { id: "temp",   label: "Temperatur", short: "Temp",   icon: Thermometer, color: "#F97316" },
+  { id: "precip", label: "Niederschlag", short: "Regen", icon: CloudRain,   color: "#3B82F6" },
+  { id: "wind",   label: "Wind & Böen", short: "Wind",  icon: WindIcon,    color: "#0EA5E9" },
+  { id: "uv",     label: "UV-Index",   short: "UV",    icon: Sun,         color: "#EAB308" },
+];
 
 export function HourlyForecastChart({
   hourly,
@@ -137,12 +126,8 @@ export function HourlyForecastChart({
   daily?: DailyData;
   currentTime?: string;
 }) {
-  const [activeRow, setActiveRow] = React.useState<Row | null>(null);
-  const handleChartClick = (data: any) => {
-    if (data?.activePayload?.[0]?.payload) {
-      setActiveRow(data.activePayload[0].payload as Row);
-    }
-  };
+  const [metric, setMetric] = React.useState<Metric>("temp");
+
   // Find starting index = current hour (or closest)
   const now = currentTime ? new Date(currentTime).getTime() : Date.now();
   let startIdx = 0;
@@ -158,7 +143,6 @@ export function HourlyForecastChart({
     const t = hourly.time[i];
     const temp = Math.round(hourly.temperature_2m[i]);
     const feels = Math.round(hourly.apparent_temperature?.[i] ?? hourly.temperature_2m[i]);
-    const delta = feels - temp;
     const wind = Math.round(hourly.wind_speed_10m[i] ?? 0);
     const gust = Math.round(hourly.wind_gusts_10m?.[i] ?? wind);
     rows.push({
@@ -166,8 +150,6 @@ export function HourlyForecastChart({
       iso: t,
       temp,
       feels,
-      diffWarm: delta > 3 ? delta : null,
-      diffCold: delta < -3 ? delta : null,
       pop: Math.round(hourly.precipitation_probability?.[i] ?? 0),
       precip: hourly.precipitation?.[i] ?? 0,
       wind,
@@ -180,7 +162,6 @@ export function HourlyForecastChart({
   }
 
   const nowLabel = rows[0]?.time;
-  const showPrecipChart = rows.some((r) => r.pop > 20 || r.precip > 0);
 
   // Sunrise/sunset within the window
   const startMs = rows[0] ? new Date(rows[0].iso).getTime() : 0;
@@ -207,196 +188,282 @@ export function HourlyForecastChart({
 
   const uvPeak = rows.reduce((m, r) => (r.uv > m ? r.uv : m), 0);
 
-  const accent = "var(--accent)";
+  // Theme-aware colors (works in light & dark via oklch tokens)
   const muted = "var(--muted-foreground)";
-  const grid = "oklch(1 0 0 / 0.04)";
-  const sep = "oklch(1 0 0 / 0.08)";
+  const grid = "color-mix(in oklab, var(--foreground) 10%, transparent)";
+  const axis = "color-mix(in oklab, var(--foreground) 55%, transparent)";
 
-  const hiddenX = <XAxis dataKey="time" hide tickLine={false} axisLine={false} />;
+  // Custom X-axis tick: hides if collides with "Jetzt"
+  const renderXTick = (props: any) => {
+    const { x, y, payload, index } = props;
+    if (payload.value === nowLabel) {
+      return (
+        <text x={x} y={y + 12} textAnchor="middle" fill="var(--primary)" fontSize={10} fontWeight={700}>
+          Jetzt
+        </text>
+      );
+    }
+    // Show every 4th hour
+    if (index % 4 !== 0) return <g />;
+    return (
+      <text x={x} y={y + 12} textAnchor="middle" fill={axis} fontSize={10}>
+        {payload.value}
+      </text>
+    );
+  };
+
+  const sharedX = (
+    <XAxis
+      dataKey="time"
+      tick={renderXTick}
+      tickLine={false}
+      axisLine={false}
+      interval={0}
+      height={22}
+    />
+  );
+
+  const sharedRefs = (
+    <>
+      {nowLabel && (
+        <ReferenceLine x={nowLabel} stroke="var(--primary)" strokeWidth={1.5} strokeDasharray="4 4" strokeOpacity={0.7} />
+      )}
+      {sunrise && (
+        <ReferenceLine
+          x={sunrise.at}
+          stroke={muted}
+          strokeDasharray="2 3"
+          strokeOpacity={0.45}
+          label={{ value: `☀ ${sunrise.label}`, position: "insideTopRight", fill: muted, fontSize: 9 }}
+        />
+      )}
+      {sunset && (
+        <ReferenceLine
+          x={sunset.at}
+          stroke={muted}
+          strokeDasharray="2 3"
+          strokeOpacity={0.45}
+          label={{ value: `☾ ${sunset.label}`, position: "insideTopRight", fill: muted, fontSize: 9 }}
+        />
+      )}
+    </>
+  );
+
+  const cursor = { stroke: "var(--primary)", strokeOpacity: 0.35, strokeWidth: 1 };
 
   return (
-    <div className="glass relative overflow-visible rounded-3xl">
-      {activeRow && <InfoBar row={activeRow} onClose={() => setActiveRow(null)} />}
-      {/* Panel 1: Temp & Gefühlt */}
-      <div className="px-3 pt-3">
-        <div className="px-1 pb-1 text-[10px] uppercase tracking-wider text-muted-foreground/70">
-          Temperatur & Gefühlt
+    <div className="glass overflow-hidden rounded-3xl">
+      {/* Header: title + metric tabs */}
+      <div className="space-y-2.5 p-3 sm:p-4">
+        <div className="flex items-center justify-between">
+          <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+            Tagesverlauf · nächste 24 h
+          </div>
+          {metric === "uv" && uvPeak > 0 && (
+            <span className="rounded-full bg-orange-100 px-2 py-0.5 text-[10px] font-medium text-orange-700 dark:bg-orange-500/20 dark:text-orange-300">
+              Peak {uvPeak.toFixed(1)}
+            </span>
+          )}
         </div>
-        <Legend items={[
-          { kind: "dot", color: "var(--accent)", label: "Temperatur" },
-          { kind: "dash", color: "var(--accent)", label: "Gefühlt" },
-        ]} />
-        <div className="h-[120px] w-full pt-2 pb-1 sm:h-[160px]">
-          <ResponsiveContainer width="100%" height="100%">
-            <ComposedChart data={rows} margin={MARGIN} onClick={handleChartClick}>
-              <CartesianGrid stroke={grid} vertical={false} />
-              {hiddenX}
-              <YAxis
-                width={Y_WIDTH}
-                tick={{ fill: muted, fontSize: 9 }}
-                tickLine={false}
-                axisLine={false}
-                unit="°"
-                domain={["dataMin - 1", "dataMax + 1"]}
-              />
-              <Tooltip content={<UnifiedTooltip />} cursor={false} wrapperStyle={{ pointerEvents: "none" }} position={{ x: 0, y: 0 }} />
-              <Area type="monotone" dataKey="diffCold" stroke="none" fill="#3B82F6" fillOpacity={0.18} isAnimationActive={false} connectNulls={false} baseValue={0} activeDot={false} />
-              <Area type="monotone" dataKey="diffWarm" stroke="none" fill="#EF4444" fillOpacity={0.18} isAnimationActive={false} connectNulls={false} baseValue={0} activeDot={false} />
-              <Area type="monotone" dataKey="temp" stroke={accent} strokeOpacity={0.6} strokeWidth={2} fill={accent} fillOpacity={0.08} dot={false} activeDot={{ r: 6, strokeWidth: 0 }} />
-              <Line type="monotone" dataKey="feels" stroke={accent} strokeOpacity={0.4} strokeDasharray="3 3" strokeWidth={1.5} dot={false} activeDot={false} />
-              {nowLabel && <ReferenceLine x={nowLabel} stroke={accent} strokeWidth={1.5} strokeDasharray="4 4" strokeOpacity={0.8} />}
-            </ComposedChart>
-          </ResponsiveContainer>
+
+        {/* Metric tabs */}
+        <div
+          role="tablist"
+          aria-label="Messwert auswählen"
+          className="flex w-full gap-1 rounded-xl border border-border/40 bg-muted/40 p-1"
+        >
+          {METRICS.map((m) => {
+            const active = metric === m.id;
+            const Icon = m.icon;
+            return (
+              <button
+                key={m.id}
+                role="tab"
+                aria-selected={active}
+                onClick={() => setMetric(m.id)}
+                className={`flex flex-1 items-center justify-center gap-1.5 rounded-lg px-2 py-1.5 text-xs font-medium transition-colors ${
+                  active
+                    ? "bg-background text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                <Icon className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">{m.label}</span>
+                <span className="sm:hidden">{m.short}</span>
+              </button>
+            );
+          })}
         </div>
       </div>
 
-      {showPrecipChart && <div style={{ height: 1, background: sep }} />}
+      {/* Legend per metric */}
+      <div className="px-4 pb-1">
+        {metric === "temp" && (
+          <Legend
+            items={[
+              { kind: "dot", color: "#F97316", label: "Temperatur" },
+              { kind: "dash", color: "#F97316", label: "Gefühlt" },
+            ]}
+          />
+        )}
+        {metric === "precip" && (
+          <Legend
+            items={[
+              { kind: "bar", color: "#60A5FA", label: "Wahrscheinlichkeit %" },
+              { kind: "bar", color: "#1D4ED8", label: "Menge mm" },
+            ]}
+          />
+        )}
+        {metric === "wind" && (
+          <Legend
+            items={[
+              { kind: "dot", color: "#0EA5E9", label: "Wind" },
+              { kind: "dash", color: "#0EA5E9", label: "Böen" },
+            ]}
+          />
+        )}
+        {metric === "uv" && (
+          <Legend
+            items={[
+              { kind: "bar", color: "#22C55E", label: "Gering" },
+              { kind: "bar", color: "#EAB308", label: "Mittel" },
+              { kind: "bar", color: "#F97316", label: "Hoch" },
+              { kind: "bar", color: "#EF4444", label: "Sehr hoch" },
+              { kind: "bar", color: "#A855F7", label: "Extrem" },
+            ]}
+          />
+        )}
+      </div>
 
-      {/* Panel 2: Niederschlag */}
-      {showPrecipChart && (
-      <div className="px-3 pt-2">
-        <div className="px-1 pb-1 text-[10px] uppercase tracking-wider text-muted-foreground/70">
-          Niederschlag
-        </div>
-        <Legend items={[
-          { kind: "bar", color: "#60A5FA", label: "Regenwahrsch. %" },
-          { kind: "bar", color: "#1D4ED8", label: "Regen mm" },
-        ]} />
-        <div className="h-[100px] w-full pt-2 pb-1 sm:h-[130px]">
-          <ResponsiveContainer width="100%" height="100%">
-            <ComposedChart data={rows} margin={MARGIN} onClick={handleChartClick}>
+      {/* Chart */}
+      <div className="h-[260px] w-full px-2 pb-3 pt-1 sm:h-[300px]">
+        <ResponsiveContainer width="100%" height="100%">
+          {metric === "temp" ? (
+            <ComposedChart data={rows} margin={MARGIN}>
               <CartesianGrid stroke={grid} vertical={false} />
-              {hiddenX}
+              {sharedX}
+              <YAxis
+                width={Y_WIDTH}
+                tick={{ fill: axis, fontSize: 10 }}
+                tickLine={false}
+                axisLine={false}
+                unit="°"
+                domain={["dataMin - 2", "dataMax + 2"]}
+              />
+              <Tooltip content={<TooltipBox metric={metric} />} cursor={cursor} />
+              <defs>
+                <linearGradient id="tempFill" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#F97316" stopOpacity={0.28} />
+                  <stop offset="100%" stopColor="#F97316" stopOpacity={0.04} />
+                </linearGradient>
+              </defs>
+              <Area
+                type="monotone"
+                dataKey="temp"
+                stroke="#F97316"
+                strokeWidth={2.25}
+                fill="url(#tempFill)"
+                dot={false}
+                activeDot={{ r: 5, strokeWidth: 0, fill: "#F97316" }}
+              />
+              <Line
+                type="monotone"
+                dataKey="feels"
+                stroke="#F97316"
+                strokeOpacity={0.75}
+                strokeDasharray="4 3"
+                strokeWidth={1.75}
+                dot={false}
+                activeDot={false}
+              />
+              {sharedRefs}
+            </ComposedChart>
+          ) : metric === "precip" ? (
+            <ComposedChart data={rows} margin={MARGIN}>
+              <CartesianGrid stroke={grid} vertical={false} />
+              {sharedX}
               <YAxis
                 yAxisId="pop"
                 width={Y_WIDTH}
                 domain={[0, 100]}
-                ticks={[0, 100]}
-                tick={{ fill: muted, fontSize: 9 }}
+                ticks={[0, 50, 100]}
+                tick={{ fill: axis, fontSize: 10 }}
                 tickLine={false}
                 axisLine={false}
                 unit="%"
               />
               <YAxis yAxisId="mm" orientation="right" hide domain={[0, (max: number) => Math.max(max, 2)]} />
-              <Tooltip content={<UnifiedTooltip />} cursor={false} wrapperStyle={{ pointerEvents: "none" }} position={{ x: 0, y: 0 }} />
-              <Bar yAxisId="pop" dataKey="pop" radius={[3, 3, 0, 0]} fill="#60A5FA" fillOpacity={0.7} isAnimationActive={false} />
-              <Bar yAxisId="mm" dataKey="precip" radius={[3, 3, 0, 0]} fill="#1D4ED8" fillOpacity={0.85} isAnimationActive={false} />
-              {nowLabel && <ReferenceLine yAxisId="pop" x={nowLabel} stroke={accent} strokeWidth={1.5} strokeDasharray="4 4" strokeOpacity={0.8} />}
+              <Tooltip content={<TooltipBox metric={metric} />} cursor={cursor} />
+              <Bar yAxisId="pop" dataKey="pop" radius={[3, 3, 0, 0]} fill="#60A5FA" fillOpacity={0.65} isAnimationActive={false} />
+              <Bar yAxisId="mm" dataKey="precip" radius={[3, 3, 0, 0]} fill="#1D4ED8" fillOpacity={0.9} isAnimationActive={false} />
+              {sharedRefs}
             </ComposedChart>
-          </ResponsiveContainer>
-        </div>
-      </div>
-      )}
-
-      <div style={{ height: 1, background: sep }} />
-
-
-
-      {/* Panel 3: Wind & Böen */}
-      <div className="px-3 pt-2">
-        <div className="px-1 pb-1 text-[11px] font-medium text-foreground/90">Wind & Böen</div>
-        <Legend items={[
-          { kind: "dot", color: "var(--accent)", label: "Windgeschw." },
-          { kind: "dash", color: "var(--accent)", label: "Böen" },
-        ]} />
-        <div className="h-[120px] w-full pt-2 pb-1 sm:h-[160px]">
-          <ResponsiveContainer width="100%" height="100%">
-            <ComposedChart data={rows} margin={MARGIN} onClick={handleChartClick}>
+          ) : metric === "wind" ? (
+            <ComposedChart data={rows} margin={MARGIN}>
               <CartesianGrid stroke={grid} vertical={false} />
-              {hiddenX}
+              {sharedX}
               <YAxis
                 width={Y_WIDTH}
-                tick={{ fill: muted, fontSize: 9 }}
+                tick={{ fill: axis, fontSize: 10 }}
                 tickLine={false}
                 axisLine={false}
                 domain={[0, (max: number) => Math.max(max, 30)]}
                 allowDecimals={false}
+                unit=""
               />
-              <Tooltip content={<UnifiedTooltip />} cursor={false} wrapperStyle={{ pointerEvents: "none" }} position={{ x: 0, y: 0 }} />
-              <Area type="monotone" dataKey="wind" stackId="band" stroke="none" fill="transparent" isAnimationActive={false} activeDot={false} />
-              <Area type="monotone" dataKey="gustBand" stackId="band" stroke="none" fill={accent} fillOpacity={0.06} isAnimationActive={false} activeDot={false} />
-              <ReferenceLine y={20} stroke={muted} strokeDasharray="2 3" strokeOpacity={0.4} label={{ value: "leichte Brise", position: "insideTopRight", fill: muted, fontSize: 8 }} />
-              <ReferenceLine y={50} stroke={muted} strokeDasharray="2 3" strokeOpacity={0.4} label={{ value: "starker Wind", position: "insideTopRight", fill: muted, fontSize: 8 }} />
-              <Line type="monotone" dataKey="gust" stroke={accent} strokeOpacity={0.6} strokeDasharray="4 3" strokeWidth={1} dot={false} activeDot={false} />
-              <Line type="monotone" dataKey="wind" stroke={accent} strokeWidth={2} dot={false} activeDot={{ r: 6, strokeWidth: 0 }} />
-              {nowLabel && <ReferenceLine x={nowLabel} stroke={accent} strokeWidth={1.5} strokeDasharray="4 4" strokeOpacity={0.8} />}
+              <Tooltip content={<TooltipBox metric={metric} />} cursor={cursor} />
+              <defs>
+                <linearGradient id="windFill" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#0EA5E9" stopOpacity={0.22} />
+                  <stop offset="100%" stopColor="#0EA5E9" stopOpacity={0.02} />
+                </linearGradient>
+              </defs>
+              <Area type="monotone" dataKey="wind" stackId="band" stroke="none" fill="transparent" />
+              <Area type="monotone" dataKey="gustBand" stackId="band" stroke="none" fill="#0EA5E9" fillOpacity={0.12} />
+              <ReferenceLine y={20} stroke={muted} strokeDasharray="2 3" strokeOpacity={0.35} />
+              <ReferenceLine y={50} stroke={muted} strokeDasharray="2 3" strokeOpacity={0.35} />
+              <Line
+                type="monotone"
+                dataKey="gust"
+                stroke="#0EA5E9"
+                strokeOpacity={0.75}
+                strokeDasharray="4 3"
+                strokeWidth={1.75}
+                dot={false}
+              />
+              <Area
+                type="monotone"
+                dataKey="wind"
+                stroke="#0EA5E9"
+                strokeWidth={2.25}
+                fill="url(#windFill)"
+                dot={false}
+                activeDot={{ r: 5, strokeWidth: 0, fill: "#0EA5E9" }}
+              />
+              {sharedRefs}
             </ComposedChart>
-          </ResponsiveContainer>
-        </div>
-      </div>
-
-      <div style={{ height: 1, background: sep }} />
-
-      {/* Panel 4: UV-Index */}
-      <div className="px-3 pb-3 pt-2">
-        <div className="flex items-center justify-between px-1 pb-1">
-          <div className="text-[11px] font-medium text-foreground/90">UV-Index</div>
-          {uvPeak > 0 && (
-            <span className="rounded-full bg-orange-100 px-2 py-0.5 text-xs text-orange-700 dark:bg-orange-900 dark:text-orange-300">
-              Peak: {uvPeak.toFixed(1)}
-            </span>
-          )}
-        </div>
-        <Legend items={[
-          { kind: "dot", color: "#22C55E", label: "Gering" },
-          { kind: "dot", color: "#EAB308", label: "Mittel" },
-          { kind: "dot", color: "#F97316", label: "Hoch" },
-          { kind: "dot", color: "#EF4444", label: "Sehr hoch" },
-          { kind: "dot", color: "#A855F7", label: "Extrem" },
-        ]} />
-        <div className="h-[110px] w-full pt-2 pb-1 sm:h-[140px]">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={rows} margin={{ ...MARGIN, top: 18, bottom: 4 }} onClick={handleChartClick}>
+          ) : (
+            <BarChart data={rows} margin={MARGIN}>
               <CartesianGrid stroke={grid} vertical={false} />
-              <XAxis
-                dataKey="time"
-                tick={(props: any) => {
-                  const { x, y, payload } = props;
-                  const isNow = payload.value === nowLabel;
-                  if (isNow) {
-                    return (
-                      <text x={x} y={y + 10} textAnchor="middle" fill={accent} fontSize={10} fontWeight={700}>
-                        Jetzt
-                      </text>
-                    );
-                  }
-                  return (
-                    <text x={x} y={y + 10} textAnchor="middle" fill={muted} fontSize={10}>
-                      {payload.value}
-                    </text>
-                  );
-                }}
-                tickLine={false}
-                axisLine={false}
-                interval={2}
-                minTickGap={12}
-              />
+              {sharedX}
               <YAxis
                 width={Y_WIDTH}
                 domain={[0, 12]}
                 ticks={[0, 3, 6, 9, 12]}
-                tick={{ fill: muted, fontSize: 9 }}
+                tick={{ fill: axis, fontSize: 10 }}
                 tickLine={false}
                 axisLine={false}
               />
-              <Tooltip content={<UnifiedTooltip />} cursor={false} wrapperStyle={{ pointerEvents: "none" }} position={{ x: 0, y: 0 }} />
+              <Tooltip content={<TooltipBox metric={metric} />} cursor={cursor} />
               <Bar dataKey="uv" radius={[3, 3, 0, 0]} isAnimationActive={false}>
                 {rows.map((r, i) => (
                   <Cell key={i} fill={r.uv > 0 ? uvColor(r.uv) : "transparent"} />
                 ))}
               </Bar>
-              {nowLabel && <ReferenceLine x={nowLabel} stroke={accent} strokeWidth={1.5} strokeDasharray="4 4" strokeOpacity={0.8} />}
-              {sunrise && (
-                <ReferenceLine x={sunrise.at} stroke={muted} strokeDasharray="2 3" strokeOpacity={0.5}
-                  label={{ value: `↑ ${sunrise.label}`, position: "top", fill: muted, fontSize: 9 }} />
-              )}
-              {sunset && (
-                <ReferenceLine x={sunset.at} stroke={muted} strokeDasharray="2 3" strokeOpacity={0.5}
-                  label={{ value: `↓ ${sunset.label}`, position: "top", fill: muted, fontSize: 9 }} />
-              )}
+              {sharedRefs}
             </BarChart>
-          </ResponsiveContainer>
-        </div>
+          )}
+        </ResponsiveContainer>
       </div>
     </div>
   );
