@@ -58,9 +58,12 @@ export function scoreFromLPI(lpi: number | null | undefined): number {
 
 export function scoreFromCAPE(cape: number | null | undefined): number {
   if (cape == null || Number.isNaN(cape) || cape <= 0) return 0;
-  if (cape <= 500) return Math.round((cape / 500) * 50);
-  if (cape >= 2000) return 100;
-  return Math.round(50 + ((cape - 500) / 1500) * 50);
+  // Basis-Score nach DWD-orientierten CAPE-Schwellen (gilt wenn LI fehlt)
+  if (cape >= 2500) return 75;
+  if (cape >= 1500) return 55;
+  if (cape >= 500) return 35;
+  if (cape >= 300) return 20;
+  return Math.round((cape / 300) * 20);
 }
 
 /**

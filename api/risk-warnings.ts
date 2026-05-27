@@ -218,6 +218,7 @@ DEINE AUFGABE FÜR Gewitter-Block:
 REGELN:
 - Amtliche Warnungen und Rainbow Nowcast nur als Realitäts-Check für summary und Gewitter-Begründung — NICHT für warnungen_12h.
 - Erfinde keine Werte, die nicht aus den Daten ableitbar sind.
+- Wenn lifted_index_min null, 999 oder fehlt: KEINE Erwähnung von LI in der Begründung — argumentiere dann nur mit CAPE, LPI, Shear und Rohdaten.
 
 OUTPUT (NUR JSON, nichts davor/danach):
 {
