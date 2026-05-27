@@ -406,7 +406,7 @@ export function WeatherHeroCanvas({ weatherCode, isDay }: WeatherHeroCanvasProps
       if (group === "NIGHT" || group === "CLOUDY_NIGHT") {
         for (const s of stars) drawStar(ctx, s, 0);
       }
-      drawVignette(ctx, w, h, dark || group === "NIGHT" || group === "CLOUDY_NIGHT" ? 0.32 : 0.18);
+      drawVignette(ctx, w, h, heavyVignette ? 0.32 : 0.18);
     };
 
     if (reduced) {
