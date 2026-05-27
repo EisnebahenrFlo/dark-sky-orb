@@ -21,7 +21,7 @@ export function RealisticWeatherIcon({ code, isDay, size = 24, className }: Weat
     if (code === 0) return <Moon {...props} />;
     if (code === 1) return <MoonLightCloud {...props} />;
     if (code === 2) return <CloudyNight {...props} />;
-    if (code === 3) return <Overcast {...props} />;
+    if (code === 3) return <NightOvercast {...props} />;
   }
 
   if (code === 0) return <Sun {...props} />;
