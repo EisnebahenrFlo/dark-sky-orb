@@ -1,12 +1,7 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { HourlyPage } from "@/pages/Hourly";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/hourly")({
-  head: () => ({
-    meta: [
-      { title: "Stündlich · MeteoFlo" },
-      { name: "description", content: "Stündliche Vorhersage für die nächsten 48 Stunden." },
-    ],
-  }),
-  component: HourlyPage,
+  beforeLoad: () => {
+    throw redirect({ to: "/vorhersage" });
+  },
 });

@@ -1,12 +1,7 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { NowcastPage } from "@/pages/Nowcast";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/nowcast")({
-  head: () => ({
-    meta: [
-      { title: "Nowcast · MeteoFlo" },
-      { name: "description", content: "Hochaufgelöste Niederschlagsvorhersage für die nächsten Stunden." },
-    ],
-  }),
-  component: NowcastPage,
+  beforeLoad: () => {
+    throw redirect({ to: "/", hash: "nowcast" });
+  },
 });

@@ -20,7 +20,9 @@ export function HeutePage() {
   return (
     <div className="space-y-8">
       <CurrentPage onRefresh={handleRefresh} />
-      <NowcastPage />
+      <section id="nowcast" className="scroll-mt-24">
+        <NowcastPage />
+      </section>
     </div>
   );
 }
