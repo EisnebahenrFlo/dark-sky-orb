@@ -378,7 +378,7 @@ export default async function handler(req: any, res: any) {
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return errorResponse(res, 405, 'BAD_REQUEST', 'Method not allowed');
 
-  const { weatherData, location, windowHours = 48 } = req.body ?? {};
+  const { weatherData, location, windowHours = 48, thunderstormScore } = req.body ?? {};
   const officialWarnings: any[] = req.body?.officialWarnings ?? [];
   const nowcast: any = req.body?.nowcast ?? null;
   if (!weatherData || !location) return errorResponse(res, 400, 'BAD_REQUEST', 'Missing weatherData or location');
@@ -398,8 +398,12 @@ export default async function handler(req: any, res: any) {
     }
   }
 
-  // Score serverseitig aus weatherData berechnen (Frontend-Wert wird ignoriert)
-  const serverScore: number = computeServerStormScore(weatherData, 6);
+  // Single Source of Truth: lokaler useThunderstormRisk-Score vom Client.
+  // Fallback auf serverseitige Berechnung, falls kein Wert übergeben wurde.
+  const clientScore = typeof thunderstormScore === 'number' && Number.isFinite(thunderstormScore)
+    ? Math.max(0, Math.min(100, Math.round(thunderstormScore)))
+    : null;
+  const serverScore: number = clientScore ?? computeServerStormScore(weatherData, 6);
   const level = scoreLevelLabel(serverScore);
   const color = scoreToColor(serverScore);
 
