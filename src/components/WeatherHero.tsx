@@ -4,6 +4,7 @@ import { Wind, Droplets, Gauge, CloudRain, Thermometer, Cloud, Navigation } from
 import type { CurrentWeather, GeoResult, MinutelyData } from "@/lib/weather";
 import { windDirectionLabel } from "@/lib/weather";
 import { getEffectiveWeather } from "@/lib/weatherDescription";
+import { summarizeNowcastPrecip } from "@/lib/nowcast";
 import { RelativeTime } from "./RelativeTime";
 import { WeatherHeroCanvas, getWeatherGroup, getHeroPalette } from "./WeatherHeroCanvas";
 
@@ -73,13 +74,11 @@ export function WeatherHero({ location, data, updatedAt, onRefresh }: Props) {
 }
 
 export function WeatherHeroStats({ data, minutely15, children }: { data: CurrentWeather; minutely15?: MinutelyData; children?: ReactNode }) {
-  const next2hValues = minutely15?.precipitation?.slice(0, 8);
-  const hasNowcast = Array.isArray(next2hValues) && next2hValues.length > 0;
-  const next2hSum = hasNowcast ? next2hValues!.reduce((a, b) => a + (b ?? 0), 0) : 0;
-  const precipValue = hasNowcast
-    ? (next2hSum < 0.1 ? "Kein Regen" : `${safeFixed(next2hSum, 1)} mm`)
+  const nowcast = summarizeNowcastPrecip(minutely15, 8);
+  const precipValue = nowcast.hasData
+    ? (nowcast.sum < 0.1 ? "Kein Regen" : `${safeFixed(nowcast.sum, 1)} mm`)
     : (data.precipitation < 0.1 ? "—" : `${safeFixed(data.precipitation, 1)} mm`);
-  const precipSub = hasNowcast ? "nächste 2h" : "aktuelle Stunde";
+  const precipSub = nowcast.hasData ? "nächste 2h" : "aktuelle Stunde";
   return (
     <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
       <Stat
