@@ -183,3 +183,67 @@ export function intensityLabel(rate: number): string {
   if (rate < 15) return "stark";
   return "sehr stark";
 }
+
+export type IntensityBucket = "none" | "drizzle" | "light" | "moderate" | "heavy" | "extreme";
+
+export function intensityBucket(rate: number): IntensityBucket {
+  if (!Number.isFinite(rate) || rate <= 0) return "none";
+  if (rate < 0.1) return "none";
+  if (rate < 0.5) return "drizzle";
+  if (rate < 2.5) return "light";
+  if (rate < 7.5) return "moderate";
+  if (rate < 15) return "heavy";
+  return "extreme";
+}
+
+export interface NowcastCell {
+  /** Minutes from now this cell starts (0, 10, 20, ...). */
+  minOffset: number;
+  /** Rate in mm/h; 0 when there is no data or no precip. */
+  rate: number;
+  /** Precip kind; "none" when no data or no precip. */
+  type: PrecipKind;
+  bucket: IntensityBucket;
+  /** True when no forecast item covered this slot. */
+  missing: boolean;
+}
+
+/**
+ * Build a regular grid of `slotMin`-wide cells covering `minutes` minutes
+ * starting now. Forecast items are slotted into the nearest start; gaps
+ * become `missing` cells so the strip width is always predictable.
+ */
+export function buildCells(
+  items: RainbowNowcastItem[] | null | undefined,
+  nowSec: number,
+  minutes: number,
+  slotMin = 10,
+): NowcastCell[] {
+  const count = Math.max(0, Math.floor(minutes / slotMin));
+  const cells: NowcastCell[] = Array.from({ length: count }, (_, i) => ({
+    minOffset: i * slotMin,
+    rate: 0,
+    type: "none",
+    bucket: "none",
+    missing: true,
+  }));
+  if (!Array.isArray(items)) return cells;
+
+  for (const f of items) {
+    if (!f || typeof f.timestampBegin !== "number") continue;
+    const offsetMin = (f.timestampBegin - nowSec) / 60;
+    if (offsetMin < -slotMin || offsetMin >= minutes) continue;
+    const idx = Math.max(0, Math.min(count - 1, Math.floor(offsetMin / slotMin)));
+    const rate = safeRate(f.precipRate);
+    const type = normalizeType(f.precipType);
+    cells[idx] = {
+      minOffset: idx * slotMin,
+      rate,
+      type,
+      bucket: intensityBucket(rate),
+      missing: false,
+    };
+  }
+  return cells;
+}
+
