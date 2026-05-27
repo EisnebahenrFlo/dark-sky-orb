@@ -398,10 +398,10 @@ export default async function handler(req: any, res: any) {
     }
   }
 
-  // Score vom Frontend übernehmen, Fallback auf 0
-  const frontendScore: number = typeof thunderstormScore === 'number' ? thunderstormScore : 0;
-  const level = scoreLevelLabel(frontendScore);
-  const color = scoreToColor(frontendScore);
+  // Score serverseitig aus weatherData berechnen (Frontend-Wert wird ignoriert)
+  const serverScore: number = computeServerStormScore(weatherData, 6);
+  const level = scoreLevelLabel(serverScore);
+  const color = scoreToColor(serverScore);
 
   const dLat = typeof dataLat === 'number' ? Math.round(dataLat * 10) : 'x';
   const dLon = typeof dataLon === 'number' ? Math.round(dataLon * 10) : 'x';
