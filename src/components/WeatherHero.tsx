@@ -105,7 +105,7 @@ export function WeatherHeroStats({ data, minutely15, children }: { data: Current
           </div>
         </div>
       </div>
-      <Stat icon={CloudRain} label="Niederschlag" value={data.precipitation < 0.1 ? "—" : `${safeFixed(data.precipitation, 1)} mm`} sub="aktuelle Stunde" />
+      <Stat icon={CloudRain} label="Niederschlag" value={precipValue} sub={precipSub} />
       <Stat icon={Cloud} label="Bewölkung" value={`${data.cloud_cover}%`} />
       <Stat icon={Droplets} label="Luftfeuchte" value={`${data.relative_humidity_2m}%`} />
       <Stat icon={Gauge} label="Luftdruck" value={`${Math.round(data.pressure_msl)} hPa`} />
