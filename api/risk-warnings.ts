@@ -521,8 +521,8 @@ export default async function handler(req: any, res: any) {
     return errorResponse(res, 500, 'INVALID_RESPONSE', 'KI-Antwort unvollständig', schemaErr);
   }
 
-  // Score aus Frontend erzwingen (Claude darf ihn nicht verändern)
-  parsed.gewitter_risiko_6h.score = frontendScore;
+  // Server-Score erzwingen (Claude darf ihn nicht verändern)
+  parsed.gewitter_risiko_6h.score = serverScore;
   parsed.gewitter_risiko_6h.level = level;
   parsed.gewitter_risiko_6h.color = color;
 
