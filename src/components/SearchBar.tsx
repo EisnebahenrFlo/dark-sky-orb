@@ -132,7 +132,7 @@ export function SearchBar({ onSelect, recent, onClearRecent }: Props) {
       )}
 
       {open && (showRecent || q.trim().length >= 2) && (
-        <div className="glass absolute z-20 mt-2 w-full overflow-hidden rounded-2xl shadow-2xl">
+        <div className="absolute z-20 mt-2 w-full overflow-hidden rounded-2xl border border-border bg-background shadow-2xl">
           {showRecent && (
             <div className="flex items-center justify-between px-5 py-2 text-xs uppercase tracking-wider text-muted-foreground">
               <span className="flex items-center gap-2"><Clock className="h-3 w-3" /> Zuletzt</span>
@@ -144,7 +144,7 @@ export function SearchBar({ onSelect, recent, onClearRecent }: Props) {
               <li key={`${r.id}-${r.latitude}`}>
                 <button
                   onClick={() => select(r)}
-                  className="flex w-full items-center gap-3 px-5 py-3 text-left transition hover:bg-white/5"
+                  className="flex w-full items-center gap-3 px-5 py-3 text-left text-foreground transition hover:bg-muted"
                 >
                   <MapPin className="h-4 w-4 shrink-0 text-primary" strokeWidth={1.5} />
                   <div className="min-w-0 flex-1">
