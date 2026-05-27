@@ -181,3 +181,60 @@ describe("intensityLabel", () => {
     expect(intensityLabel(20)).toBe("sehr stark");
   });
 });
+
+import { buildCells, intensityBucket } from "../rainbowNowcast";
+
+describe("intensityBucket", () => {
+  it("buckets rate ranges", () => {
+    expect(intensityBucket(0)).toBe("none");
+    expect(intensityBucket(0.05)).toBe("none");
+    expect(intensityBucket(0.3)).toBe("drizzle");
+    expect(intensityBucket(1)).toBe("light");
+    expect(intensityBucket(5)).toBe("moderate");
+    expect(intensityBucket(10)).toBe("heavy");
+    expect(intensityBucket(20)).toBe("extreme");
+  });
+  it("handles bad input", () => {
+    expect(intensityBucket(NaN)).toBe("none");
+    expect(intensityBucket(-1)).toBe("none");
+  });
+});
+
+describe("buildCells", () => {
+  it("creates N=minutes/slot cells with missing=true by default", () => {
+    const cells = buildCells([], NOW, 120, 10);
+    expect(cells).toHaveLength(12);
+    expect(cells.every((c) => c.missing && c.bucket === "none")).toBe(true);
+    expect(cells.map((c) => c.minOffset)).toEqual([0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110]);
+  });
+
+  it("fills cells from forecast items", () => {
+    const items = [mk(0, 0.3), mk(20, 1.2), mk(50, 0)];
+    const cells = buildCells(items, NOW, 60, 10);
+    expect(cells).toHaveLength(6);
+    expect(cells[0]).toMatchObject({ rate: 0.3, type: "rain", bucket: "drizzle", missing: false });
+    expect(cells[1].missing).toBe(true);
+    expect(cells[2]).toMatchObject({ rate: 1.2, bucket: "light", missing: false });
+    expect(cells[5]).toMatchObject({ rate: 0, bucket: "none", missing: false });
+  });
+
+  it("ignores items outside the window", () => {
+    const items = [mk(-60, 5), mk(180, 5), mk(30, 1)];
+    const cells = buildCells(items, NOW, 60, 10);
+    const filled = cells.filter((c) => !c.missing);
+    expect(filled).toHaveLength(1);
+    expect(filled[0].minOffset).toBe(30);
+  });
+
+  it("clamps slightly-in-the-past items (within one slot) into cell 0", () => {
+    const items = [{ ...mk(0, 2), timestampBegin: NOW - 60 }]; // 1 min ago
+    const cells = buildCells(items, NOW, 60, 10);
+    expect(cells[0].rate).toBe(2);
+    expect(cells[0].missing).toBe(false);
+  });
+
+  it("guards null/missing input", () => {
+    expect(buildCells(null, NOW, 60, 10)).toHaveLength(6);
+    expect(buildCells(undefined, NOW, 60, 10).every((c) => c.missing)).toBe(true);
+  });
+});
