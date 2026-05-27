@@ -6,6 +6,7 @@ import "leaflet/dist/leaflet.css";
 import iconUrl from "leaflet/dist/images/marker-icon.png";
 import iconRetinaUrl from "leaflet/dist/images/marker-icon-2x.png";
 import shadowUrl from "leaflet/dist/images/marker-shadow.png";
+import { Locate, Plus, Minus } from "lucide-react";
 
 import { useWeather } from "@/contexts/WeatherContext";
 import { useTheme } from "@/hooks/useTheme";
@@ -41,6 +42,44 @@ function InvalidateOnRefresh({ refreshKey }: { refreshKey: number }) {
     map.invalidateSize();
   }, [refreshKey, map]);
   return null;
+}
+
+function MapControls({
+  lat,
+  lon,
+}: {
+  lat: number;
+  lon: number;
+}) {
+  const map = useMap();
+  return (
+    <div className="absolute right-3 top-3 z-[400] flex flex-col gap-1.5">
+      <div className="flex flex-col overflow-hidden rounded-2xl bg-background/90 shadow-sm ring-1 ring-border/60 backdrop-blur">
+        <button
+          onClick={() => map.zoomIn()}
+          aria-label="Vergrößern"
+          className="grid h-9 w-9 place-items-center text-foreground transition-colors hover:bg-muted/60"
+        >
+          <Plus className="h-4 w-4" strokeWidth={2} />
+        </button>
+        <div className="h-px bg-border/60" />
+        <button
+          onClick={() => map.zoomOut()}
+          aria-label="Verkleinern"
+          className="grid h-9 w-9 place-items-center text-foreground transition-colors hover:bg-muted/60"
+        >
+          <Minus className="h-4 w-4" strokeWidth={2} />
+        </button>
+      </div>
+      <button
+        onClick={() => map.flyTo([lat, lon], 9, { duration: 0.8 })}
+        aria-label="Auf Standort zentrieren"
+        className="grid h-9 w-9 place-items-center rounded-2xl bg-background/90 text-foreground shadow-sm ring-1 ring-border/60 backdrop-blur transition-colors hover:bg-muted/60"
+      >
+        <Locate className="h-4 w-4 text-primary" strokeWidth={2} />
+      </button>
+    </div>
+  );
 }
 
 const FRAME_MS_FAST = 400;
@@ -102,7 +141,7 @@ export default function RadarMap({ refreshKey = 0 }: { refreshKey?: number }) {
     <div>
       <div className="glass relative overflow-hidden rounded-3xl">
         {isDev && (
-          <div className="pointer-events-none absolute right-3 top-3 z-[500] rounded-full bg-yellow-400/95 px-2.5 py-1 text-[10px] font-medium uppercase tracking-wider text-yellow-950 shadow-md">
+          <div className="pointer-events-none absolute left-3 top-3 z-[500] rounded-full bg-yellow-400/95 px-2.5 py-1 text-[10px] font-medium uppercase tracking-wider text-yellow-950 shadow-md">
             DEV: Rainbow.ai Test
           </div>
         )}
@@ -112,6 +151,7 @@ export default function RadarMap({ refreshKey = 0 }: { refreshKey?: number }) {
             zoom={9}
             maxZoom={12}
             scrollWheelZoom
+            zoomControl={false}
             style={{ height: "100%", width: "100%", background: "var(--muted)" }}
           >
             <TileLayer key={resolved} url={baseTile} attribution={baseAttr} maxZoom={12} />
@@ -128,6 +168,7 @@ export default function RadarMap({ refreshKey = 0 }: { refreshKey?: number }) {
             <Marker position={[location.latitude, location.longitude]} />
             <Recenter lat={location.latitude} lon={location.longitude} />
             <InvalidateOnRefresh refreshKey={refreshKey} />
+            <MapControls lat={location.latitude} lon={location.longitude} />
           </MapContainer>
         </div>
       </div>

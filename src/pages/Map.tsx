@@ -1,6 +1,6 @@
 import { lazy, Suspense, useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Loader2, Map as MapIcon } from "lucide-react";
+import { Loader2, Map as MapIcon, Radar, Zap } from "lucide-react";
 import { useWeather } from "@/contexts/WeatherContext";
 import { RefreshButton } from "@/components/RefreshButton";
 import { LiveBadge } from "@/components/LiveBadge";
@@ -51,20 +51,37 @@ export function MapPage() {
             {tab === "radar" ? "Niederschlagsradar" : "Live-Blitze"}
           </span>
         </div>
-        <div className="glass flex gap-0.5 rounded-full p-0.5 text-xs">
-          {(["radar", "lightning"] as const).map((t) => (
-            <button
-              key={t}
-              onClick={() => setTab(t)}
-              className={`rounded-full px-4 py-1.5 transition-colors ${
-                tab === t
-                  ? "bg-primary text-primary-foreground"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              {t === "radar" ? "Radar" : "Blitze"}
-            </button>
-          ))}
+
+        <div
+          role="tablist"
+          aria-label="Kartenansicht"
+          className="glass flex gap-0.5 rounded-full p-1 text-xs shadow-sm ring-1 ring-border/50"
+        >
+          {([
+            { id: "radar", label: "Radar", Icon: Radar },
+            { id: "lightning", label: "Blitze", Icon: Zap },
+          ] as const).map(({ id, label, Icon }) => {
+            const active = tab === id;
+            return (
+              <button
+                key={id}
+                role="tab"
+                aria-selected={active}
+                onClick={() => setTab(id)}
+                className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 font-medium transition-all ${
+                  active
+                    ? "bg-primary text-primary-foreground shadow-sm"
+                    : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
+                }`}
+              >
+                <Icon
+                  className="h-3.5 w-3.5"
+                  strokeWidth={active ? 2.5 : 2}
+                />
+                <span>{label}</span>
+              </button>
+            );
+          })}
         </div>
       </div>
 
