@@ -6,6 +6,8 @@ import type { CurrentWeather, GeoResult, MinutelyData } from "@/lib/weather";
 import { windDirectionLabel } from "@/lib/weather";
 import { getEffectiveWeather } from "@/lib/weatherDescription";
 import { summarizeNowcastPrecip } from "@/lib/nowcast";
+import { useRainbowNowcast } from "@/hooks/useRainbowNowcast";
+import { formatClockTime } from "@/lib/rainbowNowcast";
 import { RelativeTime } from "./RelativeTime";
 import { WeatherHeroCanvas, getWeatherGroup, getHeroPalette } from "./WeatherHeroCanvas";
 import { RealisticWeatherIcon } from "./RealisticWeatherIcon";
