@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Star, Pencil, Check } from "lucide-react";
+import { Star, Pencil, Check, Sparkles } from "lucide-react";
 import {
   Sheet,
   SheetContent,
@@ -21,7 +21,7 @@ interface Props {
 
 export function FavoritesPanel({ open, onOpenChange }: Props) {
   const { location, selectLocation } = useWeather();
-  const { favorites, removeFavorite, moveFavoriteUp, moveFavoriteDown } = useFavorites();
+  const { favorites, removeFavorite, moveFavoriteUp, moveFavoriteDown, max } = useFavorites();
   const [editMode, setEditMode] = useState(false);
   const isMobile = useIsMobile();
 
@@ -50,19 +50,31 @@ export function FavoritesPanel({ open, onOpenChange }: Props) {
     >
       <SheetContent
         side={isMobile ? "bottom" : "right"}
-        className={`flex flex-col gap-0 ${
-          isMobile ? "max-h-[85vh] rounded-t-2xl" : "w-full sm:max-w-md"
+        className={`flex flex-col gap-0 bg-background ${
+          isMobile ? "max-h-[88vh] rounded-t-3xl" : "w-full sm:max-w-md"
         }`}
       >
+        {isMobile && (
+          <div className="mx-auto mb-2 h-1.5 w-10 rounded-full bg-muted-foreground/30" />
+        )}
         <SheetHeader className="flex-row items-center justify-between space-y-0 border-b border-border pb-4">
-          <SheetTitle className="flex items-center gap-2">
-            <Star className="h-5 w-5 fill-accent text-accent" strokeWidth={1.5} />
-            Favoriten
+          <SheetTitle className="flex items-center gap-2.5 text-lg">
+            <span className="grid h-8 w-8 place-items-center rounded-lg bg-amber-500/15 text-amber-500">
+              <Star className="h-4 w-4 fill-current" strokeWidth={1.5} />
+            </span>
+            <span>Favoriten</span>
+            <span className="text-xs font-normal text-muted-foreground">
+              {favorites.length}/{max}
+            </span>
           </SheetTitle>
           {favorites.length > 0 && (
             <button
               onClick={() => setEditMode((v) => !v)}
-              className="inline-flex items-center gap-1 rounded-full border border-border px-3 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-foreground/5 hover:text-foreground"
+              className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
+                editMode
+                  ? "bg-primary text-primary-foreground hover:opacity-90"
+                  : "border border-border text-muted-foreground hover:bg-foreground/5 hover:text-foreground"
+              }`}
             >
               {editMode ? (
                 <>
@@ -81,17 +93,29 @@ export function FavoritesPanel({ open, onOpenChange }: Props) {
           <CurrentLocationCard onAdded={() => setEditMode(false)} />
 
           <div>
-            <div className="mb-2 flex items-center justify-between px-1 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
-              <span>Meine Orte {favorites.length > 0 && `(${favorites.length})`}</span>
+            <div className="mb-2 flex items-center justify-between px-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+              <span>Meine Orte</span>
+              {favorites.length > 0 && (
+                <span className="font-mono normal-case tracking-normal">
+                  Tippen zum Wechseln
+                </span>
+              )}
             </div>
 
             {favorites.length === 0 ? (
-              <div className="glass flex flex-col items-center justify-center gap-3 rounded-xl p-8 text-center">
-                <Star className="h-10 w-10 text-muted-foreground" strokeWidth={1.5} />
-                <p className="text-sm text-muted-foreground">Noch keine Favoriten gespeichert</p>
+              <div className="glass flex flex-col items-center justify-center gap-3 rounded-2xl p-8 text-center border border-dashed border-border">
+                <span className="grid h-12 w-12 place-items-center rounded-full bg-amber-500/10 text-amber-500">
+                  <Sparkles className="h-5 w-5" strokeWidth={1.75} />
+                </span>
+                <div className="space-y-1">
+                  <p className="text-sm font-medium text-foreground">Noch keine Favoriten</p>
+                  <p className="text-xs text-muted-foreground">
+                    Tippe oben auf <Star className="inline h-3 w-3 align-middle" /> oder nutze die Suche, um Orte zu speichern.
+                  </p>
+                </div>
               </div>
             ) : (
-              <div className="glass divide-y divide-border rounded-xl overflow-hidden">
+              <div className="glass overflow-hidden rounded-2xl border border-border/60 p-1">
                 {favorites.map((fav, i) => (
                   <FavoriteItem
                     key={fav.id}

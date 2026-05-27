@@ -1,4 +1,4 @@
-import { Star, MapPin } from "lucide-react";
+import { Star, MapPin, Plus } from "lucide-react";
 import { useWeather } from "@/contexts/WeatherContext";
 import { useFavorites } from "@/hooks/useFavorites";
 import { geoToFavorite } from "@/lib/favoritesStorage";
@@ -26,14 +26,16 @@ export function CurrentLocationCard({ onAdded }: { onAdded?: () => void }) {
 
   return (
     <div>
-      <div className="mb-2 px-1 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+      <div className="mb-2 px-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
         Aktueller Standort
       </div>
-      <div className="glass flex items-center justify-between gap-3 rounded-xl p-3">
-        <div className="flex min-w-0 items-center gap-2.5">
-          <MapPin className="h-4 w-4 shrink-0 text-primary" strokeWidth={1.75} />
+      <div className="glass flex items-center justify-between gap-3 rounded-2xl p-3.5 border border-border/60">
+        <div className="flex min-w-0 items-center gap-3">
+          <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-primary/12 text-primary">
+            <MapPin className="h-4 w-4" strokeWidth={2} />
+          </span>
           <div className="min-w-0">
-            <div className="truncate text-sm font-medium">{location.name}</div>
+            <div className="truncate text-sm font-semibold text-foreground">{location.name}</div>
             {(location.admin1 || location.country) && (
               <div className="truncate text-[11px] text-muted-foreground">
                 {[location.admin1, location.country].filter(Boolean).join(" · ")}
@@ -42,15 +44,15 @@ export function CurrentLocationCard({ onAdded }: { onAdded?: () => void }) {
           </div>
         </div>
         {already ? (
-          <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-muted px-2.5 py-1 text-[11px] font-medium text-muted-foreground">
-            <Star className="h-3 w-3 fill-accent text-accent" /> Bereits Favorit
+          <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-amber-500/15 px-2.5 py-1 text-[11px] font-semibold text-amber-600 dark:text-amber-400">
+            <Star className="h-3 w-3 fill-current" /> Favorit
           </span>
         ) : (
           <button
             onClick={handleAdd}
-            className="inline-flex shrink-0 items-center gap-1 rounded-full bg-primary px-3 py-1.5 text-[11px] font-medium text-primary-foreground transition-opacity hover:opacity-90"
+            className="inline-flex shrink-0 items-center gap-1 rounded-full bg-primary px-3 py-1.5 text-[11px] font-semibold text-primary-foreground transition-all hover:opacity-90 active:scale-95 shadow-sm"
           >
-            <Star className="h-3 w-3" /> Favorit
+            <Plus className="h-3 w-3" strokeWidth={3} /> Speichern
           </button>
         )}
       </div>
