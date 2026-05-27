@@ -104,7 +104,7 @@ function WarnungenTab() {
     refresh: riskRefresh,
   } = useRiskWarningsCtx();
   const riskRetry = useDebouncedAction(() => riskRefresh(), 5000);
-  const unifiedRisk = useThunderstormRisk();
+  const unifiedRisk = useThunderstormRisk(48);
 
   return (
     <div className="space-y-5">
