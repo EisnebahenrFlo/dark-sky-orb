@@ -131,18 +131,18 @@ function detectWarnings(weatherData: any, windowHours: number, officialWarnings:
     warnings.push({ typ: 'schnee', stufe, sum: Math.round(snow * 10) / 10, unit: 'cm' });
   }
 
-  // Gewitter: CAPE >=300 warnung, >=500 markant, >=1500 unwetter, >=2500 extrem
+  // Gewitter: stufe leitet sich aus dem serverseitig berechneten Score ab (>=20).
+  // Ausgelöst, wenn Score-Schwelle erreicht ODER amtliche Gewitterwarnung aktiv.
   const maxCape = idx.reduce((m: number, i: number) => Math.max(m, hourly.cape?.[i] ?? 0), 0);
   const hasOfficialThunderstorm = officialWarnings?.some(
     (w: any) => typeof w?.type === 'string' && w.type.toLowerCase().includes('thunderstorm'),
   );
-  if (maxCape >= 300 || hasOfficialThunderstorm) {
-    const stufe: Stufe = maxCape >= 2500 ? 'extrem'
-                      : maxCape >= 1500 ? 'unwetter'
-                      : maxCape >= 500 ? 'markant' : 'warnung';
+  if (stormScore >= 20 || hasOfficialThunderstorm) {
+    const stufe: Stufe = stufeFromScore(stormScore);
     warnings.push({
       typ: 'gewitter',
       stufe,
+      score: stormScore,
       cape_max: Math.round(maxCape),
       official: !!hasOfficialThunderstorm,
       unit: 'J/kg',
