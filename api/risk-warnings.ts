@@ -410,7 +410,7 @@ export default async function handler(req: any, res: any) {
   const dLat = typeof dataLat === 'number' ? Math.round(dataLat * 10) : 'x';
   const dLon = typeof dataLon === 'number' ? Math.round(dataLon * 10) : 'x';
   const bucket = Math.floor(Date.now() / FRESH_MS);
-  const cacheKey = `warnings_v2:${Math.round(locLat * 10)}_${Math.round(locLon * 10)}_${dLat}_${dLon}_${bucket}`;
+  const cacheKey = `warnings_v3:${Math.round(locLat * 10)}_${Math.round(locLon * 10)}_${dLat}_${dLon}_s${serverScore}_${bucket}`;
   const locLabel = `${location?.name ?? '?'} (${locLat},${locLon})`;
 
   // Cache lookup
