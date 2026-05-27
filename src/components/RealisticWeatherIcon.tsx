@@ -209,6 +209,26 @@ function PartlyCloudy({ size, uid, className }: Base) {
   );
 }
 
+function NightOvercast({ size, uid, className }: Base) {
+  const c1 = `nCloud1_${uid}`;
+  const c2 = `nCloud2_${uid}`;
+  const c3 = `nCloud3_${uid}`;
+  return (
+    <Frame size={size} className={className}>
+      <defs>
+        <CloudGradient id={c1} night />
+        <CloudGradient id={c2} night />
+        <CloudGradient id={c3} night />
+      </defs>
+      <CloudShape fill={`url(#${c1})`} x={-4} y={-2} scale={0.85} />
+      <CloudShape fill={`url(#${c2})`} x={10} y={2} scale={0.8} />
+      <CloudShape fill={`url(#${c3})`} y={10} />
+    </Frame>
+  );
+}
+
+
+
 
 function Overcast({ size, uid, className }: Base) {
   const c1 = `cloudGrad1_${uid}`;
