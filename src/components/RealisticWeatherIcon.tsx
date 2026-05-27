@@ -516,14 +516,15 @@ function Moon({ size, uid, className }: Base) {
   const mg = `moonGrad_${uid}`;
   const mask = `moonMask_${uid}`;
   const shadow = `moonShadow_${uid}`;
+  // r=20 in 64-viewbox → Durchmesser 40 ≈ 62% der Icon-Größe.
   return (
     <Frame size={size} className={className}>
       <defs>
         <MoonGradient id={mg} />
         <mask id={mask}>
           <rect width="64" height="64" fill="black" />
-          <circle cx={34} cy={32} r={16} fill="white" />
-          <circle cx={40} cy={28} r={14} fill="black" />
+          <circle cx={32} cy={32} r={20} fill="white" />
+          <circle cx={40} cy={26} r={17} fill="black" />
         </mask>
         <filter id={shadow} x="-50%" y="-50%" width="200%" height="200%">
           <feDropShadow dx="0" dy="1" stdDeviation="1" floodColor="#000" floodOpacity="0.35" />
@@ -532,11 +533,37 @@ function Moon({ size, uid, className }: Base) {
       <g filter={`url(#${shadow})`}>
         <rect width="64" height="64" fill={`url(#${mg})`} mask={`url(#${mask})`} opacity="1" />
       </g>
-      {[[12, 14], [54, 18], [10, 48], [52, 50]].map(([cx, cy], i) => (
-        <g key={i}>
-          <circle cx={cx} cy={cy} r={1.2} fill="#FCD34D" opacity="1" />
-        </g>
+      {[[10, 12], [56, 16], [8, 52], [54, 54]].map(([cx, cy], i) => (
+        <circle key={i} cx={cx} cy={cy} r={1.2} fill="#FCD34D" opacity="1" />
       ))}
+    </Frame>
+  );
+}
+
+function MoonLightCloud({ size, uid, className }: Base) {
+  const mg = `moonGrad_${uid}`;
+  const mask = `moonMask_${uid}`;
+  const cg = `cloudGrad_${uid}`;
+  const shadow = `moonShadow_${uid}`;
+  // Mond dominant, kleine Wolke davor unten rechts.
+  return (
+    <Frame size={size} className={className}>
+      <defs>
+        <MoonGradient id={mg} />
+        <CloudGradient id={cg} dark />
+        <mask id={mask}>
+          <rect width="64" height="64" fill="black" />
+          <circle cx={28} cy={28} r={18} fill="white" />
+          <circle cx={36} cy={22} r={15} fill="black" />
+        </mask>
+        <filter id={shadow} x="-50%" y="-50%" width="200%" height="200%">
+          <feDropShadow dx="0" dy="1" stdDeviation="1" floodColor="#000" floodOpacity="0.35" />
+        </filter>
+      </defs>
+      <g filter={`url(#${shadow})`}>
+        <rect width="64" height="64" fill={`url(#${mg})`} mask={`url(#${mask})`} opacity="1" />
+      </g>
+      <CloudShape fill={`url(#${cg})`} x={12} y={18} scale={0.6} />
     </Frame>
   );
 }
