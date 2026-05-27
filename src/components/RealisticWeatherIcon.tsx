@@ -65,10 +65,11 @@ function Frame({ size, className, children }: { size: number; className?: string
 /* ---------- shared paint helpers ---------- */
 
 function CloudGradient({ id, dark = false }: { id: string; dark?: boolean }) {
+  // Mittleres Grau für gute Sichtbarkeit in Light & Dark Mode.
   return (
     <linearGradient id={id} x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stopColor={dark ? "#9aa6b8" : "#ffffff"} />
-      <stop offset="100%" stopColor={dark ? "#5b6678" : "#b8c2d1"} />
+      <stop offset="0%" stopColor={dark ? "#9CA3AF" : "#D1D5DB"} stopOpacity="1" />
+      <stop offset="100%" stopColor={dark ? "#6B7280" : "#9CA3AF"} stopOpacity="1" />
     </linearGradient>
   );
 }
@@ -76,8 +77,8 @@ function CloudGradient({ id, dark = false }: { id: string; dark?: boolean }) {
 function DropGradient({ id }: { id: string }) {
   return (
     <linearGradient id={id} x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stopColor="#7dd3fc" />
-      <stop offset="100%" stopColor="#1d4ed8" />
+      <stop offset="0%" stopColor="#7dd3fc" stopOpacity="1" />
+      <stop offset="100%" stopColor="#1d4ed8" stopOpacity="1" />
     </linearGradient>
   );
 }
@@ -85,18 +86,19 @@ function DropGradient({ id }: { id: string }) {
 function SunGradient({ id }: { id: string }) {
   return (
     <radialGradient id={id} cx="0.5" cy="0.5" r="0.5">
-      <stop offset="0%" stopColor="#ffffff" />
-      <stop offset="55%" stopColor="#fde68a" />
-      <stop offset="100%" stopColor="#f59e0b" />
+      <stop offset="0%" stopColor="#ffffff" stopOpacity="1" />
+      <stop offset="55%" stopColor="#fde68a" stopOpacity="1" />
+      <stop offset="100%" stopColor="#f59e0b" stopOpacity="1" />
     </radialGradient>
   );
 }
 
 function MoonGradient({ id }: { id: string }) {
+  // Helleres, sattes Gelb für gute Sichtbarkeit.
   return (
     <radialGradient id={id} cx="0.4" cy="0.4" r="0.7">
-      <stop offset="0%" stopColor="#fef9c3" />
-      <stop offset="100%" stopColor="#cbd5e1" />
+      <stop offset="0%" stopColor="#FEF3C7" stopOpacity="1" />
+      <stop offset="100%" stopColor="#FCD34D" stopOpacity="1" />
     </radialGradient>
   );
 }
