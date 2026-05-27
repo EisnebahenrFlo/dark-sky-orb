@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { safeFixed } from "@/lib/safeFormat";
 import { Wind, Droplets, Gauge, CloudRain, Thermometer, Cloud, Navigation } from "lucide-react";
-import type { CurrentWeather, GeoResult } from "@/lib/weather";
+import type { CurrentWeather, GeoResult, MinutelyData } from "@/lib/weather";
 import { windDirectionLabel } from "@/lib/weather";
 import { getEffectiveWeather } from "@/lib/weatherDescription";
 import { RelativeTime } from "./RelativeTime";
@@ -58,6 +58,9 @@ export function WeatherHero({ location, data, updatedAt, onRefresh }: Props) {
             <div className="text-sm" style={{ color: palette.subtext }}>
               Gefühlt {Math.round(data.apparent_temperature)}°
             </div>
+            <div className="text-[10px] opacity-60" style={{ color: palette.subtext }}>
+              Vorhersage Open-Meteo
+            </div>
           </div>
         </div>
 
@@ -69,7 +72,14 @@ export function WeatherHero({ location, data, updatedAt, onRefresh }: Props) {
   );
 }
 
-export function WeatherHeroStats({ data, children }: { data: CurrentWeather; children?: ReactNode }) {
+export function WeatherHeroStats({ data, minutely15, children }: { data: CurrentWeather; minutely15?: MinutelyData; children?: ReactNode }) {
+  const next2hValues = minutely15?.precipitation?.slice(0, 8);
+  const hasNowcast = Array.isArray(next2hValues) && next2hValues.length > 0;
+  const next2hSum = hasNowcast ? next2hValues!.reduce((a, b) => a + (b ?? 0), 0) : 0;
+  const precipValue = hasNowcast
+    ? (next2hSum < 0.1 ? "Kein Regen" : `${safeFixed(next2hSum, 1)} mm`)
+    : (data.precipitation < 0.1 ? "—" : `${safeFixed(data.precipitation, 1)} mm`);
+  const precipSub = hasNowcast ? "nächste 2h" : "aktuelle Stunde";
   return (
     <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
       <Stat
@@ -95,7 +105,7 @@ export function WeatherHeroStats({ data, children }: { data: CurrentWeather; chi
           </div>
         </div>
       </div>
-      <Stat icon={CloudRain} label="Niederschlag" value={data.precipitation < 0.1 ? "—" : `${safeFixed(data.precipitation, 1)} mm`} sub="aktuelle Stunde" />
+      <Stat icon={CloudRain} label="Niederschlag" value={precipValue} sub={precipSub} />
       <Stat icon={Cloud} label="Bewölkung" value={`${data.cloud_cover}%`} />
       <Stat icon={Droplets} label="Luftfeuchte" value={`${data.relative_humidity_2m}%`} />
       <Stat icon={Gauge} label="Luftdruck" value={`${Math.round(data.pressure_msl)} hPa`} />
