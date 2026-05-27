@@ -140,7 +140,7 @@ export function useRiskWarnings() {
       return;
     }
     fetchWarnings();
-  }, [location.latitude, location.longitude, weatherData, weatherFetching, fetchWarnings]);
+  }, [location, location.latitude, location.longitude, weatherData, weatherFetching, fetchWarnings]);
 
   // Auto-refresh every 15 min, pause when tab is hidden
   useEffect(() => {
