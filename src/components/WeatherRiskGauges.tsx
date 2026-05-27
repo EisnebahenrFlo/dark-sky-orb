@@ -36,13 +36,7 @@ function polar(cx: number, cy: number, r: number, deg: number): { x: number; y: 
   return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) };
 }
 
-function describeArc(
-  cx: number,
-  cy: number,
-  r: number,
-  startDeg: number,
-  endDeg: number,
-): string {
+function describeArc(cx: number, cy: number, r: number, startDeg: number, endDeg: number): string {
   const start = polar(cx, cy, r, startDeg);
   const end = polar(cx, cy, r, endDeg);
   const largeArc = endDeg - startDeg > 180 ? 1 : 0;
@@ -51,9 +45,7 @@ function describeArc(
 
 function useIsDark(): boolean {
   const [isDark, setIsDark] = useState<boolean>(() =>
-    typeof document !== "undefined"
-      ? document.documentElement.classList.contains("dark")
-      : false,
+    typeof document !== "undefined" ? document.documentElement.classList.contains("dark") : false,
   );
   useEffect(() => {
     const el = document.documentElement;
@@ -106,13 +98,7 @@ function Gauge({ risk, index, isDark }: { risk: RiskItem; index: number; isDark:
         aria-hidden="true"
       >
         {/* Track */}
-        <path
-          d={trackPath}
-          stroke={trackColor}
-          strokeWidth={5}
-          strokeLinecap="round"
-          fill="none"
-        />
+        <path d={trackPath} stroke={trackColor} strokeWidth={5} strokeLinecap="round" fill="none" />
         {/* Fill */}
         <path
           d={fillPath}
@@ -147,10 +133,7 @@ function Gauge({ risk, index, isDark }: { risk: RiskItem; index: number; isDark:
         <circle cx={ARC_CX} cy={ARC_CY} r={2.5} fill={color} />
       </svg>
 
-      <div
-        className="mt-1 text-[14px] font-extrabold leading-none tabular-nums"
-        style={{ color }}
-      >
+      <div className="mt-1 text-[14px] font-extrabold leading-none tabular-nums" style={{ color }}>
         {score}
       </div>
       <div className="mt-0.5 text-[8px] uppercase tracking-wide text-muted-foreground">
