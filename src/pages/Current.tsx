@@ -23,7 +23,7 @@ export function CurrentPage({ onRefresh }: { onRefresh?: () => Promise<void> | v
               <WarningIndicatorCard />
             </div>
             <div className="mt-2">
-              <WeatherHeroStats data={data.current}>
+              <WeatherHeroStats data={data.current} minutely15={data.minutely_15}>
                 <UvIndexStat value={uv} isDay={!!data.current.is_day} />
               </WeatherHeroStats>
             </div>
