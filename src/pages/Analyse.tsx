@@ -84,9 +84,12 @@ const ERROR_COPY: Record<SynoptikErrorCode, { title: string; body: string }> = {
 function useDebouncedAction(action: () => void, ms = 5000) {
   const [disabled, setDisabled] = useState(false);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  useEffect(() => () => {
-    if (timeoutRef.current) clearTimeout(timeoutRef.current);
-  }, []);
+  useEffect(
+    () => () => {
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    },
+    [],
+  );
   const trigger = useCallback(() => {
     if (disabled) return;
     setDisabled(true);
@@ -150,9 +153,7 @@ function WarnungenTab() {
 
         {riskData && (
           <>
-            <RiskHero
-              risk={{ ...riskData.gewitter_risiko_6h, score: unifiedRisk.current.score }}
-            />
+            <RiskHero risk={{ ...riskData.gewitter_risiko_6h, score: unifiedRisk.current.score }} />
 
             {riskData.warnungen_12h.length > 0 ? (
               <div className="space-y-3">
@@ -359,10 +360,7 @@ export function AnalysePage() {
 
   return (
     <div className="space-y-4">
-      <div
-        className="flex w-full rounded-[10px] p-[3px]"
-        style={{ background: "#f0f4f8" }}
-      >
+      <div className="flex w-full rounded-[10px] p-[3px]" style={{ background: "#f0f4f8" }}>
         {[
           { v: "warnungen" as Tab, label: "Warnungen" },
           { v: "analyse" as Tab, label: "Analyse" },

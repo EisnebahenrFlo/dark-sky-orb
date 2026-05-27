@@ -174,15 +174,7 @@ export function useWeatherRisks(): UseWeatherRisksResult {
               : 85 + Math.min(15, ((50 - vis) / 50) * 15);
     const nebel = makeRisk("nebel", nebelScore, false);
 
-    const all: RiskItem[] = [
-      gewitter,
-      starkregen,
-      hagel,
-      sturm,
-      schneesturm,
-      glatteis,
-      nebel,
-    ];
+    const all: RiskItem[] = [gewitter, starkregen, hagel, sturm, schneesturm, glatteis, nebel];
 
     // Top 4 nach Score, mit fester Tiebreaker-Reihenfolge
     const sorted = [...all].sort((a, b) => {
