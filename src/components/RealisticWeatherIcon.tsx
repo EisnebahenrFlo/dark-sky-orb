@@ -50,28 +50,39 @@ export function RealisticWeatherIcon({ code, isDay, size = 24, className }: Weat
 type Base = { size: number; uid: string; className?: string };
 
 /**
- * Inline <style> applies in document scope, so we can theme cloud colors via
- * the `html.dark` class set by ThemeProvider. Light & dark stops/strokes both
- * live here — every CloudGradient/CloudShape just references the class names.
+ * Theme CSS is injected ONCE per document, not per icon instance.
+ * Light: dunklere Wolken-Stops für Lesbarkeit auf hellem Glass.
+ * Dark:  hellere Wolken, dezenter Stroke.
  */
 const ICON_THEME_CSS = `
-  .rwi-cloud-front-0 { stop-color: #9CA3AF; }
-  .rwi-cloud-front-1 { stop-color: #6B7280; }
-  .rwi-cloud-back-0  { stop-color: #6B7280; }
-  .rwi-cloud-back-1  { stop-color: #4B5563; }
-  .rwi-cloud-night-0 { stop-color: #B0B7C3; }
-  .rwi-cloud-night-1 { stop-color: #9CA3AF; }
-  .rwi-cloud-stroke  { stroke: #6B7280; }
-  html.dark .rwi-cloud-front-0 { stop-color: #D1D5DB; }
+  .rwi-cloud-front-0 { stop-color: #94A3B8; }
+  .rwi-cloud-front-1 { stop-color: #475569; }
+  .rwi-cloud-back-0  { stop-color: #64748B; }
+  .rwi-cloud-back-1  { stop-color: #334155; }
+  .rwi-cloud-night-0 { stop-color: #94A3B8; }
+  .rwi-cloud-night-1 { stop-color: #475569; }
+  .rwi-cloud-stroke  { stroke: #334155; stroke-opacity: 0.5; }
+  html.dark .rwi-cloud-front-0 { stop-color: #E5E7EB; }
   html.dark .rwi-cloud-front-1 { stop-color: #9CA3AF; }
   html.dark .rwi-cloud-back-0  { stop-color: #9CA3AF; }
-  html.dark .rwi-cloud-back-1  { stop-color: #6B7280; }
+  html.dark .rwi-cloud-back-1  { stop-color: #4B5563; }
   html.dark .rwi-cloud-night-0 { stop-color: #6B7280; }
-  html.dark .rwi-cloud-night-1 { stop-color: #4B5563; }
-  html.dark .rwi-cloud-stroke  { stroke: #9CA3AF; }
+  html.dark .rwi-cloud-night-1 { stop-color: #374151; }
+  html.dark .rwi-cloud-stroke  { stroke: #D1D5DB; stroke-opacity: 0.4; }
 `;
 
+let rwiThemeInjected = false;
+function ensureRwiTheme() {
+  if (rwiThemeInjected || typeof document === "undefined") return;
+  const style = document.createElement("style");
+  style.setAttribute("data-rwi-theme", "");
+  style.textContent = ICON_THEME_CSS;
+  document.head.appendChild(style);
+  rwiThemeInjected = true;
+}
+
 function Frame({ size, className, children }: { size: number; className?: string; children: React.ReactNode }) {
+  ensureRwiTheme();
   return (
     <svg
       width={size}
@@ -79,9 +90,12 @@ function Frame({ size, className, children }: { size: number; className?: string
       viewBox="0 0 64 64"
       xmlns="http://www.w3.org/2000/svg"
       className={className}
-      style={{ display: "inline-block", verticalAlign: "middle" }}
+      style={{
+        display: "inline-block",
+        verticalAlign: "middle",
+        filter: "drop-shadow(0 1px 2px rgba(15, 23, 42, 0.18))",
+      }}
     >
-      <style>{ICON_THEME_CSS}</style>
       {children}
     </svg>
   );
@@ -137,10 +151,9 @@ function CloudShape({ fill, x = 0, y = 0, scale = 1, shadow = true }: { fill: st
         d="M16 38 Q9 38 9 31 Q9 25 15 24 Q16 17 24 17 Q31 17 33 23 Q36 21 40 22 Q47 23 47 30 Q53 31 53 36 Q53 41 47 41 L17 41 Q16 41 16 38 Z"
         fill={fill}
         className="rwi-cloud-stroke"
-        strokeWidth={0.75}
-        style={shadow ? { filter: "drop-shadow(0 1px 1px rgba(0,0,0,0.15))" } : undefined}
+        strokeWidth={1}
+        style={shadow ? { filter: "drop-shadow(0 1px 1px rgba(0,0,0,0.18))" } : undefined}
       />
-
     </g>
   );
 }
@@ -300,15 +313,24 @@ function Drops({ count, color = "url(#dropG)", rotate = 10, big = false }: { cou
       {positions.map((x, i) => {
         const y = 46 + (i % 2) * 4;
         return (
-          <ellipse
-            key={i}
-            cx={x + 4}
-            cy={y}
-            rx={big ? 1.6 : 1.2}
-            ry={big ? 3.2 : 2.4}
-            fill={color}
-            transform={`rotate(${rotate} ${x + 4} ${y})`}
-          />
+          <g key={i}>
+            <ellipse
+              cx={x + 4}
+              cy={y}
+              rx={big ? 2.1 : 1.6}
+              ry={big ? 4.2 : 3.2}
+              fill={color}
+              transform={`rotate(${rotate} ${x + 4} ${y})`}
+            />
+            <ellipse
+              cx={x + 4 - (big ? 0.6 : 0.45)}
+              cy={y - (big ? 1.2 : 0.9)}
+              rx={big ? 0.55 : 0.4}
+              ry={big ? 1.1 : 0.8}
+              fill="rgba(255,255,255,0.55)"
+              transform={`rotate(${rotate} ${x + 4} ${y})`}
+            />
+          </g>
         );
       })}
     </g>
@@ -402,7 +424,7 @@ function Snow({ size, uid, className, flakes, big = false }: Base & { flakes: nu
   const cg = `cloudGrad_${uid}`;
   const fg = `flakeGrad_${uid}`;
   const positions = [14, 22, 30, 38, 46, 18, 42].slice(0, flakes);
-  const r = big ? 2.2 : 1.6;
+  const r = big ? 2.8 : 2.1;
   return (
     <Frame size={size} className={className}>
       <defs>

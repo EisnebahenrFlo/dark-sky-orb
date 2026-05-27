@@ -81,7 +81,7 @@ function DayRow({
         </div>
 
         {/* Weather icon */}
-        <RealisticWeatherIcon code={code} isDay={1} size={28} className="shrink-0" />
+        <RealisticWeatherIcon code={code} isDay={1} size={38} className="shrink-0" />
 
         {/* Middle: precipitation + wind + thunder */}
         <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-4 gap-y-1.5 text-[14px]">
