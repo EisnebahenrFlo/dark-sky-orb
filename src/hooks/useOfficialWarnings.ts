@@ -113,7 +113,7 @@ export function useOfficialWarnings() {
     ctrlRef.current = ctrl;
     fetchWarnings(ctrl.signal);
     return () => ctrl.abort();
-  }, [location.latitude, location.longitude, fetchWarnings]);
+  }, [location, location.latitude, location.longitude, fetchWarnings]);
 
   // Auto refresh
   useEffect(() => {
