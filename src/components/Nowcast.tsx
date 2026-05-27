@@ -43,7 +43,7 @@ export function Nowcast({
   return (
     <section>
       {showHeader && (
-        <SectionHeader title="Nowcast" subtitle={`Nächste ${hours} Stunden · 15-Min-Schritte`} />
+        <SectionHeader title="Nowcast" subtitle={`Nächste ${hours} Stunden · 15-Min-Schritte`} accessory={<LiveBadge />} />
       )}
       <div className="glass rounded-3xl p-5 sm:p-6">
         {totalPrecip === 0 ? (
