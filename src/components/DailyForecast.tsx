@@ -22,18 +22,18 @@ function timeOnly(iso: string) {
   return new Date(iso).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" });
 }
 
-function ThunderBadge({ risk }: { risk: number }) {
-  if (risk < 20) return null;
+function ThunderBadge({ score }: { score: number }) {
+  if (score < 20) return null;
   const { cls, label } =
-    risk >= 75
+    score >= 75
       ? { cls: "bg-red-500 text-white", label: "Sehr hoch" }
-      : risk >= 50
+      : score >= 50
       ? { cls: "bg-orange-500 text-white", label: "Hoch" }
       : { cls: "bg-amber-400 text-amber-950", label: "Möglich" };
   return (
     <span
       className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[12px] font-semibold ${cls}`}
-      title={`Gewitter-Risiko: ${label}`}
+      title={`Gewitter: ${label}`}
     >
       <Zap size={11} strokeWidth={2.5} />
       {label}
