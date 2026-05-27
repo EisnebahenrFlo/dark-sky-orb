@@ -45,11 +45,13 @@ function DayRow({
   daily,
   i,
   hourly,
+  thunderScore,
 }: {
   daily: DailyData;
   i: number;
   hourly?: HourlyData;
   current?: CurrentWeather;
+  thunderScore: number;
 }) {
   const [open, setOpen] = useState(false);
   const min = daily.temperature_2m_min[i] != null ? Math.round(daily.temperature_2m_min[i]) : null;
@@ -60,9 +62,7 @@ function DayRow({
   const wind = daily.wind_speed_10m_max[i] != null ? Math.round(daily.wind_speed_10m_max[i]) : null;
   const dir = daily.wind_direction_10m_dominant[i];
 
-  const thunder = hourly
-    ? dailyThunderRiskFromHourly(hourly.time, hourly.cape, hourly.lifted_index, daily.time[i])
-    : { risk: 0, label: "Kein", color: "transparent" };
+
 
   return (
     <div className="glass overflow-hidden rounded-2xl">
