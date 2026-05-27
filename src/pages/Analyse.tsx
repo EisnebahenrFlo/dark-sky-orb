@@ -252,26 +252,7 @@ function AnalyseTab() {
           </SectionCard>
 
           <SectionCard icon={CalendarClock} title="Entwicklung">
-            <div className="space-y-3">
-              <div>
-                <div className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                  Nächste 24h
-                </div>
-                <p className="mt-1">{data.entwicklung?.next_24h}</p>
-              </div>
-              <div className="border-t border-border pt-3">
-                <div className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                  Nächste 48h
-                </div>
-                <p className="mt-1">{data.entwicklung?.next_48h}</p>
-              </div>
-              <div className="border-t border-border pt-3">
-                <div className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                  Trend 3–7 Tage
-                </div>
-                <p className="mt-1">{data.entwicklung?.trend_3_7d}</p>
-              </div>
-            </div>
+            <EntwicklungTabs entwicklung={data.entwicklung} />
           </SectionCard>
 
           {data.regionale_besonderheiten && data.regionale_besonderheiten.length > 0 && (
@@ -285,28 +266,7 @@ function AnalyseTab() {
           )}
 
           {data.großwetterlage_detail && (
-            <SectionCard icon={Layers} title="Details für Wetter-Nerds">
-              <div className="space-y-2">
-                {data.großwetterlage_detail.höhenstruktur && (
-                  <p>
-                    <span className="font-medium">Höhenstruktur: </span>
-                    {data.großwetterlage_detail.höhenstruktur}
-                  </p>
-                )}
-                {data.großwetterlage_detail.bodendruck && (
-                  <p>
-                    <span className="font-medium">Bodendruck: </span>
-                    {data.großwetterlage_detail.bodendruck}
-                  </p>
-                )}
-                {data.großwetterlage_detail.fronten && (
-                  <p>
-                    <span className="font-medium">Fronten: </span>
-                    {data.großwetterlage_detail.fronten}
-                  </p>
-                )}
-              </div>
-            </SectionCard>
+            <WetterNerdsCard detail={data.großwetterlage_detail} />
           )}
 
           <AnalysisDisclaimer />
