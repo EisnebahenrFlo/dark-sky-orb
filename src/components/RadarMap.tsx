@@ -44,6 +44,44 @@ function InvalidateOnRefresh({ refreshKey }: { refreshKey: number }) {
   return null;
 }
 
+function MapControls({
+  lat,
+  lon,
+}: {
+  lat: number;
+  lon: number;
+}) {
+  const map = useMap();
+  return (
+    <div className="absolute right-3 top-3 z-[400] flex flex-col gap-1.5">
+      <div className="flex flex-col overflow-hidden rounded-2xl bg-background/90 shadow-sm ring-1 ring-border/60 backdrop-blur">
+        <button
+          onClick={() => map.zoomIn()}
+          aria-label="Vergrößern"
+          className="grid h-9 w-9 place-items-center text-foreground transition-colors hover:bg-muted/60"
+        >
+          <Plus className="h-4 w-4" strokeWidth={2} />
+        </button>
+        <div className="h-px bg-border/60" />
+        <button
+          onClick={() => map.zoomOut()}
+          aria-label="Verkleinern"
+          className="grid h-9 w-9 place-items-center text-foreground transition-colors hover:bg-muted/60"
+        >
+          <Minus className="h-4 w-4" strokeWidth={2} />
+        </button>
+      </div>
+      <button
+        onClick={() => map.flyTo([lat, lon], 9, { duration: 0.8 })}
+        aria-label="Auf Standort zentrieren"
+        className="grid h-9 w-9 place-items-center rounded-2xl bg-background/90 text-foreground shadow-sm ring-1 ring-border/60 backdrop-blur transition-colors hover:bg-muted/60"
+      >
+        <Locate className="h-4 w-4 text-primary" strokeWidth={2} />
+      </button>
+    </div>
+  );
+}
+
 const FRAME_MS_FAST = 400;
 const FRAME_MS_NEAR_NOW = 700;
 const LOOP_RESET_PAUSE_MS = 1000;
