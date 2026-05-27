@@ -141,7 +141,7 @@ export default function RadarMap({ refreshKey = 0 }: { refreshKey?: number }) {
     <div>
       <div className="glass relative overflow-hidden rounded-3xl">
         {isDev && (
-          <div className="pointer-events-none absolute right-3 top-3 z-[500] rounded-full bg-yellow-400/95 px-2.5 py-1 text-[10px] font-medium uppercase tracking-wider text-yellow-950 shadow-md">
+          <div className="pointer-events-none absolute left-3 top-3 z-[500] rounded-full bg-yellow-400/95 px-2.5 py-1 text-[10px] font-medium uppercase tracking-wider text-yellow-950 shadow-md">
             DEV: Rainbow.ai Test
           </div>
         )}
@@ -151,6 +151,7 @@ export default function RadarMap({ refreshKey = 0 }: { refreshKey?: number }) {
             zoom={9}
             maxZoom={12}
             scrollWheelZoom
+            zoomControl={false}
             style={{ height: "100%", width: "100%", background: "var(--muted)" }}
           >
             <TileLayer key={resolved} url={baseTile} attribution={baseAttr} maxZoom={12} />
@@ -167,6 +168,7 @@ export default function RadarMap({ refreshKey = 0 }: { refreshKey?: number }) {
             <Marker position={[location.latitude, location.longitude]} />
             <Recenter lat={location.latitude} lon={location.longitude} />
             <InvalidateOnRefresh refreshKey={refreshKey} />
+            <MapControls lat={location.latitude} lon={location.longitude} />
           </MapContainer>
         </div>
       </div>
