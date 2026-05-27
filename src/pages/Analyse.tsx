@@ -4,12 +4,14 @@ import {
   Brain,
   CalendarClock,
   CheckCircle2,
+  ChevronDown,
   Globe,
   Layers,
   MapPin,
   Wind,
   Zap,
 } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { useSynoptikAnalysisCtx } from "@/contexts/SynoptikAnalysisContext";
 import type { SynoptikErrorCode } from "@/hooks/useSynoptikAnalysis";
 import { getWeatherModelLabel } from "@/lib/weather";
