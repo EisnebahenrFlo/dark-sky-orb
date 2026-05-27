@@ -499,7 +499,7 @@ export default async function handler(req: any, res: any) {
   const dLat = typeof dataLat === 'number' ? Math.round(dataLat * 10) : 'x';
   const dLon = typeof dataLon === 'number' ? Math.round(dataLon * 10) : 'x';
   const bucket = Math.floor(Date.now() / FRESH_MS);
-  const cacheKey = `warnings_v3:${Math.round(locLat * 10)}_${Math.round(locLon * 10)}_${dLat}_${dLon}_s${serverScore}_${bucket}`;
+  const cacheKey = `warnings_v4:${Math.round(locLat * 10)}_${Math.round(locLon * 10)}_${dLat}_${dLon}_s${serverScore}_${bucket}`;
   const locLabel = `${location?.name ?? '?'} (${locLat},${locLon})`;
 
   // Cache lookup
@@ -575,17 +575,8 @@ export default async function handler(req: any, res: any) {
     console.error('[risk-warnings] anthropic failed', {
       location: locLabel, code: apiResult.code, status: apiResult.status,
     });
-    if (cached && isStaleButUsable(cached.timestamp, STALE_MAX_MS)) {
-      return res.status(200).json({
-        ...cached.data, cached: true, fromCache: true, stale: true,
-        ageMinutes: ageMinutes(cached.timestamp),
-      });
-    }
-    const userMsg =
-      apiResult.code === 'TIMEOUT' ? 'KI-Warnungen Zeitüberschreitung'
-      : apiResult.code === 'RATE_LIMIT' ? 'KI-Warnungen derzeit überlastet'
-      : 'KI-Formulierung fehlgeschlagen';
-    return errorResponse(res, apiResult.status, apiResult.code, userMsg, apiResult.details);
+    const fallback = fallbackResponse(warnings, serverScore, level, color, convectiveContext, windowHours);
+    return res.status(200).json({ ...fallback, cached: false, fromCache: false, stale: false, fallback: true });
   }
 
   const textContent: string = apiResult.data?.content?.[0]?.text ?? '';
@@ -594,30 +585,21 @@ export default async function handler(req: any, res: any) {
     parsed = extractJson(textContent);
   } catch (parseError) {
     console.error('[risk-warnings] parse error', { location: locLabel, err: String(parseError) });
-    if (cached && isStaleButUsable(cached.timestamp, STALE_MAX_MS)) {
-      return res.status(200).json({
-        ...cached.data, cached: true, fromCache: true, stale: true,
-        ageMinutes: ageMinutes(cached.timestamp),
-      });
-    }
-    return errorResponse(res, 500, 'PARSE_ERROR', 'KI-Antwort konnte nicht geparst werden');
+    const fallback = fallbackResponse(warnings, serverScore, level, color, convectiveContext, windowHours);
+    return res.status(200).json({ ...fallback, cached: false, fromCache: false, stale: false, fallback: true });
   }
 
   const schemaErr = validateSchema(parsed);
   if (schemaErr) {
-    if (cached && isStaleButUsable(cached.timestamp, STALE_MAX_MS)) {
-      return res.status(200).json({
-        ...cached.data, cached: true, fromCache: true, stale: true,
-        ageMinutes: ageMinutes(cached.timestamp),
-      });
-    }
-    return errorResponse(res, 500, 'INVALID_RESPONSE', 'KI-Antwort unvollständig', schemaErr);
+    const fallback = fallbackResponse(warnings, serverScore, level, color, convectiveContext, windowHours);
+    return res.status(200).json({ ...fallback, cached: false, fromCache: false, stale: false, fallback: true });
   }
 
   // Server-Score erzwingen (Claude darf ihn nicht verändern)
   parsed.gewitter_risiko_6h.score = serverScore;
   parsed.gewitter_risiko_6h.level = level;
   parsed.gewitter_risiko_6h.color = color;
+  parsed.warnungen_12h = materializeWarnings(warnings, parsed.warnungen_12h);
 
   await setCached(cacheKey, parsed, 24 * 60 * 60);
   console.log('[risk-warnings] cache SET', { location: locLabel });
