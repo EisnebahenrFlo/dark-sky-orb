@@ -583,7 +583,7 @@ function CloudyNight({ size, uid, className }: Base) {
       </defs>
       {/* Mond deutlich sichtbar, oben rechts */}
       <g filter={`url(#${shadow})`}>
-        <circle cx={46} cy={18} r={10} fill={`url(#${mg})`} opacity="1" />
+        <circle cx={44} cy={20} r={13} fill={`url(#${mg})`} opacity="1" />
       </g>
       {/* Wolke davor, lässt Mond teilweise sichtbar */}
       <CloudShape fill={`url(#${cg})`} y={8} />
