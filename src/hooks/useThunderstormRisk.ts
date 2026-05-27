@@ -128,16 +128,26 @@ function computeHourScore(
   capeVal: number | null | undefined,
   liVal: number | null | undefined,
   cinVal: number | null | undefined,
+  gustVal: number | null | undefined,
   isoTime: string,
 ): { score: number; source: "lpi" | "cape" } {
-  const lpiScore = scoreFromLPI(lpiVal);
-  const capeScore = scoreFromCAPE(capeVal);
+  // Basis: CAPE-Score
+  const baseScore = scoreFromCAPE(capeVal);
 
-  // Primäres Signal: LPI wenn verfügbar, sonst CAPE
-  const rawScore = lpiScore > 0 ? lpiScore : capeScore;
-  const source: "lpi" | "cape" = lpiScore > 0 ? "lpi" : "cape";
+  // Additive Boni
+  let bonus = 0;
+  const lpi = typeof lpiVal === "number" && !Number.isNaN(lpiVal) ? lpiVal : 0;
+  if (lpi > 5) bonus += 15;
+  else if (lpi > 0) bonus += 10;
 
-  // Modifier anwenden
+  const cape = typeof capeVal === "number" && !Number.isNaN(capeVal) ? capeVal : 0;
+  const gust = typeof gustVal === "number" && !Number.isNaN(gustVal) ? gustVal : 0;
+  if (gust > 50 && cape > 300) bonus += 5;
+
+  const rawScore = baseScore + bonus;
+  const source: "lpi" | "cape" = lpi > 0 ? "lpi" : "cape";
+
+  // Modifier: LI/CIN/Tageszeit weiterhin multiplikativ
   const modifiedScore = rawScore * liFactor(liVal) * cinFactor(cinVal) * daytimeFactor(isoTime);
 
   return { score: modifiedScore, source };
@@ -159,12 +169,15 @@ export function computeThunderstormRiskSeries(
   const hasLPI = Array.isArray(lpi) && lpi.some((v) => typeof v === "number" && v >= 0.5);
   const source: "lpi" | "cape" = hasLPI ? "lpi" : "cape";
 
+  const gusts = hourly.wind_gusts_10m;
+
   const series: ThunderstormRisk[] = hourly.time.map((t, i) => {
     const { score, source: s } = computeHourScore(
       lpi?.[i],
       cape?.[i],
       li?.[i],
       cin?.[i],
+      gusts?.[i],
       t,
     );
     return makeRisk(score, s);
