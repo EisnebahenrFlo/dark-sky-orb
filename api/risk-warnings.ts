@@ -371,6 +371,95 @@ function validateSchema(r: any): string | null {
   return null;
 }
 
+function warningTitle(w: any): string {
+  const key = `${w.typ}/${w.stufe}`;
+  const titles: Record<string, string> = {
+    'gewitter/warnung': 'Gewitter möglich',
+    'gewitter/markant': 'Starkes Gewitter möglich',
+    'gewitter/unwetter': 'Unwetterwarnung Gewitter',
+    'gewitter/extrem': 'Extremes Unwetter',
+    'wind/warnung': 'Windböen erwartet',
+    'wind/markant': 'Markante Windböen',
+    'wind/unwetter': 'Sturmwarnung',
+    'wind/extrem': 'Orkanwarnung',
+    'regen/warnung': 'Regen möglich',
+    'regen/markant': 'Starkregen',
+    'regen/unwetter': 'Unwetterwarnung Starkregen',
+    'schnee/warnung': 'Schneefall möglich',
+    'schnee/markant': 'Markanter Schneefall',
+    'schnee/unwetter': 'Unwetterwarnung Schnee',
+    'frost/warnung': 'Frost möglich',
+    'frost/markant': 'Strenger Frost',
+    'glätte/warnung': 'Glättegefahr',
+    'hitze/warnung': 'Hitze erwartet',
+    'hitze/markant': 'Markante Hitze',
+    'hitze/unwetter': 'Extreme Hitze',
+  };
+  return titles[key] ?? 'Wetterhinweis';
+}
+
+function warningIcon(typ: string): string {
+  if (typ === 'wind') return 'Wind';
+  if (typ === 'regen') return 'CloudRain';
+  if (typ === 'gewitter') return 'Zap';
+  if (typ === 'schnee') return 'Snowflake';
+  if (typ === 'hitze' || typ === 'frost') return 'Thermometer';
+  return 'AlertTriangle';
+}
+
+function warningDescription(w: any): string {
+  if (w.typ === 'gewitter') {
+    return `Gewitter-Score ${w.score ?? 0}/100, CAPE bis ${w.cape_max ?? 0} J/kg. Achte auf Blitzschlag, Starkregen und kurzfristige Böen.`;
+  }
+  if (w.typ === 'wind') return `Böen bis ${w.max_value ?? 0} km/h möglich. Lose Gegenstände sichern.`;
+  if (w.typ === 'regen') return `Bis ${w.max_1h ?? 0} mm in einer Stunde oder ${w.sum ?? 0} mm im Zeitraum möglich. Unterführungen und überflutete Bereiche meiden.`;
+  if (w.typ === 'schnee') return `Bis ${w.sum ?? 0} cm Schnee möglich. Plane längere Wegezeiten ein.`;
+  if (w.typ === 'hitze') return `Temperaturen bis ${w.max_value ?? 0} °C möglich. Risikogruppen schützen und genug trinken.`;
+  if (w.typ === 'frost') return `Temperaturen bis ${w.min_value ?? 0} °C möglich. Frostempfindliche Bereiche schützen.`;
+  if (w.typ === 'glätte') return 'Glätte durch Niederschlag bei niedrigen Temperaturen möglich. Besonders auf Brücken vorsichtig fahren.';
+  return 'Wetterrisiko im Vorhersagezeitraum möglich. Beobachte die Entwicklung aufmerksam.';
+}
+
+function materializeWarnings(warnings: any[], aiWarnings: any[] = []) {
+  const byKey = new Map<string, any>();
+  for (const w of aiWarnings) byKey.set(`${w.typ}_${w.stufe}`, w);
+  return warnings.map((w, i) => {
+    const ai = byKey.get(`${w.typ}_${w.stufe}`);
+    return {
+      id: ai?.id ?? `${w.typ}_${w.stufe}_${i}`,
+      typ: w.typ,
+      stufe: w.stufe,
+      titel: ai?.titel || warningTitle(w),
+      beschreibung: ai?.beschreibung || warningDescription(w),
+      color: w.color,
+      icon: ai?.icon || warningIcon(w.typ),
+    };
+  });
+}
+
+function fallbackResponse(warnings: any[], serverScore: number, level: string, color: string, convectiveContext: any, windowHours: number) {
+  const cape = convectiveContext?.cape_max_jkg ?? 0;
+  const lpi = convectiveContext?.lpi_max_jkg ?? 0;
+  const begründung = serverScore > 0
+    ? `Der lokale Gewitter-Score liegt bei ${serverScore}/100. CAPE bis ${cape} J/kg${lpi > 0 ? ` und LPI bis ${lpi}` : ''} stützen die Einschätzung.`
+    : 'Die lokalen Gewitterparameter liegen aktuell unter der Warnschwelle.';
+  return {
+    gewitter_risiko_6h: {
+      level,
+      score: serverScore,
+      begründung,
+      zeitfenster: `nächste ${windowHours} h`,
+      konvektionstyp: serverScore >= 35 ? 'Multizellen möglich' : serverScore >= 20 ? 'Einzelzellen möglich' : 'keine relevante Konvektion',
+      color,
+    },
+    warnungen_12h: materializeWarnings(warnings),
+    summary: warnings.length > 0
+      ? 'Es liegen lokal berechnete Wetterhinweise vor. Die KI-Formulierung war vorübergehend nicht verfügbar.'
+      : 'Aktuell liegen keine lokal berechneten kritischen Risiken vor.',
+    disclaimer: 'Experimentelle KI-Auswertung. Keine amtliche Warnung. Bei akuter Gefahr DWD/ZAMG/MeteoSwiss/Protezione Civile konsultieren.',
+  };
+}
+
 export default async function handler(req: any, res: any) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
