@@ -1,17 +1,18 @@
 /**
- * Unwetter-Risiko-Tachos: rendert die Top-4-Risiken aus useWeatherRisks
- * als Halbkreis-Gauges. Versteckt sich automatisch, wenn alle Risiken
- * unterhalb der Sichtbarkeitsschwelle (Score ≤ 10) liegen.
+ * Unwetter-Risiko: Donut-Ring-Variante (A).
+ * Aktive Risiken (Score > 10) als gefüllter Ring mit Icon in der Mitte,
+ * Score darunter und farbigem Level-Chip. Inaktive werden als kompakte
+ * Mini-Chip-Zeile zusammengefasst, damit aktive Risiken visuell dominieren.
  */
 import { useEffect, useState } from "react";
 import { useWeatherRisks } from "@/hooks/useWeatherRisks";
 import RiskIcon, { type RiskIconId } from "@/components/RiskIcon";
 import type { RiskItem } from "@/hooks/useWeatherRisks";
 
-const ARC_RADIUS = 26;
-const ARC_CX = 32;
-const ARC_CY = 36;
-const ARC_LENGTH = Math.PI * ARC_RADIUS; // ≈ 81.68
+const RING_SIZE = 64;
+const RING_STROKE = 6;
+const RING_RADIUS = (RING_SIZE - RING_STROKE) / 2;
+const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;
 
 const NAME_LABEL: Record<RiskIconId, string> = {
   gewitter: "Gewitter",
@@ -23,24 +24,40 @@ const NAME_LABEL: Record<RiskIconId, string> = {
   nebel: "Nebel",
 };
 
-function scoreColor(score: number): string {
-  if (score <= 10) return "#8e8e93";
-  if (score <= 25) return "#34c759";
-  if (score <= 60) return "#ff9500";
-  if (score <= 85) return "#ff3b30";
-  return "#c0392b";
-}
-
-function polar(cx: number, cy: number, r: number, deg: number): { x: number; y: number } {
-  const rad = (deg * Math.PI) / 180;
-  return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) };
-}
-
-function describeArc(cx: number, cy: number, r: number, startDeg: number, endDeg: number): string {
-  const start = polar(cx, cy, r, startDeg);
-  const end = polar(cx, cy, r, endDeg);
-  const largeArc = endDeg - startDeg > 180 ? 1 : 0;
-  return `M ${start.x} ${start.y} A ${r} ${r} 0 ${largeArc} 1 ${end.x} ${end.y}`;
+/**
+ * Farbpalette pro Schwellenwert.
+ * Jeweils eine Light- und Dark-optimierte Variante, damit die Ringe und
+ * Chips in beiden Modi gut sichtbar bleiben (WCAG-tauglicher Kontrast).
+ */
+function scoreColors(score: number, isDark: boolean): {
+  ring: string;
+  chipBg: string;
+  chipText: string;
+  scoreText: string;
+} {
+  if (score <= 10) {
+    return isDark
+      ? { ring: "#3a3a3c", chipBg: "rgba(142,142,147,0.18)", chipText: "#9ea0a6", scoreText: "#9ea0a6" }
+      : { ring: "#d1d1d6", chipBg: "rgba(99,99,102,0.12)", chipText: "#6b6b70", scoreText: "#6b6b70" };
+  }
+  if (score <= 25) {
+    return isDark
+      ? { ring: "#30d158", chipBg: "rgba(48,209,88,0.22)", chipText: "#4ade80", scoreText: "#4ade80" }
+      : { ring: "#22c55e", chipBg: "rgba(34,197,94,0.14)", chipText: "#15803d", scoreText: "#15803d" };
+  }
+  if (score <= 60) {
+    return isDark
+      ? { ring: "#ff9f0a", chipBg: "rgba(255,159,10,0.22)", chipText: "#fbbf24", scoreText: "#fbbf24" }
+      : { ring: "#f59e0b", chipBg: "rgba(245,158,11,0.16)", chipText: "#b45309", scoreText: "#b45309" };
+  }
+  if (score <= 85) {
+    return isDark
+      ? { ring: "#ff453a", chipBg: "rgba(255,69,58,0.22)", chipText: "#fca5a5", scoreText: "#fca5a5" }
+      : { ring: "#ef4444", chipBg: "rgba(239,68,68,0.14)", chipText: "#b91c1c", scoreText: "#b91c1c" };
+  }
+  return isDark
+    ? { ring: "#ff375f", chipBg: "rgba(255,55,95,0.28)", chipText: "#fda4af", scoreText: "#fda4af" }
+    : { ring: "#dc2626", chipBg: "rgba(220,38,38,0.16)", chipText: "#991b1b", scoreText: "#991b1b" };
 }
 
 function useIsDark(): boolean {
@@ -49,99 +66,113 @@ function useIsDark(): boolean {
   );
   useEffect(() => {
     const el = document.documentElement;
-    const obs = new MutationObserver(() => {
-      setIsDark(el.classList.contains("dark"));
-    });
+    const obs = new MutationObserver(() => setIsDark(el.classList.contains("dark")));
     obs.observe(el, { attributes: true, attributeFilter: ["class"] });
     return () => obs.disconnect();
   }, []);
   return isDark;
 }
 
-function Gauge({ risk, index, isDark }: { risk: RiskItem; index: number; isDark: boolean }) {
+function RiskRing({ risk, index, isDark }: { risk: RiskItem; index: number; isDark: boolean }) {
   const score = Math.max(0, Math.min(100, risk.score));
-  const color = scoreColor(score);
-  const trackColor = isDark ? "#2c2c2e" : "#e5e5ea";
+  const colors = scoreColors(score, isDark);
+  const trackColor = isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.07)";
 
-  // Winkel: -180° (links) bis 0° (rechts), Score skaliert linear
-  const rawAngle = -180 + (score / 100) * 180;
-  const scoreAngle = Math.min(0, rawAngle);
-  const tip = polar(ARC_CX, ARC_CY, 18, scoreAngle);
-
-  // Mount-Animation: vom Anfangszustand zum Zielzustand
   const [mounted, setMounted] = useState(false);
   useEffect(() => {
     const t = window.setTimeout(() => setMounted(true), 30);
     return () => window.clearTimeout(t);
   }, []);
 
-  const dashoffset = mounted ? ARC_LENGTH * (1 - score / 100) : ARC_LENGTH;
-  const needleRotation = mounted ? scoreAngle : -180;
-  const delay = `${index * 0.1}s`;
-
-  const trackPath = describeArc(ARC_CX, ARC_CY, ARC_RADIUS, -180, 0);
-  const fillPath = describeArc(ARC_CX, ARC_CY, ARC_RADIUS, -180, 0);
-
+  const dashoffset = mounted
+    ? RING_CIRCUMFERENCE * (1 - score / 100)
+    : RING_CIRCUMFERENCE;
+  const delay = `${index * 0.08}s`;
   const levelLabel = `${risk.isEstimate ? "~" : ""}${risk.label}`;
 
   return (
     <div className="flex flex-col items-center">
-      <div className="mb-1">
-        <RiskIcon id={risk.id} size={20} color="hsl(var(--muted-foreground))" />
+      <div className="relative" style={{ width: RING_SIZE, height: RING_SIZE }}>
+        <svg
+          width={RING_SIZE}
+          height={RING_SIZE}
+          viewBox={`0 0 ${RING_SIZE} ${RING_SIZE}`}
+          xmlns="http://www.w3.org/2000/svg"
+          aria-hidden="true"
+          style={{ transform: "rotate(-90deg)" }}
+        >
+          {/* Track */}
+          <circle
+            cx={RING_SIZE / 2}
+            cy={RING_SIZE / 2}
+            r={RING_RADIUS}
+            stroke={trackColor}
+            strokeWidth={RING_STROKE}
+            fill="none"
+          />
+          {/* Fill */}
+          <circle
+            cx={RING_SIZE / 2}
+            cy={RING_SIZE / 2}
+            r={RING_RADIUS}
+            stroke={colors.ring}
+            strokeWidth={RING_STROKE}
+            strokeLinecap="round"
+            fill="none"
+            strokeDasharray={RING_CIRCUMFERENCE}
+            strokeDashoffset={dashoffset}
+            style={{
+              transition: "stroke-dashoffset 1.1s cubic-bezier(0.34, 1.4, 0.64, 1)",
+              transitionDelay: delay,
+            }}
+          />
+        </svg>
+        {/* Icon zentriert */}
+        <div
+          className="absolute inset-0 flex items-center justify-center"
+          style={{ color: colors.ring }}
+        >
+          <RiskIcon id={risk.id} size={26} color="currentColor" />
+        </div>
       </div>
 
-      <svg
-        width={64}
-        height={38}
-        viewBox="0 0 64 38"
-        xmlns="http://www.w3.org/2000/svg"
-        aria-hidden="true"
+      <div
+        className="mt-1.5 text-[15px] font-bold leading-none tabular-nums"
+        style={{ color: colors.scoreText }}
       >
-        {/* Track */}
-        <path d={trackPath} stroke={trackColor} strokeWidth={5} strokeLinecap="round" fill="none" />
-        {/* Fill */}
-        <path
-          d={fillPath}
-          stroke={color}
-          strokeWidth={5}
-          strokeLinecap="round"
-          fill="none"
-          strokeDasharray={ARC_LENGTH}
-          strokeDashoffset={dashoffset}
-          style={{
-            transition: "stroke-dashoffset 1.1s cubic-bezier(0.34, 1.4, 0.64, 1)",
-            transitionDelay: delay,
-          }}
-        />
-        {/* Nadel */}
-        <line
-          x1={ARC_CX}
-          y1={ARC_CY}
-          x2={tip.x}
-          y2={tip.y}
-          stroke={color}
-          strokeWidth={2}
-          strokeLinecap="round"
-          style={{
-            transform: `rotate(${needleRotation - scoreAngle}deg)`,
-            transformOrigin: `${ARC_CX}px ${ARC_CY}px`,
-            transition: "transform 1.1s cubic-bezier(0.34, 1.4, 0.64, 1)",
-            transitionDelay: delay,
-          }}
-        />
-        {/* Zentrum */}
-        <circle cx={ARC_CX} cy={ARC_CY} r={2.5} fill={color} />
-      </svg>
-
-      <div className="mt-1 text-[14px] font-extrabold leading-none tabular-nums" style={{ color }}>
         {score}
       </div>
-      <div className="mt-0.5 text-[8px] uppercase tracking-wide text-muted-foreground">
+
+      <div className="mt-1 text-[9px] font-semibold uppercase tracking-wide text-foreground/70">
         {NAME_LABEL[risk.id]}
       </div>
-      <div className="text-[9px] font-bold" style={{ color }}>
+
+      <div
+        className="mt-1 inline-flex items-center rounded-full px-1.5 py-0.5 text-[9px] font-semibold leading-none"
+        style={{ backgroundColor: colors.chipBg, color: colors.chipText }}
+      >
         {levelLabel}
       </div>
+    </div>
+  );
+}
+
+function InactiveRow({ risks }: { risks: RiskItem[] }) {
+  if (risks.length === 0) return null;
+  return (
+    <div className="mt-3 flex flex-wrap items-center justify-center gap-1.5 border-t border-border/50 pt-3">
+      <span className="text-[9px] font-semibold uppercase tracking-wide text-muted-foreground">
+        Kein Risiko:
+      </span>
+      {risks.map((r) => (
+        <span
+          key={r.id}
+          className="inline-flex items-center gap-1 rounded-full bg-muted/60 px-2 py-0.5 text-[10px] font-medium text-muted-foreground"
+        >
+          <RiskIcon id={r.id} size={11} color="currentColor" />
+          {NAME_LABEL[r.id]}
+        </span>
+      ))}
     </div>
   );
 }
@@ -174,9 +205,9 @@ export default function WeatherRiskGauges() {
   if (isLoading && risks.length === 0) {
     return (
       <CardShell>
-        <div className="grid grid-cols-4 items-start gap-1">
+        <div className="grid grid-cols-4 items-start gap-2">
           {[0, 1, 2, 3].map((i) => (
-            <div key={i} className="h-[90px] animate-pulse rounded-xl bg-muted" />
+            <div key={i} className="h-[110px] animate-pulse rounded-xl bg-muted" />
           ))}
         </div>
       </CardShell>
@@ -185,16 +216,22 @@ export default function WeatherRiskGauges() {
 
   if (risks.length === 0) return null;
 
-  const allLow = risks.every((r) => r.score <= 10);
-  if (allLow) return null;
+  const active = risks.filter((r) => r.score > 10);
+  const inactive = risks.filter((r) => r.score <= 10);
+
+  if (active.length === 0) return null;
 
   return (
     <CardShell>
-      <div className="grid grid-cols-4 items-start gap-1">
-        {risks.map((r, i) => (
-          <Gauge key={r.id} risk={r} index={i} isDark={isDark} />
+      <div
+        className="grid items-start gap-2"
+        style={{ gridTemplateColumns: `repeat(${Math.min(active.length, 4)}, minmax(0, 1fr))` }}
+      >
+        {active.map((r, i) => (
+          <RiskRing key={r.id} risk={r} index={i} isDark={isDark} />
         ))}
       </div>
+      <InactiveRow risks={inactive} />
     </CardShell>
   );
 }
