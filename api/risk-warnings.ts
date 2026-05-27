@@ -422,7 +422,7 @@ export default async function handler(req: any, res: any) {
   console.log('[risk-warnings] cache MISS', { location: locLabel, hasStale: !!cached });
 
   // Warnungen berechnen
-  const warnings = detectWarnings(weatherData, windowHours, officialWarnings);
+  const warnings = detectWarnings(weatherData, windowHours, officialWarnings, serverScore);
   const convectiveContext = buildConvectiveContext(weatherData, windowHours);
 
   console.log('[risk-warnings] INPUT', JSON.stringify({
