@@ -379,25 +379,72 @@ export function HourlyForecastChart({
               {sharedRefs}
             </ComposedChart>
           ) : metric === "precip" ? (
-            <ComposedChart data={rows} margin={MARGIN}>
-              <CartesianGrid stroke={grid} vertical={false} />
-              {sharedX}
-              <YAxis
-                yAxisId="pop"
-                width={Y_WIDTH}
-                domain={[0, 100]}
-                ticks={[0, 50, 100]}
-                tick={{ fill: axis, fontSize: 10 }}
-                tickLine={false}
-                axisLine={false}
-                unit="%"
-              />
-              <YAxis yAxisId="mm" orientation="right" hide domain={[0, (max: number) => Math.max(max, 2)]} />
-              <Tooltip content={<TooltipBox metric={metric} />} cursor={cursor} />
-              <Bar yAxisId="pop" dataKey="pop" radius={[3, 3, 0, 0]} fill="#60A5FA" fillOpacity={0.65} isAnimationActive={false} />
-              <Bar yAxisId="mm" dataKey="precip" radius={[3, 3, 0, 0]} fill="#1D4ED8" fillOpacity={0.9} isAnimationActive={false} />
-              {sharedRefs}
-            </ComposedChart>
+            (() => {
+              const maxMm = Math.max(
+                ...rows.map((r) => (Number.isFinite(r.precip) ? r.precip : 0)),
+                0,
+              );
+              const mmDomainMax = maxMm > 0 ? Math.max(Math.ceil(maxMm * 1.2 * 10) / 10, 1) : 2;
+              return (
+                <ComposedChart data={rows} margin={MARGIN}>
+                  <CartesianGrid stroke={grid} vertical={false} />
+                  {sharedX}
+                  {/* Left axis: precipitation amount (mm) — primary */}
+                  <YAxis
+                    yAxisId="mm"
+                    width={Y_WIDTH}
+                    domain={[0, mmDomainMax]}
+                    tick={{ fill: axis, fontSize: 10 }}
+                    tickLine={false}
+                    axisLine={false}
+                    unit=" mm"
+                    allowDecimals
+                  />
+                  {/* Right axis: probability — for the overlay line */}
+                  <YAxis
+                    yAxisId="pop"
+                    orientation="right"
+                    domain={[0, 100]}
+                    width={26}
+                    ticks={[0, 50, 100]}
+                    tick={{ fill: axis, fontSize: 10 }}
+                    tickLine={false}
+                    axisLine={false}
+                    unit="%"
+                  />
+                  <Tooltip content={<TooltipBox metric={metric} />} cursor={cursor} />
+                  <defs>
+                    <linearGradient id="popFill" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#60A5FA" stopOpacity={0.25} />
+                      <stop offset="100%" stopColor="#60A5FA" stopOpacity={0.02} />
+                    </linearGradient>
+                  </defs>
+                  {/* Probability as soft area background */}
+                  <Area
+                    yAxisId="pop"
+                    type="monotone"
+                    dataKey="pop"
+                    stroke="#60A5FA"
+                    strokeWidth={1.5}
+                    strokeOpacity={0.8}
+                    fill="url(#popFill)"
+                    dot={false}
+                    isAnimationActive={false}
+                  />
+                  {/* Precipitation amount as solid bars (primary visual) */}
+                  <Bar
+                    yAxisId="mm"
+                    dataKey="precip"
+                    radius={[3, 3, 0, 0]}
+                    fill="#1D4ED8"
+                    fillOpacity={0.9}
+                    minPointSize={3}
+                    isAnimationActive={false}
+                  />
+                  {sharedRefs}
+                </ComposedChart>
+              );
+            })()
           ) : metric === "wind" ? (
             <ComposedChart data={rows} margin={MARGIN}>
               <CartesianGrid stroke={grid} vertical={false} />
