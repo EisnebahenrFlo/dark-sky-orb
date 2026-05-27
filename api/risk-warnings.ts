@@ -53,63 +53,75 @@ function detectWarnings(weatherData: any, windowHours: number, officialWarnings:
   const idx = getIndices(hourly, windowHours);
   if (idx.length === 0) return warnings;
 
-  const getMax = (arr: number[], key: 'max' | 'min' = 'max') =>
+  const getMax = (arr: number[] | undefined, key: 'max' | 'min' = 'max') =>
     idx.reduce((acc: number, i: number) => {
       const v = arr?.[i] ?? (key === 'max' ? -Infinity : Infinity);
       return key === 'max' ? Math.max(acc, v) : Math.min(acc, v);
     }, key === 'max' ? -Infinity : Infinity);
 
-  // Wind
+  // Wind: Böen >=60 warnung, >=75 markant, >=90 unwetter, >=118 extrem
   const maxGust = getMax(hourly.wind_gusts_10m);
-  if (maxGust >= THRESHOLDS.wind_gust_markant) {
-    const stufe = maxGust >= THRESHOLDS.wind_gust_extreme ? 'extrem'
-                : maxGust >= THRESHOLDS.wind_gust_severe ? 'unwetter' : 'markant';
+  if (maxGust >= 60) {
+    const stufe: Stufe = maxGust >= 118 ? 'extrem' : maxGust >= 90 ? 'unwetter' : maxGust >= 75 ? 'markant' : 'warnung';
     warnings.push({ typ: 'wind', stufe, max_value: Math.round(maxGust), unit: 'km/h' });
   }
 
-  // Regen
+  // Starkregen: >=10mm/h oder >=15mm/12h warnung, >=25mm/h markant, >=40mm/h unwetter
   const max1h = getMax(hourly.precipitation);
-  const sum = idx.reduce((s: number, i: number) => s + (hourly.precipitation?.[i] ?? 0), 0);
-  if (max1h >= THRESHOLDS.precip_1h_markant || sum >= THRESHOLDS.precip_12h_markant) {
-    const stufe = (max1h >= THRESHOLDS.precip_1h_extreme || sum >= THRESHOLDS.precip_12h_extreme) ? 'extrem'
-                : (max1h >= THRESHOLDS.precip_1h_severe || sum >= THRESHOLDS.precip_12h_severe) ? 'unwetter' : 'markant';
-    warnings.push({ typ: 'regen', stufe, max_1h: Math.round(max1h * 10) / 10, sum: Math.round(sum * 10) / 10, unit: 'mm' });
+  const sum12 = idx.reduce((s: number, i: number) => s + (hourly.precipitation?.[i] ?? 0), 0);
+  if (max1h >= 10 || sum12 >= 15) {
+    const stufe: Stufe = max1h >= 40 ? 'unwetter' : max1h >= 25 ? 'markant' : 'warnung';
+    warnings.push({ typ: 'regen', stufe, max_1h: Math.round(max1h * 10) / 10, sum: Math.round(sum12 * 10) / 10, unit: 'mm' });
   }
 
-  // Schnee
+  // Schnee: >=5cm/12h warnung, >=10 markant, >=20 unwetter
   const snow = idx.reduce((s: number, i: number) => s + (hourly.snowfall?.[i] ?? 0), 0);
-  if (snow >= THRESHOLDS.snow_12h_markant) {
-    const stufe = snow >= THRESHOLDS.snow_12h_severe ? 'unwetter' : 'markant';
+  if (snow >= 5) {
+    const stufe: Stufe = snow >= 20 ? 'unwetter' : snow >= 10 ? 'markant' : 'warnung';
     warnings.push({ typ: 'schnee', stufe, sum: Math.round(snow * 10) / 10, unit: 'cm' });
   }
 
-  // Hitze: deaktiviert (Schwelle 32°C zu niedrig für Mai/Juni — würde Fehlalarme erzeugen)
-
-  // Gewitter: CAPE-Schwelle ODER amtliche Gewitterwarnung
+  // Gewitter: CAPE >=300 warnung, >=500 markant, >=1500 unwetter, >=2500 extrem
   const maxCape = idx.reduce((m: number, i: number) => Math.max(m, hourly.cape?.[i] ?? 0), 0);
   const hasOfficialThunderstorm = officialWarnings?.some(
     (w: any) => typeof w?.type === 'string' && w.type.toLowerCase().includes('thunderstorm'),
   );
-  if (maxCape >= 500 || hasOfficialThunderstorm) {
+  if (maxCape >= 300 || hasOfficialThunderstorm) {
+    const stufe: Stufe = maxCape >= 2500 ? 'extrem'
+                      : maxCape >= 1500 ? 'unwetter'
+                      : maxCape >= 500 ? 'markant' : 'warnung';
     warnings.push({
       typ: 'gewitter',
-      stufe: 'markant',
+      stufe,
       cape_max: Math.round(maxCape),
       official: !!hasOfficialThunderstorm,
       unit: 'J/kg',
     });
   }
 
+  // Hitze: >=30°C warnung, >=35 markant, >=38 unwetter
+  const maxTemp = getMax(hourly.temperature_2m);
+  if (maxTemp >= 30) {
+    const stufe: Stufe = maxTemp >= 38 ? 'unwetter' : maxTemp >= 35 ? 'markant' : 'warnung';
+    warnings.push({ typ: 'hitze', stufe, max_value: Math.round(maxTemp), unit: '°C' });
+  }
 
+  // Frost: <=-5°C warnung, <=-10°C markant
+  const minTemp = getMax(hourly.temperature_2m, 'min');
+  if (minTemp <= -5) {
+    const stufe: Stufe = minTemp <= -10 ? 'markant' : 'warnung';
+    warnings.push({ typ: 'frost', stufe, min_value: Math.round(minTemp), unit: '°C' });
+  }
 
-  // Glätte
+  // Glätte: <=0°C mit Niederschlag → warnung
   const glazeRisk = idx.some((i: number) =>
-    (hourly.temperature_2m?.[i] ?? 999) <= THRESHOLDS.glaze_temp &&
+    (hourly.temperature_2m?.[i] ?? 999) <= 0 &&
     (hourly.precipitation?.[i] ?? 0) > 0.1
   );
-  if (glazeRisk) warnings.push({ typ: 'glätte', stufe: 'markant' });
+  if (glazeRisk) warnings.push({ typ: 'glätte', stufe: 'warnung' as Stufe });
 
-  return warnings;
+  // Color je Warnung anhängen
+  return warnings.map((w) => ({ ...w, color: stufeColor(w.stufe) }));
 }
 
 // Kontext-Metriken für Claude (nur zur Formulierung, nicht zur Score-Berechnung)
