@@ -4,6 +4,7 @@ import { Wind, Droplets, Gauge, CloudRain, Thermometer, Cloud, Navigation } from
 import type { CurrentWeather, GeoResult, MinutelyData } from "@/lib/weather";
 import { windDirectionLabel } from "@/lib/weather";
 import { getEffectiveWeather } from "@/lib/weatherDescription";
+import { summarizeNowcastPrecip } from "@/lib/nowcast";
 import { RelativeTime } from "./RelativeTime";
 import { WeatherHeroCanvas, getWeatherGroup, getHeroPalette } from "./WeatherHeroCanvas";
 
