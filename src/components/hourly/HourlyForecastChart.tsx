@@ -309,8 +309,8 @@ export function HourlyForecastChart({
         {metric === "precip" && (
           <Legend
             items={[
-              { kind: "bar", color: "#60A5FA", label: "Wahrscheinlichkeit %" },
-              { kind: "bar", color: "#1D4ED8", label: "Menge mm" },
+              { kind: "bar", color: "#1D4ED8", label: "Niederschlag mm" },
+              { kind: "dot", color: "#60A5FA", label: "Wahrscheinlichkeit %" },
             ]}
           />
         )}
