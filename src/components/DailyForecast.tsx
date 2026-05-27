@@ -16,7 +16,7 @@ import type { CurrentWeather, DailyData, HourlyData } from "@/lib/weather";
 import { weekdayLabel, windDirectionLabel } from "@/lib/weather";
 import { RealisticWeatherIcon } from "./RealisticWeatherIcon";
 import { SectionHeader } from "./SectionHeader";
-import { dailyThunderRiskFromHourly } from "@/lib/thunderRisk";
+import { computeThunderstormRiskSeries } from "@/hooks/useThunderstormRisk";
 
 function timeOnly(iso: string) {
   return new Date(iso).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" });
