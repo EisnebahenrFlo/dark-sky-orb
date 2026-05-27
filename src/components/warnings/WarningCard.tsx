@@ -2,6 +2,7 @@ import {
   AlertTriangle,
   CloudRain,
   Snowflake,
+  Sparkles,
   Thermometer,
   Wind,
   Zap,
@@ -26,106 +27,88 @@ const STUFE_LABEL: Record<string, string> = {
 
 type ColorKey = "green" | "yellow" | "orange" | "red" | "purple";
 
-const COLOR_STYLES: Record<ColorKey, {
-  bar: string;
-  bg: string;
-  border: string;
-  icon: string;
-  badge: string;
-}> = {
+const TONE: Record<ColorKey, { strip: string; accent: string; tint: string; ring: string }> = {
   green: {
-    bar: "#22c55e",
-    bg: "rgba(34,197,94,0.10)",
-    border: "rgba(34,197,94,0.25)",
-    icon: "#16a34a",
-    badge: "bg-green-500 text-white",
+    strip: "bg-emerald-500",
+    accent: "text-emerald-600 dark:text-emerald-400",
+    tint: "from-emerald-500/10",
+    ring: "ring-emerald-500/20",
   },
   yellow: {
-    bar: "#f59e0b",
-    bg: "rgba(245,158,11,0.10)",
-    border: "rgba(245,158,11,0.25)",
-    icon: "#d97706",
-    badge: "bg-amber-400 text-amber-950",
+    strip: "bg-amber-500",
+    accent: "text-amber-600 dark:text-amber-400",
+    tint: "from-amber-500/10",
+    ring: "ring-amber-500/20",
   },
   orange: {
-    bar: "#f97316",
-    bg: "rgba(249,115,22,0.10)",
-    border: "rgba(249,115,22,0.25)",
-    icon: "#ea580c",
-    badge: "bg-orange-500 text-white",
+    strip: "bg-orange-500",
+    accent: "text-orange-600 dark:text-orange-400",
+    tint: "from-orange-500/10",
+    ring: "ring-orange-500/25",
   },
   red: {
-    bar: "#ef4444",
-    bg: "rgba(239,68,68,0.10)",
-    border: "rgba(239,68,68,0.25)",
-    icon: "#dc2626",
-    badge: "bg-red-500 text-white",
+    strip: "bg-red-500",
+    accent: "text-red-600 dark:text-red-400",
+    tint: "from-red-500/15",
+    ring: "ring-red-500/30",
   },
   purple: {
-    bar: "#a855f7",
-    bg: "rgba(168,85,247,0.10)",
-    border: "rgba(168,85,247,0.25)",
-    icon: "#9333ea",
-    badge: "bg-purple-500 text-white",
+    strip: "bg-purple-500",
+    accent: "text-purple-600 dark:text-purple-400",
+    tint: "from-purple-500/10",
+    ring: "ring-purple-500/20",
   },
 };
 
 function resolveColor(c: string): ColorKey {
-  return (c in COLOR_STYLES ? c : "yellow") as ColorKey;
+  return (c in TONE ? c : "yellow") as ColorKey;
 }
 
 export function WarningCard({ warning }: { warning: RiskWarning }) {
   const Icon = ICONS[warning.icon] ?? AlertTriangle;
-  const color = COLOR_STYLES[resolveColor(warning.color)];
+  const tone = TONE[resolveColor(warning.color)];
 
   return (
-    <div
-      className="relative overflow-hidden rounded-2xl border p-5 pl-6 shadow-sm transition-colors sm:p-6 sm:pl-7"
-      style={{ background: color.bg, borderColor: color.border }}
-    >
-      <span
+    <div className="relative overflow-hidden rounded-2xl border border-border/70 bg-card shadow-sm">
+      <div
+        className={`pointer-events-none absolute inset-0 bg-gradient-to-br ${tone.tint} via-transparent to-transparent`}
         aria-hidden
-        className="absolute left-0 top-0 h-full"
-        style={{ width: "4px", background: color.bar }}
       />
-      <div className="flex items-start gap-3">
-        <div
-          className="grid h-9 w-9 shrink-0 place-items-center rounded-lg"
-          style={{ background: "rgba(255,255,255,0.6)", color: color.icon }}
-        >
-          <Icon className="h-5 w-5" strokeWidth={2} />
-        </div>
-        <div className="flex-1">
-          <div
-            className="text-[10px] font-semibold uppercase tracking-wider"
-            style={{ color: color.icon }}
-          >
-            KI-Analyse · Experimentell
+      <div className={`absolute left-0 top-0 h-full w-1 ${tone.strip}`} aria-hidden />
+
+      <div className="relative p-4 pl-5">
+        <div className="mb-2 flex items-center justify-between gap-2">
+          <div className="inline-flex items-center gap-1.5">
+            <Sparkles className={`h-3 w-3 ${tone.accent}`} strokeWidth={2} />
+            <span className={`text-[10px] font-bold uppercase tracking-widest ${tone.accent}`}>
+              KI-Analyse · Experimentell
+            </span>
           </div>
-          <div className="mt-1 flex items-start justify-between gap-3">
-            <h3
-              className="text-base font-semibold tracking-tight"
-              style={{ color: "#1a2a3a" }}
-            >
+          <span
+            className={`shrink-0 rounded-full bg-background/70 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ring-1 ${tone.ring} ${tone.accent}`}
+          >
+            {STUFE_LABEL[warning.stufe] ?? warning.stufe}
+          </span>
+        </div>
+
+        <div className="flex items-start gap-3">
+          <div className={`grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-background/70 ring-1 ${tone.ring}`}>
+            <Icon className={`h-4.5 w-4.5 ${tone.accent}`} strokeWidth={2} />
+          </div>
+          <div className="min-w-0 flex-1">
+            <h3 className="font-display text-base font-bold leading-tight text-foreground">
               {warning.titel}
             </h3>
-            <span
-              className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold uppercase tracking-wider ${color.badge}`}
-            >
-              {STUFE_LABEL[warning.stufe] ?? warning.stufe}
-            </span>
+            <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+              {warning.beschreibung}
+            </p>
           </div>
-          <p className="mt-1 text-sm" style={{ color: "#5a6a7a", lineHeight: 1.6 }}>
-            {warning.beschreibung}
-          </p>
-          <div className="mt-2">
-            <span
-              className="inline-flex rounded-full bg-white/60 px-2 py-0.5 text-xs font-medium"
-              style={{ color: color.icon }}
-            >
-              Experimentell · Keine amtliche Warnung
-            </span>
-          </div>
+        </div>
+
+        <div className="mt-3 border-t border-border/60 pt-2">
+          <span className="text-[10px] italic text-muted-foreground/80">
+            Keine amtliche Warnung · dient als Ergänzung
+          </span>
         </div>
       </div>
     </div>
