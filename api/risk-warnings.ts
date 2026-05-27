@@ -1,7 +1,7 @@
 // Vercel Serverless Function – KI-Warnungen
 // Gewitter-Score kommt FERTIG BERECHNET vom Frontend (useThunderstormRisk).
 // Claude formuliert nur — er rechnet nicht.
-import { getCached, setCached, isFresh, isStaleButUsable, ageMinutes } from './_lib/cache.js';
+import { getCached, setCached, isFresh, ageMinutes } from './_lib/cache.js';
 
 // Stufen-System (Score-basiert, NICHT abhängig von amtlichen Warnungen):
 //   20–34  → warnung  (yellow)
@@ -28,7 +28,6 @@ type ErrorCode =
   | 'BAD_REQUEST';
 
 const FRESH_MS = 15 * 60 * 1000;
-const STALE_MAX_MS = 24 * 60 * 60 * 1000;
 const RETRY_DELAYS_MS = [500, 1500, 4500];
 const REQUEST_TIMEOUT_MS = 30_000;
 
