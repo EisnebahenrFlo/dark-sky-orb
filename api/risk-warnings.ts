@@ -46,7 +46,57 @@ function getIndices(hourly: any, hours: number): number[] {
     .map((item: { t: number; i: number }) => item.i);
 }
 
-function detectWarnings(weatherData: any, windowHours: number, officialWarnings: any[] = []) {
+// ---- Server-seitige Score-Berechnung (kopiert aus src/hooks/useThunderstormRisk.ts) ----
+function scoreFromCAPE(cape: number | null | undefined): number {
+  if (cape == null || Number.isNaN(cape) || cape <= 0) return 0;
+  if (cape >= 2500) return 80;
+  if (cape >= 1500) return 65;
+  if (cape >= 1000) return 50;
+  if (cape >= 500) return 35;
+  if (cape >= 300) return 20;
+  return 0;
+}
+
+function computeHourScore(
+  capeVal: number | null | undefined,
+  lpiVal: number | null | undefined,
+  gustVal: number | null | undefined,
+): number {
+  const basis = scoreFromCAPE(capeVal);
+  let bonus = 0;
+  const lpi = typeof lpiVal === 'number' && !Number.isNaN(lpiVal) ? lpiVal : 0;
+  if (lpi > 5) bonus += 15;
+  else if (lpi > 0) bonus += 10;
+  const gust = typeof gustVal === 'number' && !Number.isNaN(gustVal) ? gustVal : 0;
+  if (gust > 50) bonus += 5;
+  return Math.min(100, basis + bonus);
+}
+
+// Peak-Score über die nächsten N Stunden ab jetzt
+function computeServerStormScore(weatherData: any, hours = 6): number {
+  const h = weatherData?.hourly;
+  if (!h?.time) return 0;
+  const nowMs = Date.now();
+  let peak = 0;
+  let counted = 0;
+  for (let i = 0; i < h.time.length && counted < hours; i++) {
+    const t = new Date(h.time[i]).getTime();
+    if (t < nowMs) continue;
+    const s = computeHourScore(h.cape?.[i], h.lightning_potential?.[i], h.wind_gusts_10m?.[i]);
+    if (s > peak) peak = s;
+    counted++;
+  }
+  return peak;
+}
+
+function stufeFromScore(score: number): Stufe {
+  if (score >= 75) return 'extrem';
+  if (score >= 55) return 'unwetter';
+  if (score >= 35) return 'markant';
+  return 'warnung';
+}
+
+function detectWarnings(weatherData: any, windowHours: number, officialWarnings: any[] = [], stormScore = 0) {
   const warnings: any[] = [];
   const hourly = weatherData.hourly;
   if (!hourly?.time) return warnings;
@@ -81,18 +131,18 @@ function detectWarnings(weatherData: any, windowHours: number, officialWarnings:
     warnings.push({ typ: 'schnee', stufe, sum: Math.round(snow * 10) / 10, unit: 'cm' });
   }
 
-  // Gewitter: CAPE >=300 warnung, >=500 markant, >=1500 unwetter, >=2500 extrem
+  // Gewitter: stufe leitet sich aus dem serverseitig berechneten Score ab (>=20).
+  // Ausgelöst, wenn Score-Schwelle erreicht ODER amtliche Gewitterwarnung aktiv.
   const maxCape = idx.reduce((m: number, i: number) => Math.max(m, hourly.cape?.[i] ?? 0), 0);
   const hasOfficialThunderstorm = officialWarnings?.some(
     (w: any) => typeof w?.type === 'string' && w.type.toLowerCase().includes('thunderstorm'),
   );
-  if (maxCape >= 300 || hasOfficialThunderstorm) {
-    const stufe: Stufe = maxCape >= 2500 ? 'extrem'
-                      : maxCape >= 1500 ? 'unwetter'
-                      : maxCape >= 500 ? 'markant' : 'warnung';
+  if (stormScore >= 20 || hasOfficialThunderstorm) {
+    const stufe: Stufe = stufeFromScore(stormScore);
     warnings.push({
       typ: 'gewitter',
       stufe,
+      score: stormScore,
       cape_max: Math.round(maxCape),
       official: !!hasOfficialThunderstorm,
       unit: 'J/kg',
@@ -328,7 +378,7 @@ export default async function handler(req: any, res: any) {
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return errorResponse(res, 405, 'BAD_REQUEST', 'Method not allowed');
 
-  const { weatherData, location, thunderstormScore, windowHours = 48 } = req.body ?? {};
+  const { weatherData, location, windowHours = 48 } = req.body ?? {};
   const officialWarnings: any[] = req.body?.officialWarnings ?? [];
   const nowcast: any = req.body?.nowcast ?? null;
   if (!weatherData || !location) return errorResponse(res, 400, 'BAD_REQUEST', 'Missing weatherData or location');
@@ -348,10 +398,10 @@ export default async function handler(req: any, res: any) {
     }
   }
 
-  // Score vom Frontend übernehmen, Fallback auf 0
-  const frontendScore: number = typeof thunderstormScore === 'number' ? thunderstormScore : 0;
-  const level = scoreLevelLabel(frontendScore);
-  const color = scoreToColor(frontendScore);
+  // Score serverseitig aus weatherData berechnen (Frontend-Wert wird ignoriert)
+  const serverScore: number = computeServerStormScore(weatherData, 6);
+  const level = scoreLevelLabel(serverScore);
+  const color = scoreToColor(serverScore);
 
   const dLat = typeof dataLat === 'number' ? Math.round(dataLat * 10) : 'x';
   const dLon = typeof dataLon === 'number' ? Math.round(dataLon * 10) : 'x';
@@ -372,14 +422,14 @@ export default async function handler(req: any, res: any) {
   console.log('[risk-warnings] cache MISS', { location: locLabel, hasStale: !!cached });
 
   // Warnungen berechnen
-  const warnings = detectWarnings(weatherData, windowHours, officialWarnings);
+  const warnings = detectWarnings(weatherData, windowHours, officialWarnings, serverScore);
   const convectiveContext = buildConvectiveContext(weatherData, windowHours);
 
   console.log('[risk-warnings] INPUT', JSON.stringify({
     location: location?.name,
     cape_max: Math.max(...(weatherData.hourly.cape?.slice(0, 12) ?? [0])),
     gust_max: Math.max(...(weatherData.hourly.wind_gusts_10m?.slice(0, 12) ?? [0])),
-    storm_score: frontendScore,
+    storm_score: serverScore,
     storm_level: level,
     warnings_detected: warnings.map((w: any) => `${w.typ}_${w.stufe}_${w.max_value}${w.unit}`),
   }));
@@ -409,7 +459,7 @@ export default async function handler(req: any, res: any) {
   const dynamicPart =
     `# DATEN\n` +
     `Standort: ${JSON.stringify(location)}\n` +
-    `Berechneter Gewitter-Score (Frontend, exakt übernehmen): score=${frontendScore}, level="${level}", color="${color}"\n` +
+    `Berechneter Gewitter-Score (serverseitig, exakt übernehmen): score=${serverScore}, level="${level}", color="${color}"\n` +
     `Konvektive Metriken (${windowHours}h-Fenster): ${JSON.stringify(convectiveContext, null, 2)}\n` +
     `Hinweis-Warnungen aus Schwellenwerten (nur Anhaltspunkt): ${JSON.stringify(warnings, null, 2)}\n` +
     `Rohe Stundenwerte nächste ${windowHours}h: ${JSON.stringify(rawHourly)}\n` +
@@ -471,8 +521,8 @@ export default async function handler(req: any, res: any) {
     return errorResponse(res, 500, 'INVALID_RESPONSE', 'KI-Antwort unvollständig', schemaErr);
   }
 
-  // Score aus Frontend erzwingen (Claude darf ihn nicht verändern)
-  parsed.gewitter_risiko_6h.score = frontendScore;
+  // Server-Score erzwingen (Claude darf ihn nicht verändern)
+  parsed.gewitter_risiko_6h.score = serverScore;
   parsed.gewitter_risiko_6h.level = level;
   parsed.gewitter_risiko_6h.color = color;
 
