@@ -387,13 +387,15 @@ export function WeatherHeroCanvas({ weatherCode, isDay }: WeatherHeroCanvasProps
 
     resize();
 
-    const dark =
+    const dark: boolean =
       group === "CLOUDY" || group === "CLOUDY_NIGHT" || group === "HEAVY_RAIN" ||
       group === "THUNDER" || group === "THUNDER_HAIL" || group === "SHOWER";
+    const isNightGroup: boolean = group === "NIGHT" || group === "CLOUDY_NIGHT";
+    const heavyVignette: boolean = dark || isNightGroup;
 
-    const warmArc = group === "SUNNY" || group === "PARTLY_CLOUDY";
-    const coolArc =
-      group === "NIGHT" || group === "CLOUDY_NIGHT" ||
+    const warmArc: boolean = group === "SUNNY" || group === "PARTLY_CLOUDY";
+    const coolArc: boolean =
+      isNightGroup ||
       group === "THUNDER" || group === "THUNDER_HAIL" ||
       group === "HEAVY_RAIN" || group === "SHOWER";
 
