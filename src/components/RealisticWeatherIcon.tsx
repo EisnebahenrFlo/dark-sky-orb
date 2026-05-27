@@ -59,11 +59,15 @@ const ICON_THEME_CSS = `
   .rwi-cloud-front-1 { stop-color: #6B7280; }
   .rwi-cloud-back-0  { stop-color: #6B7280; }
   .rwi-cloud-back-1  { stop-color: #4B5563; }
+  .rwi-cloud-night-0 { stop-color: #B0B7C3; }
+  .rwi-cloud-night-1 { stop-color: #9CA3AF; }
   .rwi-cloud-stroke  { stroke: #6B7280; }
   html.dark .rwi-cloud-front-0 { stop-color: #D1D5DB; }
   html.dark .rwi-cloud-front-1 { stop-color: #9CA3AF; }
   html.dark .rwi-cloud-back-0  { stop-color: #9CA3AF; }
   html.dark .rwi-cloud-back-1  { stop-color: #6B7280; }
+  html.dark .rwi-cloud-night-0 { stop-color: #6B7280; }
+  html.dark .rwi-cloud-night-1 { stop-color: #4B5563; }
   html.dark .rwi-cloud-stroke  { stroke: #9CA3AF; }
 `;
 
@@ -85,12 +89,14 @@ function Frame({ size, className, children }: { size: number; className?: string
 
 /* ---------- shared paint helpers ---------- */
 
-function CloudGradient({ id, dark = false }: { id: string; dark?: boolean }) {
-  // `dark` selects the back/layered shade — orthogonal to the page theme.
+function CloudGradient({ id, dark = false, night = false }: { id: string; dark?: boolean; night?: boolean }) {
+  // `dark` = back/layered shade. `night` = lighter night-only variant for code 3 nachts.
+  const cls0 = night ? "rwi-cloud-night-0" : dark ? "rwi-cloud-back-0" : "rwi-cloud-front-0";
+  const cls1 = night ? "rwi-cloud-night-1" : dark ? "rwi-cloud-back-1" : "rwi-cloud-front-1";
   return (
     <linearGradient id={id} x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" className={dark ? "rwi-cloud-back-0" : "rwi-cloud-front-0"} stopOpacity="1" />
-      <stop offset="100%" className={dark ? "rwi-cloud-back-1" : "rwi-cloud-front-1"} stopOpacity="1" />
+      <stop offset="0%" className={cls0} stopOpacity="1" />
+      <stop offset="100%" className={cls1} stopOpacity="1" />
     </linearGradient>
   );
 }
@@ -171,16 +177,16 @@ function MainlySunny({ size, uid, className }: Base) {
         <SunGradient id={sg} />
         <CloudGradient id={cg} />
       </defs>
-      <circle cx={44} cy={22} r={9} fill={`url(#${sg})`} />
+      <circle cx={42} cy={20} r={14} fill={`url(#${sg})`} />
       {Array.from({ length: 6 }).map((_, i) => {
         const a = (i * Math.PI) / 3;
-        const x1 = 44 + Math.cos(a) * 12;
-        const y1 = 22 + Math.sin(a) * 12;
-        const x2 = 44 + Math.cos(a) * 17;
-        const y2 = 22 + Math.sin(a) * 17;
+        const x1 = 42 + Math.cos(a) * 17;
+        const y1 = 20 + Math.sin(a) * 17;
+        const x2 = 42 + Math.cos(a) * 22;
+        const y2 = 20 + Math.sin(a) * 22;
         return <line key={i} x1={x1} y1={y1} x2={x2} y2={y2} stroke="#f59e0b" strokeWidth={2} strokeLinecap="round" />;
       })}
-      <CloudShape fill={`url(#${cg})`} y={4} />
+      <CloudShape fill={`url(#${cg})`} y={8} />
     </Frame>
   );
 }
@@ -196,12 +202,13 @@ function PartlyCloudy({ size, uid, className }: Base) {
         <CloudGradient id={cgF} />
         <CloudGradient id={cgB} dark />
       </defs>
-      <circle cx={45} cy={20} r={8} fill={`url(#${sg})`} />
-      <CloudShape fill={`url(#${cgB})`} x={6} y={2} scale={0.75} />
-      <CloudShape fill={`url(#${cgF})`} y={8} />
+      <circle cx={44} cy={18} r={14} fill={`url(#${sg})`} />
+      <CloudShape fill={`url(#${cgB})`} x={6} y={4} scale={0.75} />
+      <CloudShape fill={`url(#${cgF})`} y={12} />
     </Frame>
   );
 }
+
 
 function Overcast({ size, uid, className }: Base) {
   const c1 = `cloudGrad1_${uid}`;
