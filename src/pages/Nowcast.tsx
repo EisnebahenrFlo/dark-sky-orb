@@ -1,19 +1,28 @@
 import { useState } from "react";
-import { Info, Radio, CloudSun } from "lucide-react";
+import { Info, Radio, CloudSun, TrendingUp } from "lucide-react";
 import type { HourlyData } from "@/lib/weather";
 import { Nowcast } from "@/components/Nowcast";
 import { PageState } from "@/components/PageState";
 import { useWeather } from "@/contexts/WeatherContext";
 import {
   useRainbowNowcast,
-  type RainbowNowcastItem,
   type RainbowNowcastResponse,
-  type RainbowPrecipType,
 } from "@/hooks/useRainbowNowcast";
+import {
+  buildMarkers,
+  buildPoints,
+  buildSegments,
+  buildSummary,
+  computeRateCeiling,
+  findPeak,
+  formatOffset,
+  formatRate,
+  intensityLabel,
+  type NowcastSegment,
+  type PrecipKind,
+} from "@/lib/rainbowNowcast";
 
 type Range = 8 | 24;
-
-type PrecipKind = "rain" | "snow" | "ice" | "none";
 
 const TYPE_COLORS: Record<PrecipKind, { fill: string; stroke: string }> = {
   rain: { fill: "#B5D4F4", stroke: "#378ADD" },
@@ -38,65 +47,9 @@ const TYPE_EMOJI: Record<PrecipKind, string> = {
 
 const VB_W = 600;
 const VB_H = 100;
-const MAX_RATE = 10;
+const Y_AXIS_PAD = 32; // reserved for y-axis labels inside viewBox
 
-function normalizeType(t: RainbowPrecipType): PrecipKind {
-  if (t === "rain" || t === "snow" || t === "ice") return t;
-  return "none";
-}
-
-interface Point {
-  x: number;
-  y: number;
-  rate: number;
-  type: PrecipKind;
-  tsBegin: number;
-  minOffset: number; // minutes from now
-}
-
-function buildPoints(items: RainbowNowcastItem[], nowSec: number, minutes: number): Point[] {
-  const endSec = nowSec + minutes * 60;
-  const filtered = items
-    .filter((f) => f.timestampBegin >= nowSec - 60 && f.timestampBegin <= endSec)
-    .sort((a, b) => a.timestampBegin - b.timestampBegin);
-
-  return filtered.map((f) => {
-    const minOffset = Math.max(0, (f.timestampBegin - nowSec) / 60);
-    const rateClamped = Math.min(Math.max(f.precipRate ?? 0, 0), MAX_RATE);
-    const x = (minOffset / minutes) * VB_W;
-    const y = VB_H - (rateClamped / MAX_RATE) * VB_H;
-    return {
-      x,
-      y,
-      rate: f.precipRate ?? 0,
-      type: normalizeType(f.precipType),
-      tsBegin: f.timestampBegin,
-      minOffset,
-    };
-  });
-}
-
-interface Segment {
-  type: PrecipKind;
-  points: Point[];
-}
-
-function buildSegments(points: Point[]): Segment[] {
-  const segs: Segment[] = [];
-  for (const p of points) {
-    const last = segs[segs.length - 1];
-    if (last && last.type === p.type) {
-      last.points.push(p);
-    } else {
-      // overlap one point for visual continuity
-      const seed = last ? [last.points[last.points.length - 1], p] : [p];
-      segs.push({ type: p.type, points: [...seed] });
-    }
-  }
-  return segs;
-}
-
-function areaPath(seg: Segment): string {
+function areaPath(seg: NowcastSegment): string {
   if (seg.points.length === 0) return "";
   const pts = seg.points;
   const first = pts[0];
@@ -105,39 +58,11 @@ function areaPath(seg: Segment): string {
   return `${top} L ${last.x.toFixed(2)} ${VB_H} L ${first.x.toFixed(2)} ${VB_H} Z`;
 }
 
-function linePath(seg: Segment): string {
+function linePath(seg: NowcastSegment): string {
   if (seg.points.length === 0) return "";
   return seg.points
     .map((p, i) => `${i === 0 ? "M" : "L"} ${p.x.toFixed(2)} ${p.y.toFixed(2)}`)
     .join(" ");
-}
-
-interface Marker {
-  x: number;
-  label: string;
-}
-
-function buildMarkers(points: Point[], minutes: number): Marker[] {
-  const out: Marker[] = [];
-  let wasPrecip = points[0] ? points[0].type !== "none" && points[0].rate > 0 : false;
-  for (let i = 1; i < points.length; i++) {
-    const p = points[i];
-    const isPrecip = p.type !== "none" && p.rate > 0;
-    if (isPrecip !== wasPrecip) {
-      out.push({ x: (p.minOffset / minutes) * VB_W, label: isPrecip ? "beginnt" : "endet" });
-      wasPrecip = isPrecip;
-    }
-  }
-  return out;
-}
-
-function formatOffset(min: number): string {
-  if (min === 0) return "Jetzt";
-  if (min < 60) return `+${min} Min`;
-  const h = Math.floor(min / 60);
-  const m = min % 60;
-  if (m === 0) return `+${h}h`;
-  return `+${h}:${String(m).padStart(2, "0")}h`;
 }
 
 function timeTicks(minutes: number): number[] {
@@ -145,51 +70,16 @@ function timeTicks(minutes: number): number[] {
   return [0, 60, 120, 180, 240, 300, 360];
 }
 
-function buildSummary(points: Point[], minutes: number): { text: string; warn: boolean } {
-  if (points.length === 0) return { text: "Kein Niederschlag erwartet", warn: false };
-
-  const hasIce = points.some((p) => p.type === "ice" && p.rate > 0);
-  if (hasIce) return { text: "⚠️ Gefrierender Regen — Glatteisgefahr", warn: true };
-
-  const isPrecip = (p: Point) => p.type !== "none" && p.rate > 0;
-  const anyPrecip = points.some(isPrecip);
-  if (!anyPrecip) {
-    return { text: `Kein Niederschlag in den nächsten ${minutes < 60 ? minutes + " Min" : minutes / 60 + " h"}`, warn: false };
-  }
-
-  const first = points[0];
-  if (isPrecip(first)) {
-    // currently precipitating — find when it ends
-    let endIdx = points.length;
-    for (let i = 1; i < points.length; i++) {
-      if (!isPrecip(points[i])) {
-        endIdx = i;
-        break;
-      }
-    }
-    if (endIdx < points.length) {
-      const minsLeft = Math.round(points[endIdx].minOffset);
-      const label = first.type === "snow" ? "Schnee" : first.type === "ice" ? "Eis" : "Regen";
-      return { text: `${label} noch ${minsLeft} Minuten`, warn: false };
-    }
-    const label = first.type === "snow" ? "Schnee" : "Regen";
-    return { text: `${label} hält länger als ${minutes / 60}h an`, warn: false };
-  }
-
-  // find when precip begins
-  const startIdx = points.findIndex(isPrecip);
-  const start = points[startIdx];
-  const minsTo = Math.round(start.minOffset);
-  const label = start.type === "snow" ? "Schnee" : start.type === "ice" ? "Eis" : "Regen";
-  return { text: `${label} in ${minsTo} Minuten`, warn: false };
-}
-
 function RainbowChart({ data, minutes }: { data: RainbowNowcastResponse; minutes: number }) {
   const nowSec = Date.now() / 1000;
-  const points = buildPoints(data.forecast ?? [], nowSec, minutes);
+  // First pass: discover peak with default ceiling to derive a true-data ceiling.
+  const probe = buildPoints(data.forecast ?? [], nowSec, minutes, VB_W, VB_H, 100);
+  const ceiling = computeRateCeiling(probe);
+  const points = buildPoints(data.forecast ?? [], nowSec, minutes, VB_W, VB_H, ceiling);
   const segments = buildSegments(points);
-  const markers = buildMarkers(points, minutes);
+  const markers = buildMarkers(points, minutes, VB_W);
   const summary = buildSummary(points, minutes);
+  const peak = findPeak(points);
   const ticks = timeTicks(minutes);
 
   const presentTypes = Array.from(
@@ -198,13 +88,25 @@ function RainbowChart({ data, minutes }: { data: RainbowNowcastResponse; minutes
 
   const noPrecip = points.length === 0 || presentTypes.length === 0;
 
+  // Y-axis scale labels: 0, mid, top
+  const yLabels = [ceiling, ceiling / 2, 0];
+
   return (
     <div className="glass rounded-3xl p-5 sm:p-6">
-      <div
-        className={`mb-1 text-sm ${summary.warn ? "font-medium text-orange-500" : "text-foreground"}`}
-      >
-        {summary.text}
+      <div className="mb-2 flex items-start justify-between gap-3">
+        <div
+          className={`text-sm ${summary.warn ? "font-medium text-orange-500" : "font-medium text-foreground"}`}
+        >
+          {summary.text}
+        </div>
+        {peak && (
+          <div className="flex shrink-0 items-center gap-1 rounded-full border border-border bg-background/60 px-2 py-0.5 text-[10px] font-medium tabular-nums text-foreground">
+            <TrendingUp className="h-3 w-3 text-primary" strokeWidth={2} />
+            Spitze {formatRate(peak.rate)} · {intensityLabel(peak.rate)}
+          </div>
+        )}
       </div>
+
       {presentTypes.length > 1 && (
         <div className="mb-3 flex flex-wrap gap-2 text-xs">
           {presentTypes.map((t) => (
@@ -221,7 +123,7 @@ function RainbowChart({ data, minutes }: { data: RainbowNowcastResponse; minutes
 
       <div className="relative w-full overflow-hidden">
         {noPrecip ? (
-          <div className="grid h-40 place-items-center text-center text-muted-foreground">
+          <div className="grid h-44 place-items-center text-center text-muted-foreground">
             <div>
               <CloudSun className="mx-auto h-10 w-10" strokeWidth={1.5} aria-hidden="true" />
               <div className="mt-2 text-sm">Kein Niederschlag erwartet</div>
@@ -229,24 +131,45 @@ function RainbowChart({ data, minutes }: { data: RainbowNowcastResponse; minutes
           </div>
         ) : (
           <svg
-            viewBox={`0 0 ${VB_W} ${VB_H + 20}`}
+            viewBox={`-${Y_AXIS_PAD} 0 ${VB_W + Y_AXIS_PAD} ${VB_H + 16}`}
             preserveAspectRatio="none"
             width="100%"
             height="auto"
-            className="block h-40 w-full max-w-full"
+            className="block h-44 w-full max-w-full"
             aria-label="Niederschlagsverlauf"
           >
-            {/* Baseline */}
-            <line
-              x1={0}
-              y1={VB_H}
-              x2={VB_W}
-              y2={VB_H}
-              stroke="#e0e8f0"
-              strokeWidth={1.5}
-              strokeLinecap="round"
-            />
-
+            {/* Horizontal gridlines + Y-axis labels */}
+            {yLabels.map((val, i) => {
+              const y = (i / (yLabels.length - 1)) * VB_H;
+              return (
+                <g key={i}>
+                  <line
+                    x1={0}
+                    y1={y}
+                    x2={VB_W}
+                    y2={y}
+                    stroke="currentColor"
+                    strokeOpacity={i === yLabels.length - 1 ? 0.35 : 0.12}
+                    strokeWidth={i === yLabels.length - 1 ? 1.2 : 1}
+                    strokeDasharray={i === yLabels.length - 1 ? "" : "3 4"}
+                    className="text-border"
+                  />
+                  <text
+                    x={-6}
+                    y={y + 3}
+                    textAnchor="end"
+                    fontSize={9}
+                    className="fill-muted-foreground tabular-nums"
+                  >
+                    {val < 1 ? val.toFixed(1).replace(".", ",") : Math.round(val)}
+                  </text>
+                </g>
+              );
+            })}
+            {/* Unit label */}
+            <text x={-6} y={-2} textAnchor="end" fontSize={8} className="fill-muted-foreground">
+              mm/h
+            </text>
 
             {/* "Jetzt" dashed vertical */}
             <line
@@ -254,10 +177,11 @@ function RainbowChart({ data, minutes }: { data: RainbowNowcastResponse; minutes
               y1={0}
               x2={0}
               y2={VB_H}
-              stroke="var(--muted-foreground)"
-              strokeWidth={0.5}
+              stroke="currentColor"
+              strokeOpacity={0.5}
+              strokeWidth={0.8}
               strokeDasharray="2 3"
-              opacity={0.6}
+              className="text-muted-foreground"
             />
 
             {/* Segments */}
@@ -277,12 +201,12 @@ function RainbowChart({ data, minutes }: { data: RainbowNowcastResponse; minutes
               }
               return (
                 <g key={i}>
-                  <path d={areaPath(seg)} fill={c.fill} fillOpacity={0.5} stroke="none" />
+                  <path d={areaPath(seg)} fill={c.fill} fillOpacity={0.55} stroke="none" />
                   <path
                     d={linePath(seg)}
                     fill="none"
                     stroke={c.stroke}
-                    strokeWidth={1.5}
+                    strokeWidth={2}
                     strokeLinecap="round"
                     strokeLinejoin="round"
                   />
@@ -290,7 +214,14 @@ function RainbowChart({ data, minutes }: { data: RainbowNowcastResponse; minutes
               );
             })}
 
-            {/* Markers */}
+            {/* Peak marker */}
+            {peak && (
+              <g>
+                <circle cx={peak.x ?? 0} cy={peak.y ?? 0} r={3.5} fill="var(--background)" stroke={TYPE_COLORS[peak.type].stroke} strokeWidth={2} />
+              </g>
+            )}
+
+            {/* Begin / End markers */}
             {markers.map((m, i) => (
               <g key={i}>
                 <line
@@ -298,16 +229,18 @@ function RainbowChart({ data, minutes }: { data: RainbowNowcastResponse; minutes
                   y1={0}
                   x2={m.x}
                   y2={VB_H}
-                  stroke="var(--muted-foreground)"
-                  strokeWidth={0.5}
+                  stroke="currentColor"
+                  strokeOpacity={0.45}
+                  strokeWidth={0.8}
                   strokeDasharray="2 2"
-                  opacity={0.5}
+                  className="text-muted-foreground"
                 />
                 <text
-                  x={m.x + 3}
-                  y={10}
-                  fontSize={8}
-                  fill="var(--muted-foreground)"
+                  x={m.x + 4}
+                  y={11}
+                  fontSize={10}
+                  fontWeight={600}
+                  className="fill-foreground"
                 >
                   {m.label}
                 </text>
@@ -317,7 +250,7 @@ function RainbowChart({ data, minutes }: { data: RainbowNowcastResponse; minutes
         )}
 
         {/* Time axis labels */}
-        <div className="relative mt-1 h-4 w-full overflow-visible px-2">
+        <div className="relative mt-1 h-4 w-full overflow-visible pl-7 pr-2">
           {ticks.map((t, i) => {
             const leftPct = (t / minutes) * 100;
             const isFirst = i === 0;
@@ -332,7 +265,7 @@ function RainbowChart({ data, minutes }: { data: RainbowNowcastResponse; minutes
                       ? "-translate-x-full text-right"
                       : "-translate-x-1/2"
                 }`}
-                style={{ left: `${leftPct}%` }}
+                style={{ left: `calc(${leftPct}% + ${(1 - leftPct / 100) * 0}px)` }}
               >
                 {formatOffset(t)}
               </span>
@@ -341,29 +274,7 @@ function RainbowChart({ data, minutes }: { data: RainbowNowcastResponse; minutes
         </div>
       </div>
 
-      {!noPrecip && (
-        <div
-          className="mt-3 rounded-lg px-2.5 py-2"
-          style={{ background: "#f8fafc" }}
-        >
-          <span className="text-[9.5px] leading-snug" style={{ color: "#3a5a7a" }}>
-            {summary.text}
-          </span>
-        </div>
-      )}
-
-
-      {presentTypes.length > 1 && (
-        <div className="mt-3 flex justify-center gap-3 text-xs text-muted-foreground">
-          {presentTypes.map((t) => (
-            <span key={t} className="inline-flex items-center gap-1">
-              {TYPE_EMOJI[t]} {TYPE_LABEL[t]}
-            </span>
-          ))}
-        </div>
-      )}
-
-      <div className="mt-3 text-center text-xs text-muted-foreground">
+      <div className="mt-3 text-center text-[11px] text-muted-foreground">
         Echtzeit-Radar · Rainbow.ai · Aktualisierung alle 10 Min
       </div>
     </div>
@@ -396,25 +307,22 @@ function getNowcastContext(hourly: HourlyData): string {
 function NowcastContextBox({ hourly }: { hourly: HourlyData }) {
   const text = getNowcastContext(hourly);
   return (
-    <div
-      className="mt-3 flex items-center gap-3 rounded-[10px] px-3 py-2.5"
-      style={{ background: "#f0f6ff" }}
-    >
-      <div
-        className="grid h-[22px] w-[22px] shrink-0 place-items-center rounded-[6px]"
-        style={{ background: "#2a6dd9" }}
-      >
-        <Info className="h-3 w-3 text-white" strokeWidth={2.25} />
+    <div className="mt-3 flex items-center gap-3 rounded-[10px] bg-muted/40 px-3 py-2.5">
+      <div className="grid h-[22px] w-[22px] shrink-0 place-items-center rounded-[6px] bg-primary">
+        <Info className="h-3 w-3 text-primary-foreground" strokeWidth={2.25} />
       </div>
-      <span className="text-[10px] font-medium leading-snug" style={{ color: "#1a3a6a" }}>
-        {text}
-      </span>
+      <span className="text-[10px] font-medium leading-snug text-foreground">{text}</span>
     </div>
   );
 }
 
 function nowcastHasPrecip(data: RainbowNowcastResponse): boolean {
-  return (data.forecast ?? []).some((f) => (f.precipRate ?? 0) > 0 && f.precipType !== "no_precipitation" && f.precipType !== "none");
+  return (data.forecast ?? []).some(
+    (f) =>
+      (f.precipRate ?? 0) > 0 &&
+      f.precipType !== "no_precipitation" &&
+      f.precipType !== "none",
+  );
 }
 
 export function NowcastPage() {
@@ -444,10 +352,7 @@ export function NowcastPage() {
               </div>
 
               {/* Full-width segmented control */}
-              <div
-                className="mb-3.5 flex w-full rounded-[10px] p-[3px]"
-                style={{ background: "#f0f4f8" }}
-              >
+              <div className="mb-3.5 flex w-full rounded-[10px] bg-muted/60 p-[3px]">
                 {[
                   { r: 8 as Range, label: "2 Stunden" },
                   { r: 24 as Range, label: "6 Stunden" },
@@ -457,13 +362,11 @@ export function NowcastPage() {
                     <button
                       key={r}
                       onClick={() => setRange(r)}
-                      className="flex-1 rounded-lg border-0 px-0 py-[7px] text-[12px] font-semibold transition-all"
-                      style={{
-                        background: active ? "white" : "transparent",
-                        color: active ? "#1a2a3a" : "#8a9ab0",
-                        boxShadow: active ? "0 1px 4px rgba(0,0,0,0.12)" : "none",
-                        cursor: "pointer",
-                      }}
+                      className={`flex-1 cursor-pointer rounded-lg border-0 px-0 py-[7px] text-[12px] font-semibold transition-all ${
+                        active
+                          ? "bg-background text-foreground shadow-sm"
+                          : "bg-transparent text-muted-foreground"
+                      }`}
                     >
                       {label}
                     </button>
@@ -496,4 +399,3 @@ export function NowcastPage() {
     </div>
   );
 }
-
