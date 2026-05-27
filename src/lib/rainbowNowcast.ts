@@ -127,7 +127,17 @@ export function findPeak(points: NowcastPoint[]): NowcastPoint | null {
   return best && best.rate > 0 ? best : null;
 }
 
-export function buildSummary(points: NowcastPoint[], minutes: number): NowcastSummary {
+/** Format a UNIX-seconds timestamp as "HH:MM" using the local timezone. */
+export function formatClockTime(unixSec: number): string {
+  const d = new Date(unixSec * 1000);
+  return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+}
+
+export function buildSummary(
+  points: NowcastPoint[],
+  minutes: number,
+  nowSec: number = Date.now() / 1000,
+): NowcastSummary {
   if (points.length === 0) return { text: "Kein Niederschlag erwartet", warn: false };
   if (points.some((p) => p.type === "ice" && p.rate > 0)) {
     return { text: "⚠️ Gefrierender Regen — Glatteisgefahr", warn: true };
@@ -149,16 +159,16 @@ export function buildSummary(points: NowcastPoint[], minutes: number): NowcastSu
     }
     const label = first.type === "snow" ? "Schnee" : first.type === "ice" ? "Eis" : "Regen";
     if (endIdx < points.length) {
-      const minsLeft = Math.round(points[endIdx].minOffset);
-      return { text: `${label} noch ${minsLeft} Minuten`, warn: false };
+      const endTs = points[endIdx].tsBegin;
+      return { text: `${label} endet um ${formatClockTime(endTs)} Uhr`, warn: false };
     }
     return { text: `${label} hält länger als ${minutes / 60}h an`, warn: false };
   }
   const start = points.find(isPrecip)!;
-  const minsTo = Math.round(start.minOffset);
   const label = start.type === "snow" ? "Schnee" : start.type === "ice" ? "Eis" : "Regen";
-  return { text: `${label} in ${minsTo} Minuten`, warn: false };
+  return { text: `${label} beginnt um ${formatClockTime(start.tsBegin)} Uhr`, warn: false };
 }
+
 
 export function formatOffset(min: number): string {
   if (min === 0) return "Jetzt";

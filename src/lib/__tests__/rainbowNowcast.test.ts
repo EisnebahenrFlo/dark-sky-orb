@@ -152,14 +152,24 @@ describe("buildSummary", () => {
     const pts = buildPoints([mk(0, 0, "none"), mk(30, 0, "none")], NOW, 120, VB_W, VB_H, 1);
     expect(buildSummary(pts, 120).text).toMatch(/Kein Niederschlag/);
   });
-  it("currently raining with end → 'Regen noch X Minuten'", () => {
+  it("currently raining with end → 'Regen endet um HH:MM Uhr'", () => {
     const pts = buildPoints([mk(0, 1), mk(20, 1), mk(40, 0, "none")], NOW, 120, VB_W, VB_H, 2);
-    expect(buildSummary(pts, 120).text).toBe("Regen noch 40 Minuten");
+    // mk(40, 0, "none") starts at NOW + 40*60s — pin to that timestamp for an exact clock check.
+    const expectedClock = (() => {
+      const d = new Date((NOW + 40 * 60) * 1000);
+      return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+    })();
+    expect(buildSummary(pts, 120, NOW).text).toBe(`Regen endet um ${expectedClock} Uhr`);
   });
-  it("rain starts later → 'Regen in X Minuten'", () => {
+  it("rain starts later → 'Regen beginnt um HH:MM Uhr'", () => {
     const pts = buildPoints([mk(0, 0, "none"), mk(45, 0.8)], NOW, 120, VB_W, VB_H, 1);
-    expect(buildSummary(pts, 120).text).toBe("Regen in 45 Minuten");
+    const expectedClock = (() => {
+      const d = new Date((NOW + 45 * 60) * 1000);
+      return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+    })();
+    expect(buildSummary(pts, 120, NOW).text).toBe(`Regen beginnt um ${expectedClock} Uhr`);
   });
+
 });
 
 describe("formatOffset", () => {
