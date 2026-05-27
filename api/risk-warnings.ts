@@ -181,25 +181,43 @@ DEINE AUFGABE FÜR warnungen_12h:
 - Du bekommst eine Liste berechneter Warnungen. Deine einzige Aufgabe: Formuliere für jede Warnung einen Titel und eine Beschreibung.
 - Erfinde KEINE zusätzlichen Warnungen. Füge nichts hinzu, was nicht in der berechneten Liste steht.
 - Wenn warnungen: [] übergeben wird, gibst du warnungen_12h: [] zurück — ohne Ausnahme.
-- typ, stufe und die Messwerte übernimmst du EXAKT aus der berechneten Warnung.
+- typ, stufe, color und Messwerte übernimmst du EXAKT aus der berechneten Warnung.
+
+TITEL-VORLAGEN (exakt verwenden):
+- gewitter/warnung:  "Gewitter möglich"
+- gewitter/markant:  "Starkes Gewitter möglich"
+- gewitter/unwetter: "Unwetterwarnung Gewitter"
+- gewitter/extrem:   "Extremes Unwetter"
+- wind/warnung:      "Windböen erwartet"
+- wind/markant:      "Markante Windböen"
+- wind/unwetter:     "Sturmwarnung"
+- wind/extrem:       "Orkanwarnung"
+- regen/warnung:     "Regen möglich"
+- regen/markant:     "Starkregen"
+- regen/unwetter:    "Unwetterwarnung Starkregen"
+- schnee/warnung:    "Schneefall möglich"
+- schnee/markant:    "Markanter Schneefall"
+- schnee/unwetter:   "Unwetterwarnung Schnee"
+- frost/warnung:     "Frost möglich"
+- frost/markant:     "Strenger Frost"
+- glätte/warnung:    "Glättegefahr"
+- hitze/warnung:     "Hitze erwartet"
+- hitze/markant:     "Markante Hitze"
+- hitze/unwetter:    "Extreme Hitze"
+
+BESCHREIBUNG (max. 2 Sätze):
+- Zeitfenster (wann, z.B. "ab 16 Uhr", "nachts")
+- Konkrete Werte aus der berechneten Warnung (z.B. "Böen bis 81 km/h", "bis 28 mm in 12 h")
+- 1 kurze Handlungsempfehlung (Wind: lose Gegenstände sichern; Hitze: Risikogruppen schützen; Glätte: Brücken und exponierte Stellen)
 
 DEINE AUFGABE FÜR Gewitter-Block:
 - Übernimm score, level und color des Gewitter-Risikos EXAKT aus dem Input
-- Begründe das Gewitter-Risiko mit den gegebenen Metriken und Rohdaten
-- Schätze Konvektionstyp ein (Einzelzellen / Multizellen / Superzellen / MCS / Frontgewitter)
+- Begründe mit den gegebenen Metriken und Rohdaten
+- Schätze Konvektionstyp (Einzelzellen / Multizellen / Superzellen / MCS / Frontgewitter)
 
 REGELN:
-- Amtliche Warnungen haben HÖCHSTE PRIORITÄT für die Gewitter-Begründung und summary, NICHT für warnungen_12h.
-- Rainbow Nowcast zeigt was in den nächsten 2h tatsächlich kommt — nutze das als Realitäts-Check in der Begründung.
+- Amtliche Warnungen und Rainbow Nowcast nur als Realitäts-Check für summary und Gewitter-Begründung — NICHT für warnungen_12h.
 - Erfinde keine Werte, die nicht aus den Daten ableitbar sind.
-- Max. 2 Sätze pro Beschreibung, aktiv formuliert
-- Konkrete Zahlen einbauen (Uhrzeiten, mm, km/h, °C)
-- Bei Wind: lose Gegenstände sichern, Wald meiden
-- Bei Hitze: Risikogruppen nennen (Ältere, Kinder, Herz-Kreislauf)
-- Bei Glätte: Hinweis auf Brücken und exponierte Stellen
-
-
-
 
 OUTPUT (NUR JSON, nichts davor/danach):
 {
@@ -214,9 +232,9 @@ OUTPUT (NUR JSON, nichts davor/danach):
   "warnungen_12h": [
     {
       "id": "typ_stufe",
-      "typ": "wind|regen|gewitter|schnee|hitze|glätte|...",
-      "stufe": "markant|unwetter|extrem",
-      "titel": "Max. 5 Wörter",
+      "typ": "wind|regen|gewitter|schnee|hitze|glätte|frost",
+      "stufe": "warnung|markant|unwetter|extrem",
+      "titel": "aus Titel-Vorlagen",
       "beschreibung": "1-2 Sätze mit Zahlen und Empfehlung",
       "color": "yellow|orange|red|purple",
       "icon": "Wind|CloudRain|Zap|Snowflake|Thermometer|AlertTriangle"
@@ -226,7 +244,7 @@ OUTPUT (NUR JSON, nichts davor/danach):
   "disclaimer": "Experimentelle KI-Auswertung. Keine amtliche Warnung. Bei akuter Gefahr DWD/ZAMG/MeteoSwiss/Protezione Civile konsultieren."
 }
 
-Farbcodes Warnungen: markant=yellow/orange, unwetter=red, extrem=purple
+Farbcodes Warnungen (aus Input übernehmen): warnung=yellow, markant=orange, unwetter=red, extrem=purple
 
 # DATEN FOLGEN IM NÄCHSTEN BLOCK`;
 
