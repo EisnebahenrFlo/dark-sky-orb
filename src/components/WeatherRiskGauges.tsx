@@ -5,7 +5,6 @@
  */
 import { useEffect, useState } from "react";
 import { useWeatherRisks } from "@/hooks/useWeatherRisks";
-import { useRiskWarningsCtx } from "@/contexts/RiskWarningsContext";
 import RiskIcon, { type RiskIconId } from "@/components/RiskIcon";
 import type { RiskItem } from "@/hooks/useWeatherRisks";
 
@@ -176,16 +175,8 @@ function CardShell({ children }: { children: React.ReactNode }) {
 }
 
 export default function WeatherRiskGauges() {
-  const { risks: rawRisks, isLoading, error } = useWeatherRisks();
-  const { data } = useRiskWarningsCtx();
+  const { risks, isLoading, error } = useWeatherRisks();
   const isDark = useIsDark();
-
-  // Gewitter-Score: serverseitiger Wert hat Vorrang vor clientseitig berechnetem
-  const risks = rawRisks.map((r) =>
-    r.id === "gewitter"
-      ? { ...r, score: data?.gewitter_risiko_6h?.score ?? r.score }
-      : r,
-  );
 
   if (error) {
     return (
