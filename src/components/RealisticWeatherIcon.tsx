@@ -424,7 +424,7 @@ function Snow({ size, uid, className, flakes, big = false }: Base & { flakes: nu
   const cg = `cloudGrad_${uid}`;
   const fg = `flakeGrad_${uid}`;
   const positions = [14, 22, 30, 38, 46, 18, 42].slice(0, flakes);
-  const r = big ? 2.2 : 1.6;
+  const r = big ? 2.8 : 2.1;
   return (
     <Frame size={size} className={className}>
       <defs>
