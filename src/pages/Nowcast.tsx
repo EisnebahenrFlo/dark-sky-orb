@@ -101,7 +101,7 @@ function IntensityStrip({ data, minutes }: { data: RainbowNowcastResponse; minut
   const cells = buildCells(data.forecast ?? [], nowSec, minutes, 10);
   // Reuse buildPoints for summary + peak (they expect points, not cells).
   const points = buildPoints(data.forecast ?? [], nowSec, minutes, VB_W, VB_H, 100);
-  const summary = buildSummary(points, minutes);
+  const summary = buildSummary(points, minutes, nowSec);
   const peak = findPeak(points);
   const ticks = buildAxisTicks(minutes);
 
