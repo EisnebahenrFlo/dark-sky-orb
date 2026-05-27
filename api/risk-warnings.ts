@@ -96,6 +96,7 @@ function stufeFromScore(score: number): Stufe {
   return 'warnung';
 }
 
+function detectWarnings(weatherData: any, windowHours: number, officialWarnings: any[] = [], stormScore = 0) {
   const warnings: any[] = [];
   const hourly = weatherData.hourly;
   if (!hourly?.time) return warnings;
