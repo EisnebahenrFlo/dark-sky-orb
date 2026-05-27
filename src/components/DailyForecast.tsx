@@ -190,13 +190,24 @@ export function DailyForecast({
   hourly?: HourlyData;
   current?: CurrentWeather;
 }) {
+  const riskSeries = hourly ? computeThunderstormRiskSeries(hourly) : null;
   return (
     <section>
       <SectionHeader title="7-Tage-Übersicht" subtitle="Tippen für Details" />
       <div className="space-y-2">
-        {daily.time.map((_, i) => (
-          <DayRow key={i} daily={daily} i={i} hourly={hourly} current={current} />
-        ))}
+        {daily.time.map((dateIso, i) => {
+          const score = riskSeries?.byDay[dateIso.slice(0, 10)]?.score ?? 0;
+          return (
+            <DayRow
+              key={i}
+              daily={daily}
+              i={i}
+              hourly={hourly}
+              current={current}
+              thunderScore={score}
+            />
+          );
+        })}
       </div>
     </section>
   );
