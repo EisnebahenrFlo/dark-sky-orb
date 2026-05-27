@@ -429,7 +429,7 @@ export default async function handler(req: any, res: any) {
     location: location?.name,
     cape_max: Math.max(...(weatherData.hourly.cape?.slice(0, 12) ?? [0])),
     gust_max: Math.max(...(weatherData.hourly.wind_gusts_10m?.slice(0, 12) ?? [0])),
-    storm_score: frontendScore,
+    storm_score: serverScore,
     storm_level: level,
     warnings_detected: warnings.map((w: any) => `${w.typ}_${w.stufe}_${w.max_value}${w.unit}`),
   }));
