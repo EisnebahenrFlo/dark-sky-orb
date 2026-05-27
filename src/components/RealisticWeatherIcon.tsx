@@ -50,28 +50,39 @@ export function RealisticWeatherIcon({ code, isDay, size = 24, className }: Weat
 type Base = { size: number; uid: string; className?: string };
 
 /**
- * Inline <style> applies in document scope, so we can theme cloud colors via
- * the `html.dark` class set by ThemeProvider. Light & dark stops/strokes both
- * live here — every CloudGradient/CloudShape just references the class names.
+ * Theme CSS is injected ONCE per document, not per icon instance.
+ * Light: dunklere Wolken-Stops für Lesbarkeit auf hellem Glass.
+ * Dark:  hellere Wolken, dezenter Stroke.
  */
 const ICON_THEME_CSS = `
-  .rwi-cloud-front-0 { stop-color: #9CA3AF; }
-  .rwi-cloud-front-1 { stop-color: #6B7280; }
-  .rwi-cloud-back-0  { stop-color: #6B7280; }
-  .rwi-cloud-back-1  { stop-color: #4B5563; }
-  .rwi-cloud-night-0 { stop-color: #B0B7C3; }
-  .rwi-cloud-night-1 { stop-color: #9CA3AF; }
-  .rwi-cloud-stroke  { stroke: #6B7280; }
-  html.dark .rwi-cloud-front-0 { stop-color: #D1D5DB; }
+  .rwi-cloud-front-0 { stop-color: #94A3B8; }
+  .rwi-cloud-front-1 { stop-color: #475569; }
+  .rwi-cloud-back-0  { stop-color: #64748B; }
+  .rwi-cloud-back-1  { stop-color: #334155; }
+  .rwi-cloud-night-0 { stop-color: #94A3B8; }
+  .rwi-cloud-night-1 { stop-color: #475569; }
+  .rwi-cloud-stroke  { stroke: #334155; stroke-opacity: 0.5; }
+  html.dark .rwi-cloud-front-0 { stop-color: #E5E7EB; }
   html.dark .rwi-cloud-front-1 { stop-color: #9CA3AF; }
   html.dark .rwi-cloud-back-0  { stop-color: #9CA3AF; }
-  html.dark .rwi-cloud-back-1  { stop-color: #6B7280; }
+  html.dark .rwi-cloud-back-1  { stop-color: #4B5563; }
   html.dark .rwi-cloud-night-0 { stop-color: #6B7280; }
-  html.dark .rwi-cloud-night-1 { stop-color: #4B5563; }
-  html.dark .rwi-cloud-stroke  { stroke: #9CA3AF; }
+  html.dark .rwi-cloud-night-1 { stop-color: #374151; }
+  html.dark .rwi-cloud-stroke  { stroke: #D1D5DB; stroke-opacity: 0.4; }
 `;
 
+let rwiThemeInjected = false;
+function ensureRwiTheme() {
+  if (rwiThemeInjected || typeof document === "undefined") return;
+  const style = document.createElement("style");
+  style.setAttribute("data-rwi-theme", "");
+  style.textContent = ICON_THEME_CSS;
+  document.head.appendChild(style);
+  rwiThemeInjected = true;
+}
+
 function Frame({ size, className, children }: { size: number; className?: string; children: React.ReactNode }) {
+  ensureRwiTheme();
   return (
     <svg
       width={size}
@@ -79,9 +90,12 @@ function Frame({ size, className, children }: { size: number; className?: string
       viewBox="0 0 64 64"
       xmlns="http://www.w3.org/2000/svg"
       className={className}
-      style={{ display: "inline-block", verticalAlign: "middle" }}
+      style={{
+        display: "inline-block",
+        verticalAlign: "middle",
+        filter: "drop-shadow(0 1px 2px rgba(15, 23, 42, 0.18))",
+      }}
     >
-      <style>{ICON_THEME_CSS}</style>
       {children}
     </svg>
   );
