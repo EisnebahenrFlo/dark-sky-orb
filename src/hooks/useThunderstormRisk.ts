@@ -169,12 +169,15 @@ export function computeThunderstormRiskSeries(
   const hasLPI = Array.isArray(lpi) && lpi.some((v) => typeof v === "number" && v >= 0.5);
   const source: "lpi" | "cape" = hasLPI ? "lpi" : "cape";
 
+  const gusts = hourly.wind_gusts_10m;
+
   const series: ThunderstormRisk[] = hourly.time.map((t, i) => {
     const { score, source: s } = computeHourScore(
       lpi?.[i],
       cape?.[i],
       li?.[i],
       cin?.[i],
+      gusts?.[i],
       t,
     );
     return makeRisk(score, s);
