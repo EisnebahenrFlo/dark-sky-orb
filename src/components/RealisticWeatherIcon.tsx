@@ -18,8 +18,10 @@ export function RealisticWeatherIcon({ code, isDay, size = 24, className }: Weat
 
   // Night variants
   if (isDay === 0) {
-    if (code === 0 || code === 1) return <Moon {...props} />;
-    if (code === 2 || code === 3) return <CloudyNight {...props} />;
+    if (code === 0) return <Moon {...props} />;
+    if (code === 1) return <MoonLightCloud {...props} />;
+    if (code === 2) return <CloudyNight {...props} />;
+    if (code === 3) return <Overcast {...props} />;
   }
 
   if (code === 0) return <Sun {...props} />;
@@ -65,11 +67,11 @@ function Frame({ size, className, children }: { size: number; className?: string
 /* ---------- shared paint helpers ---------- */
 
 function CloudGradient({ id, dark = false }: { id: string; dark?: boolean }) {
-  // Mittleres Grau für gute Sichtbarkeit in Light & Dark Mode.
+  // Mittleres Grau — nie heller als #6B7280 im Light Mode.
   return (
     <linearGradient id={id} x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stopColor={dark ? "#9CA3AF" : "#D1D5DB"} stopOpacity="1" />
-      <stop offset="100%" stopColor={dark ? "#6B7280" : "#9CA3AF"} stopOpacity="1" />
+      <stop offset="0%" stopColor={dark ? "#9CA3AF" : "#6B7280"} stopOpacity="1" />
+      <stop offset="100%" stopColor={dark ? "#6B7280" : "#4B5563"} stopOpacity="1" />
     </linearGradient>
   );
 }
@@ -109,6 +111,8 @@ function CloudShape({ fill, x = 0, y = 0, scale = 1, shadow = true }: { fill: st
       <path
         d="M16 38 Q9 38 9 31 Q9 25 15 24 Q16 17 24 17 Q31 17 33 23 Q36 21 40 22 Q47 23 47 30 Q53 31 53 36 Q53 41 47 41 L17 41 Q16 41 16 38 Z"
         fill={fill}
+        stroke="#4B5563"
+        strokeWidth={0.75}
         style={shadow ? { filter: "drop-shadow(0 1px 1px rgba(0,0,0,0.15))" } : undefined}
       />
     </g>
