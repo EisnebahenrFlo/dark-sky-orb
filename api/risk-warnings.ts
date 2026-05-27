@@ -3,13 +3,21 @@
 // Claude formuliert nur — er rechnet nicht.
 import { getCached, setCached, isFresh, isStaleButUsable, ageMinutes } from './_lib/cache.js';
 
-const THRESHOLDS = {
-  wind_gust_markant: 60, wind_gust_severe: 90, wind_gust_extreme: 118,
-  precip_1h_markant: 15, precip_1h_severe: 25, precip_1h_extreme: 40,
-  precip_12h_markant: 25, precip_12h_severe: 40, precip_12h_extreme: 70,
-  snow_12h_markant: 10, snow_12h_severe: 20,
-  glaze_temp: -1,
-};
+// Stufen-System (Score-basiert, NICHT abhängig von amtlichen Warnungen):
+//   20–34  → warnung  (yellow)
+//   35–54  → markant  (orange)
+//   55–74  → unwetter (red)
+//   75–100 → extrem   (purple)
+type Stufe = 'warnung' | 'markant' | 'unwetter' | 'extrem';
+
+function stufeColor(stufe: Stufe): 'yellow' | 'orange' | 'red' | 'purple' {
+  switch (stufe) {
+    case 'warnung': return 'yellow';
+    case 'markant': return 'orange';
+    case 'unwetter': return 'red';
+    case 'extrem': return 'purple';
+  }
+}
 
 type ErrorCode =
   | 'TIMEOUT'
@@ -45,63 +53,75 @@ function detectWarnings(weatherData: any, windowHours: number, officialWarnings:
   const idx = getIndices(hourly, windowHours);
   if (idx.length === 0) return warnings;
 
-  const getMax = (arr: number[], key: 'max' | 'min' = 'max') =>
+  const getMax = (arr: number[] | undefined, key: 'max' | 'min' = 'max') =>
     idx.reduce((acc: number, i: number) => {
       const v = arr?.[i] ?? (key === 'max' ? -Infinity : Infinity);
       return key === 'max' ? Math.max(acc, v) : Math.min(acc, v);
     }, key === 'max' ? -Infinity : Infinity);
 
-  // Wind
+  // Wind: Böen >=60 warnung, >=75 markant, >=90 unwetter, >=118 extrem
   const maxGust = getMax(hourly.wind_gusts_10m);
-  if (maxGust >= THRESHOLDS.wind_gust_markant) {
-    const stufe = maxGust >= THRESHOLDS.wind_gust_extreme ? 'extrem'
-                : maxGust >= THRESHOLDS.wind_gust_severe ? 'unwetter' : 'markant';
+  if (maxGust >= 60) {
+    const stufe: Stufe = maxGust >= 118 ? 'extrem' : maxGust >= 90 ? 'unwetter' : maxGust >= 75 ? 'markant' : 'warnung';
     warnings.push({ typ: 'wind', stufe, max_value: Math.round(maxGust), unit: 'km/h' });
   }
 
-  // Regen
+  // Starkregen: >=10mm/h oder >=15mm/12h warnung, >=25mm/h markant, >=40mm/h unwetter
   const max1h = getMax(hourly.precipitation);
-  const sum = idx.reduce((s: number, i: number) => s + (hourly.precipitation?.[i] ?? 0), 0);
-  if (max1h >= THRESHOLDS.precip_1h_markant || sum >= THRESHOLDS.precip_12h_markant) {
-    const stufe = (max1h >= THRESHOLDS.precip_1h_extreme || sum >= THRESHOLDS.precip_12h_extreme) ? 'extrem'
-                : (max1h >= THRESHOLDS.precip_1h_severe || sum >= THRESHOLDS.precip_12h_severe) ? 'unwetter' : 'markant';
-    warnings.push({ typ: 'regen', stufe, max_1h: Math.round(max1h * 10) / 10, sum: Math.round(sum * 10) / 10, unit: 'mm' });
+  const sum12 = idx.reduce((s: number, i: number) => s + (hourly.precipitation?.[i] ?? 0), 0);
+  if (max1h >= 10 || sum12 >= 15) {
+    const stufe: Stufe = max1h >= 40 ? 'unwetter' : max1h >= 25 ? 'markant' : 'warnung';
+    warnings.push({ typ: 'regen', stufe, max_1h: Math.round(max1h * 10) / 10, sum: Math.round(sum12 * 10) / 10, unit: 'mm' });
   }
 
-  // Schnee
+  // Schnee: >=5cm/12h warnung, >=10 markant, >=20 unwetter
   const snow = idx.reduce((s: number, i: number) => s + (hourly.snowfall?.[i] ?? 0), 0);
-  if (snow >= THRESHOLDS.snow_12h_markant) {
-    const stufe = snow >= THRESHOLDS.snow_12h_severe ? 'unwetter' : 'markant';
+  if (snow >= 5) {
+    const stufe: Stufe = snow >= 20 ? 'unwetter' : snow >= 10 ? 'markant' : 'warnung';
     warnings.push({ typ: 'schnee', stufe, sum: Math.round(snow * 10) / 10, unit: 'cm' });
   }
 
-  // Hitze: deaktiviert (Schwelle 32°C zu niedrig für Mai/Juni — würde Fehlalarme erzeugen)
-
-  // Gewitter: CAPE-Schwelle ODER amtliche Gewitterwarnung
+  // Gewitter: CAPE >=300 warnung, >=500 markant, >=1500 unwetter, >=2500 extrem
   const maxCape = idx.reduce((m: number, i: number) => Math.max(m, hourly.cape?.[i] ?? 0), 0);
   const hasOfficialThunderstorm = officialWarnings?.some(
     (w: any) => typeof w?.type === 'string' && w.type.toLowerCase().includes('thunderstorm'),
   );
-  if (maxCape >= 500 || hasOfficialThunderstorm) {
+  if (maxCape >= 300 || hasOfficialThunderstorm) {
+    const stufe: Stufe = maxCape >= 2500 ? 'extrem'
+                      : maxCape >= 1500 ? 'unwetter'
+                      : maxCape >= 500 ? 'markant' : 'warnung';
     warnings.push({
       typ: 'gewitter',
-      stufe: 'markant',
+      stufe,
       cape_max: Math.round(maxCape),
       official: !!hasOfficialThunderstorm,
       unit: 'J/kg',
     });
   }
 
+  // Hitze: >=30°C warnung, >=35 markant, >=38 unwetter
+  const maxTemp = getMax(hourly.temperature_2m);
+  if (maxTemp >= 30) {
+    const stufe: Stufe = maxTemp >= 38 ? 'unwetter' : maxTemp >= 35 ? 'markant' : 'warnung';
+    warnings.push({ typ: 'hitze', stufe, max_value: Math.round(maxTemp), unit: '°C' });
+  }
 
+  // Frost: <=-5°C warnung, <=-10°C markant
+  const minTemp = getMax(hourly.temperature_2m, 'min');
+  if (minTemp <= -5) {
+    const stufe: Stufe = minTemp <= -10 ? 'markant' : 'warnung';
+    warnings.push({ typ: 'frost', stufe, min_value: Math.round(minTemp), unit: '°C' });
+  }
 
-  // Glätte
+  // Glätte: <=0°C mit Niederschlag → warnung
   const glazeRisk = idx.some((i: number) =>
-    (hourly.temperature_2m?.[i] ?? 999) <= THRESHOLDS.glaze_temp &&
+    (hourly.temperature_2m?.[i] ?? 999) <= 0 &&
     (hourly.precipitation?.[i] ?? 0) > 0.1
   );
-  if (glazeRisk) warnings.push({ typ: 'glätte', stufe: 'markant' });
+  if (glazeRisk) warnings.push({ typ: 'glätte', stufe: 'warnung' as Stufe });
 
-  return warnings;
+  // Color je Warnung anhängen
+  return warnings.map((w) => ({ ...w, color: stufeColor(w.stufe) }));
 }
 
 // Kontext-Metriken für Claude (nur zur Formulierung, nicht zur Score-Berechnung)
@@ -161,25 +181,43 @@ DEINE AUFGABE FÜR warnungen_12h:
 - Du bekommst eine Liste berechneter Warnungen. Deine einzige Aufgabe: Formuliere für jede Warnung einen Titel und eine Beschreibung.
 - Erfinde KEINE zusätzlichen Warnungen. Füge nichts hinzu, was nicht in der berechneten Liste steht.
 - Wenn warnungen: [] übergeben wird, gibst du warnungen_12h: [] zurück — ohne Ausnahme.
-- typ, stufe und die Messwerte übernimmst du EXAKT aus der berechneten Warnung.
+- typ, stufe, color und Messwerte übernimmst du EXAKT aus der berechneten Warnung.
+
+TITEL-VORLAGEN (exakt verwenden):
+- gewitter/warnung:  "Gewitter möglich"
+- gewitter/markant:  "Starkes Gewitter möglich"
+- gewitter/unwetter: "Unwetterwarnung Gewitter"
+- gewitter/extrem:   "Extremes Unwetter"
+- wind/warnung:      "Windböen erwartet"
+- wind/markant:      "Markante Windböen"
+- wind/unwetter:     "Sturmwarnung"
+- wind/extrem:       "Orkanwarnung"
+- regen/warnung:     "Regen möglich"
+- regen/markant:     "Starkregen"
+- regen/unwetter:    "Unwetterwarnung Starkregen"
+- schnee/warnung:    "Schneefall möglich"
+- schnee/markant:    "Markanter Schneefall"
+- schnee/unwetter:   "Unwetterwarnung Schnee"
+- frost/warnung:     "Frost möglich"
+- frost/markant:     "Strenger Frost"
+- glätte/warnung:    "Glättegefahr"
+- hitze/warnung:     "Hitze erwartet"
+- hitze/markant:     "Markante Hitze"
+- hitze/unwetter:    "Extreme Hitze"
+
+BESCHREIBUNG (max. 2 Sätze):
+- Zeitfenster (wann, z.B. "ab 16 Uhr", "nachts")
+- Konkrete Werte aus der berechneten Warnung (z.B. "Böen bis 81 km/h", "bis 28 mm in 12 h")
+- 1 kurze Handlungsempfehlung (Wind: lose Gegenstände sichern; Hitze: Risikogruppen schützen; Glätte: Brücken und exponierte Stellen)
 
 DEINE AUFGABE FÜR Gewitter-Block:
 - Übernimm score, level und color des Gewitter-Risikos EXAKT aus dem Input
-- Begründe das Gewitter-Risiko mit den gegebenen Metriken und Rohdaten
-- Schätze Konvektionstyp ein (Einzelzellen / Multizellen / Superzellen / MCS / Frontgewitter)
+- Begründe mit den gegebenen Metriken und Rohdaten
+- Schätze Konvektionstyp (Einzelzellen / Multizellen / Superzellen / MCS / Frontgewitter)
 
 REGELN:
-- Amtliche Warnungen haben HÖCHSTE PRIORITÄT für die Gewitter-Begründung und summary, NICHT für warnungen_12h.
-- Rainbow Nowcast zeigt was in den nächsten 2h tatsächlich kommt — nutze das als Realitäts-Check in der Begründung.
+- Amtliche Warnungen und Rainbow Nowcast nur als Realitäts-Check für summary und Gewitter-Begründung — NICHT für warnungen_12h.
 - Erfinde keine Werte, die nicht aus den Daten ableitbar sind.
-- Max. 2 Sätze pro Beschreibung, aktiv formuliert
-- Konkrete Zahlen einbauen (Uhrzeiten, mm, km/h, °C)
-- Bei Wind: lose Gegenstände sichern, Wald meiden
-- Bei Hitze: Risikogruppen nennen (Ältere, Kinder, Herz-Kreislauf)
-- Bei Glätte: Hinweis auf Brücken und exponierte Stellen
-
-
-
 
 OUTPUT (NUR JSON, nichts davor/danach):
 {
@@ -194,9 +232,9 @@ OUTPUT (NUR JSON, nichts davor/danach):
   "warnungen_12h": [
     {
       "id": "typ_stufe",
-      "typ": "wind|regen|gewitter|schnee|hitze|glätte|...",
-      "stufe": "markant|unwetter|extrem",
-      "titel": "Max. 5 Wörter",
+      "typ": "wind|regen|gewitter|schnee|hitze|glätte|frost",
+      "stufe": "warnung|markant|unwetter|extrem",
+      "titel": "aus Titel-Vorlagen",
       "beschreibung": "1-2 Sätze mit Zahlen und Empfehlung",
       "color": "yellow|orange|red|purple",
       "icon": "Wind|CloudRain|Zap|Snowflake|Thermometer|AlertTriangle"
@@ -206,7 +244,7 @@ OUTPUT (NUR JSON, nichts davor/danach):
   "disclaimer": "Experimentelle KI-Auswertung. Keine amtliche Warnung. Bei akuter Gefahr DWD/ZAMG/MeteoSwiss/Protezione Civile konsultieren."
 }
 
-Farbcodes Warnungen: markant=yellow/orange, unwetter=red, extrem=purple
+Farbcodes Warnungen (aus Input übernehmen): warnung=yellow, markant=orange, unwetter=red, extrem=purple
 
 # DATEN FOLGEN IM NÄCHSTEN BLOCK`;
 
