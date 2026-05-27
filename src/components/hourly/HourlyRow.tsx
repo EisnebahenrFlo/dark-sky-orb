@@ -46,6 +46,15 @@ export function HourlyRow({ row, showPrecipColumn = true }: { row: HourlyRowData
   const thunderColor = THUNDER_COLOR[thunder.level];
   const showThunder = thunder.score >= 11;
 
+  // Pill-Badge (mobile + immer sichtbar wenn score >= 20)
+  const showThunderPill = thunder.score >= 20;
+  const pill =
+    thunder.score >= 75
+      ? { cls: "bg-red-500 text-white", label: "Sehr hoch" }
+      : thunder.score >= 50
+      ? { cls: "bg-orange-500 text-white", label: "Hoch" }
+      : { cls: "bg-amber-400 text-amber-950", label: "Möglich" };
+
   return (
     <div
       className={`flex items-center gap-3 px-3 py-3 transition-colors sm:gap-4 sm:px-4 ${
@@ -76,22 +85,26 @@ export function HourlyRow({ row, showPrecipColumn = true }: { row: HourlyRowData
         </span>
       </div>
 
+      {/* Thunder pill (immer wenn score >= 20, vor der Temperatur) */}
+      {showThunderPill && (
+        <span
+          className={`inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold ${pill.cls}`}
+          title={`Gewitter: ${pill.label}`}
+          aria-label={`Gewitter: ${pill.label}`}
+        >
+          <Zap size={11} strokeWidth={2.5} />
+          {pill.label}
+        </span>
+      )}
+
       {/* Temp */}
       <div className="w-12 shrink-0 text-right font-display text-base tabular-nums sm:w-16 sm:text-lg">
         {Math.round(row.temp)}°
       </div>
 
-      {/* Precipitation prob + mobile thunder dot */}
+      {/* Precipitation prob */}
       {showPrecipColumn && (
         <div className="flex w-16 shrink-0 items-center justify-end gap-1 text-xs tabular-nums sm:w-20">
-          {showThunder && (
-            <span
-              className="mr-0.5 inline-block h-1.5 w-1.5 rounded-full sm:hidden"
-              style={{ backgroundColor: thunderColor }}
-              title={`Gewitter: ${thunder.label}`}
-              aria-label={`Gewitter: ${thunder.label}`}
-            />
-          )}
           <Droplets
             className={`h-3.5 w-3.5 ${popHigh ? "text-primary" : "text-muted-foreground/60"}`}
             strokeWidth={1.75}

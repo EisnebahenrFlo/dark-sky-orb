@@ -46,7 +46,6 @@ export function HourlyList({
   const riskSeries = computeThunderstormRiskSeries(hourly);
 
   const rows: HourlyRowData[] = hourly.time.slice(0, HOURS).map((t, i) => {
-    console.log('[hourly-thunder]', { time: hourly.time[i], score: riskSeries.hourly[i]?.score ?? 0 });
     const ts = new Date(t).getTime();
     const isCurrent = ts <= now && now < ts + 60 * 60 * 1000;
     return {
