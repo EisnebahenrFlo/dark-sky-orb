@@ -46,6 +46,15 @@ export function HourlyRow({ row, showPrecipColumn = true }: { row: HourlyRowData
   const thunderColor = THUNDER_COLOR[thunder.level];
   const showThunder = thunder.score >= 11;
 
+  // Pill-Badge (mobile + immer sichtbar wenn score >= 20)
+  const showThunderPill = thunder.score >= 20;
+  const pill =
+    thunder.score >= 75
+      ? { cls: "bg-red-500 text-white", label: "Sehr hoch" }
+      : thunder.score >= 50
+      ? { cls: "bg-orange-500 text-white", label: "Hoch" }
+      : { cls: "bg-amber-400 text-amber-950", label: "Möglich" };
+
   return (
     <div
       className={`flex items-center gap-3 px-3 py-3 transition-colors sm:gap-4 sm:px-4 ${
