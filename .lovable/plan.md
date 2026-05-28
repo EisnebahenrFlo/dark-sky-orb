@@ -1,45 +1,34 @@
-## Bug
+## Unwetter-Schwellen anpassen
 
-In `src/components/WeatherIcon.tsx` setzt `getEffectiveCode` jeden Niederschlagscode auf „klar/heiter/bewölkt" zurück, sobald `precipitation < 0.05 mm`. `isPrecipCode` umfasst aber auch **95–99 (Gewitter)**. Resultat: Bei Gewitter ohne aktuellen mm-Wert (Radar-Lag, Vorlauf, Zelle in Anmarsch) wird „Sonnig" angezeigt — wie in Leno.
+Drei gezielte Änderungen in `src/hooks/useWeatherRisks.ts` — sonst nichts.
 
-## Fix
+### 1) Starkregen — Schwellen + Nowcast-Vorlauf
 
-Eine Stelle, ein gezielter Eingriff in `src/components/WeatherIcon.tsx`:
+- Eingang: `max(precipitation[i], precipitation[i+1], precipitation[i+2])` statt nur aktueller Stunde → anrückende Zellen scoren mit.
+- Neue Kurve (mm/h → Score):
+  - `< 0,5` → 0
+  - `0,5–2` → 0–15 (low)
+  - `2–10` → 15–40 (moderate)
+  - `10–25` → 40–70 (high, ≈ DWD Stufe 2)
+  - `25–40` → 70–88 (extreme, Stufe 3)
+  - `> 40` → 88–100 (Stufe 4 Unwetter)
 
-1. **Gewitter-Codes (95, 96, 99) niemals downgraden.** In `getEffectiveCode` direkt nach Eintritt prüfen: wenn `code` ∈ {95, 96, 99} → unverändert zurückgeben.
-2. Alternativ (und sauberer): `isPrecipCode` belassen, aber den Precip-Override-Block nur ausführen, wenn `!isThunderstormCode(code)`.
+### 2) Sturm — Bft-orientierte Schwellen ab 40 km/h
 
-Konkret:
+- `< 40` → 0
+- `40–60` → 0–25 (Bft 6–7, Windhinweis)
+- `60–80` → 25–55 (Sturmböen)
+- `80–100` → 55–80 (Sturm)
+- `100–120` → 80–92 (schwerer Sturm)
+- `> 120` → 92–100 (Orkanböen)
 
-```ts
-function isThunderstormCode(code: number): boolean {
-  return code === 95 || code === 96 || code === 99;
-}
+### 3) Hagel — nur bei konvektiver Lage
 
-export function getEffectiveCode(...) {
-  // Nebel-Logik wie bisher ...
+- Wenn `weather_code ∈ {96, 99}` → fix ≥ 80.
+- Sonst nur scoren, wenn `Gewitter-Score ≥ 30`. CAPE + Freezing-Bonus wie bisher, aber gegated.
+- Eliminiert das Phantom-„Mäßig"-Hagel bei harmlosem Sommerwetter.
 
-  // Gewitter NIE überschreiben — auch bei 0 mm in der aktuellen Stunde
-  if (isThunderstormCode(code)) return code;
+### Out of scope
 
-  if (isPrecipCode(code) && (precipitation ?? 0) < 0.05) {
-    // bestehender Cloud-Cover-Fallback
-  }
-  // Cirrus-Downgrade wie bisher ...
-}
-```
-
-## Wirkung
-
-- `WeatherHero`, `HourlyRow`, alle Stellen, die `getEffectiveWeather` / `getEffectiveCode` nutzen, zeigen bei `weather_code` 95–99 wieder korrekt Gewitter-Icon + „Gewitter"-Text.
-- Drizzle/Regen-Codes (51–67, 80–82) verhalten sich unverändert — der Radar-Lag-Fallback bleibt für diese Codes erhalten.
-- Keine API-/Datenflussänderung, kein Risiko für andere Komponenten.
-
-## Geänderte Datei
-
-- `src/components/WeatherIcon.tsx` — `getEffectiveCode` um Gewitter-Guard erweitern.
-
-## Außerhalb des Scopes
-
-- Hagel (kein eigener WMO-Code), Wind, Warn-Logik.
-- Änderungen an `weatherDescription.ts` (übernimmt das Ergebnis automatisch).
+- Schneesturm, Glatteis, Nebel bleiben unverändert.
+- Keine UI-Änderungen, keine neuen Datenfelder.
