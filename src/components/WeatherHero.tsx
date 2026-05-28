@@ -11,6 +11,7 @@ import { formatClockTime } from "@/lib/rainbowNowcast";
 import { RelativeTime } from "./RelativeTime";
 import { WeatherHeroCanvas, getWeatherGroup, getHeroPalette } from "./WeatherHeroCanvas";
 import { RealisticWeatherIcon } from "./RealisticWeatherIcon";
+import { RefreshButton } from "./RefreshButton";
 import { ConfidenceBadge } from "./ConfidenceBadge";
 
 interface Props {
