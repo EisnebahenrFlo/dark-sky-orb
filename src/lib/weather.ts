@@ -24,6 +24,10 @@ export interface CurrentWeather {
   pressure_msl: number;
   precipitation: number;
   cloud_cover: number;
+  /** Low-/Mid-Wolken aus hourly[0] gespiegelt — für realistische Bewölkungs­beschreibung
+   *  (Cirren sollen nicht „bedeckt" auslösen). */
+  cloud_cover_low?: number;
+  cloud_cover_mid?: number;
   is_day: number;
   uv_index?: number;
   time: string;
