@@ -15,7 +15,21 @@ export function CurrentPage({ onRefresh }: { onRefresh?: () => Promise<void> | v
         const uv = data.current.uv_index ?? 0;
         return (
           <div>
-            <WeatherHero location={location} data={data.current} updatedAt={dataUpdatedAt} onRefresh={onRefresh} />
+            <WeatherHero
+              location={location}
+              data={data.current}
+              updatedAt={dataUpdatedAt}
+              onRefresh={onRefresh}
+              ensemble={
+                data._ensemble
+                  ? {
+                      models: data._ensemble.models,
+                      spreadTemp: data._ensemble.spread.temp[0],
+                      spreadPop: data._ensemble.spread.pop[0],
+                    }
+                  : undefined
+              }
+            />
             <div className="mt-2 empty:mt-0">
               <WeatherRiskGauges />
             </div>
