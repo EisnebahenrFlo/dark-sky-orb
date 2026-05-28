@@ -23,11 +23,17 @@ export interface CurrentWeather {
   wind_direction_10m: number;
   pressure_msl: number;
   precipitation: number;
+  /** Echte 10-Minuten-Summe vom Boden­messpunkt (mm), falls Station-Override aktiv.
+   *  Steht parallel zu `precipitation` (Modell-Stundenwert), damit UIs den richtigen
+   *  Bezugszeitraum anzeigen können. */
+  precipitation_10min?: number;
   cloud_cover: number;
   /** Low-/Mid-Wolken aus hourly[0] gespiegelt — für realistische Bewölkungs­beschreibung
    *  (Cirren sollen nicht „bedeckt" auslösen). */
   cloud_cover_low?: number;
   cloud_cover_mid?: number;
+  /** Sichtweite in Metern aus hourly[curIdx] für Hero-Nebel-Kachel. */
+  visibility?: number;
   is_day: number;
   uv_index?: number;
   time: string;
