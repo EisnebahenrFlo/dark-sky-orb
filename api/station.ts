@@ -26,6 +26,7 @@ export interface StationObservation {
   pressure: number | null;         // hPa MSL
   precipitation10min: number | null; // mm in last 10 min
   weatherCode: number | null;      // WMO
+  cloudCover: number | null;       // 0..100 %
   visibility: number | null;       // m
   observedAt: string;              // ISO
   stationName: string;
@@ -80,6 +81,8 @@ async function fetchBrightSky(lat: number, lon: number): Promise<StationObservat
   if (!w) return null;
 
   const dist = haversineKm(lat, lon, src.lat ?? lat, src.lon ?? lon);
+  const stationName = src.station_name || src.dwd_station_id || 'DWD-Station';
+  console.log(`[station] brightsky ${stationName} ${round1(dist)}km cloud=${w.cloud_cover}`);
   return {
     temperature: numOrNull(w.temperature),
     apparentTemperature: null,
@@ -90,9 +93,10 @@ async function fetchBrightSky(lat: number, lon: number): Promise<StationObservat
     pressure: numOrNull(w.pressure_msl),
     precipitation10min: numOrNull(w.precipitation_10),
     weatherCode: brightskyToWmo(w.condition, w.icon),
+    cloudCover: numOrNull(w.cloud_cover),
     visibility: numOrNull(w.visibility),
     observedAt: w.timestamp,
-    stationName: src.station_name || src.dwd_station_id || 'DWD-Station',
+    stationName,
     stationDistanceKm: round1(dist),
     source: 'brightsky',
   };
@@ -138,6 +142,9 @@ async function fetchMetar(lat: number, lon: number): Promise<StationObservation 
   const windKmh = best.wspd != null ? Math.round(best.wspd * 1.852) : null; // kt -> km/h
   const gustKmh = best.wgst != null ? Math.round(best.wgst * 1.852) : null;
   const pressureHpa = best.altim != null ? Math.round(best.altim) : null;
+  const cloudCover = metarCloudCover(best.clouds);
+  const name = best.name || best.icaoId || 'METAR';
+  console.log(`[station] metar ${name} ${round1(bestDist)}km cloud=${cloudCover}`);
 
   return {
     temperature: numOrNull(best.temp),
@@ -149,12 +156,28 @@ async function fetchMetar(lat: number, lon: number): Promise<StationObservation 
     pressure: pressureHpa,
     precipitation10min: null, // METAR doesn't give 10-min amount
     weatherCode: metarToWmo(best.wxString),
+    cloudCover,
     visibility: best.visib != null ? Math.round(Number(best.visib) * 1609) : null,
     observedAt: best.reportTime || best.obsTime || new Date().toISOString(),
-    stationName: best.name || best.icaoId || 'METAR',
+    stationName: name,
     stationDistanceKm: round1(bestDist),
     source: 'metar',
   };
+}
+
+/** Derive total sky coverage (0..100%) from METAR `clouds[]`. */
+function metarCloudCover(clouds: any): number | null {
+  if (!Array.isArray(clouds) || clouds.length === 0) return null;
+  const map: Record<string, number> = {
+    CLR: 0, SKC: 0, NCD: 0, NSC: 0,
+    FEW: 25, SCT: 50, BKN: 85, OVC: 100,
+  };
+  let max = -1;
+  for (const c of clouds) {
+    const code = String(c?.cover ?? '').toUpperCase();
+    if (code in map) max = Math.max(max, map[code]);
+  }
+  return max < 0 ? null : max;
 }
 
 function metarToWmo(wx?: string): number | null {

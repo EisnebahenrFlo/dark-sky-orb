@@ -10,6 +10,7 @@ export interface StationObservation {
   pressure: number | null;
   precipitation10min: number | null;
   weatherCode: number | null;
+  cloudCover: number | null;
   visibility: number | null;
   observedAt: string;
   stationName: string;
