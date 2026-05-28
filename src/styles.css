@@ -42,90 +42,13 @@
   --animate-sparkle: sparkle 1.8s ease-in-out infinite;
   --animate-fade-in: fade-in 0.5s ease-out;
   --animate-shimmer: shimmer 2s linear infinite;
-  --animate-tab-enter: tab-enter 300ms ease-out;
+  --animate-tab-fade: tab-fade 220ms cubic-bezier(0.22, 0.61, 0.36, 1) both;
 
-  /* Content entry animations (per weather type) */
-  --animate-content-slide-left: content-slide-left 600ms ease-out 250ms both;
-  --animate-content-rise: content-rise 600ms ease-out 250ms both;
-  --animate-content-fade: content-fade 500ms ease-out 200ms both;
-  --animate-content-drop: content-drop 600ms ease-out 300ms both;
-  --animate-content-hard: content-hard 200ms ease-out 350ms both;
-
-  /* Weather overlay animations */
-  --animate-cloud-sweep-1: cloud-sweep-1 900ms ease-out forwards;
-  --animate-cloud-sweep-2: cloud-sweep-2 1100ms ease-out 120ms forwards;
-  --animate-rain-drop: rain-drop 500ms ease-in forwards;
-  --animate-snow-fall: snow-fall 1200ms ease-in forwards;
-  --animate-thunder-flash: thunder-flash 450ms ease-out forwards;
-  --animate-star-twinkle: star-twinkle 400ms ease-in-out forwards;
-  --animate-shooting-star: shooting-star 700ms ease-out forwards;
-
-  @keyframes tab-enter {
-    0% { opacity: 0; transform: translateY(8px); }
+  @keyframes tab-fade {
+    0%   { opacity: 0; transform: translateY(6px); }
     100% { opacity: 1; transform: translateY(0); }
   }
-  @keyframes content-slide-left {
-    0% { opacity: 0; transform: translateX(24px); }
-    100% { opacity: 1; transform: translateX(0); }
-  }
-  @keyframes content-rise {
-    0% { opacity: 0; transform: translateY(16px); }
-    100% { opacity: 1; transform: translateY(0); }
-  }
-  @keyframes content-fade {
-    0% { opacity: 0; }
-    100% { opacity: 1; }
-  }
-  @keyframes content-drop {
-    0% { opacity: 0; transform: translateY(-14px); }
-    100% { opacity: 1; transform: translateY(0); }
-  }
-  @keyframes content-hard {
-    0% { opacity: 0; }
-    100% { opacity: 1; }
-  }
-  @keyframes cloud-sweep-1 {
-    0%   { transform: translateX(100vw); opacity: 0; }
-    15%  { opacity: 0.8; }
-    85%  { opacity: 0.8; }
-    100% { transform: translateX(-300px); opacity: 0; }
-  }
-  @keyframes cloud-sweep-2 {
-    0%   { transform: translateX(100vw); opacity: 0; }
-    15%  { opacity: 0.65; }
-    85%  { opacity: 0.65; }
-    100% { transform: translateX(-260px); opacity: 0; }
-  }
-  @keyframes rain-drop {
-    0%   { transform: translateY(-30px); opacity: 0; }
-    15%  { opacity: 0.85; }
-    100% { transform: translateY(120vh); opacity: 0.6; }
-  }
-  @keyframes snow-fall {
-    0%   { transform: translate(0, -20px); opacity: 0; }
-    15%  { opacity: 0.95; }
-    25%  { transform: translate(10px, 20vh); }
-    50%  { transform: translate(-10px, 45vh); }
-    75%  { transform: translate(10px, 70vh); }
-    100% { transform: translate(-6px, 110vh); opacity: 0; }
-  }
-  @keyframes thunder-flash {
-    0%   { opacity: 0; }
-    8%   { opacity: 0.75; }
-    25%  { opacity: 0; }
-    35%  { opacity: 0.45; }
-    50%  { opacity: 0; }
-    100% { opacity: 0; }
-  }
-  @keyframes star-twinkle {
-    0%, 100% { opacity: 0; transform: scale(0.3); }
-    50%      { opacity: 0.95; transform: scale(1.3); }
-  }
-  @keyframes shooting-star {
-    0%   { opacity: 0; transform: translate(0, 0) rotate(20deg); }
-    20%  { opacity: 1; }
-    100% { opacity: 0; transform: translate(220px, 70px) rotate(20deg); }
-  }
+
   @keyframes float {
     0%, 100% { transform: translateY(0px); }
     50% { transform: translateY(-8px); }
@@ -161,22 +84,18 @@
   .animate-pulse-glow,
   .animate-sparkle,
   .animate-shimmer,
-  .animate-tab-enter,
-  .animate-content-slide-left,
-  .animate-content-rise,
-  .animate-content-fade,
-  .animate-content-drop,
-  .animate-content-hard,
-  .animate-cloud-sweep-1,
-  .animate-cloud-sweep-2,
-  .animate-rain-drop,
-  .animate-snow-fall,
-  .animate-thunder-flash,
-  .animate-star-twinkle,
-  .animate-shooting-star {
+  .animate-tab-fade {
     animation: none !important;
   }
 }
+
+/* iOS Safari: prevent zoom on focus by ensuring inputs are >= 16px on mobile */
+@media (max-width: 767px) {
+  input, select, textarea {
+    font-size: 16px;
+  }
+}
+
 
 /* Default = dark */
 :root {
