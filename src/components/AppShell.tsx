@@ -100,11 +100,13 @@ export function AppShell() {
           </span>
         </Link>
         <div className="flex items-center gap-3">
+          <span className="sr-only" role="status" aria-live="polite">
+            {isFetching ? "Wetterdaten werden aktualisiert" : ""}
+          </span>
           {isFetching && (
             <Loader2
               className="h-4 w-4 animate-spin text-muted-foreground"
-              aria-label="Daten werden aktualisiert"
-              role="status"
+              aria-hidden="true"
             />
           )}
           <FavoritesButton />
