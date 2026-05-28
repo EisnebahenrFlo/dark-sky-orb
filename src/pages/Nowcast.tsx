@@ -361,7 +361,30 @@ export function NowcastPage() {
                   {!hasRain && <NowcastContextBox hourly={data.hourly} />}
                 </>
               ) : rainbow.isLoading ? (
-                <div className="glass h-56 animate-pulse rounded-3xl" />
+                <div
+                  className="glass space-y-4 rounded-3xl p-5 sm:p-6"
+                  role="status"
+                  aria-label="Nowcast wird geladen"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="space-y-2">
+                      <div className="h-4 w-44 animate-pulse rounded bg-muted/70" />
+                      <div className="h-3 w-32 animate-pulse rounded bg-muted/50" />
+                    </div>
+                    <div className="h-5 w-16 animate-pulse rounded-full bg-muted/60" />
+                  </div>
+                  <div className="h-12 w-full animate-pulse rounded-xl bg-muted/60" />
+                  <div className="flex justify-between">
+                    {Array.from({ length: 5 }).map((_, i) => (
+                      <div key={i} className="h-2.5 w-8 animate-pulse rounded bg-muted/40" />
+                    ))}
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {Array.from({ length: 5 }).map((_, i) => (
+                      <div key={i} className="h-3 w-14 animate-pulse rounded bg-muted/40" />
+                    ))}
+                  </div>
+                </div>
               ) : (
                 <div className="space-y-2">
                   {rainbow.isError && (
