@@ -1,47 +1,54 @@
-## Ziel
-Drei UI-Schwächen beheben — alles rein präsentational, keine Datenlogik anfassen.
+# Vercel hängt in „Queued" — Plan
 
----
+Lovable kann Vercel-Deploys weder triggern noch abbrechen. Wenn ein Commit auf `main` landet, Vercel aber gar nicht baut, liegt es zu 95 % an **Webhook / Git-Integration / Account-Limit**, nicht am Code. Plan: erst extern verifizieren, dann (falls nötig) einen minimalen Repo-Trigger als Fallback.
 
-### 1. Header aufräumen — Theme in Menü
+## Schritt 1 — Außerhalb des Repos prüfen (du, ~3 min)
 
-**Heute:** Header zeigt Logo, Spinner, Favoriten-Stern und drei nebeneinanderliegende Theme-Buttons (Hell / Dunkel / System). Auf 390px frisst der Theme-Switcher die Hälfte der Aktionsleiste, obwohl es eine Einstellung ist.
+1. **GitHub → Repo → Settings → Webhooks**
+   Ist der Vercel-Webhook grün (letzte Delivery 200 OK)? Wenn rot/grau → Vercel-GitHub-App neu autorisieren (GitHub → Settings → Applications → Vercel → Configure → Repo-Zugriff erneuern).
+2. **Vercel → Project → Settings → Git**
+   - Richtiges Repo verbunden?
+   - Production Branch = `main` (nicht `master`)?
+   - „Ignored Build Step" leer oder `exit 1`?
+3. **Vercel → Dashboard (oberer Banner)**
+   Hobby-Plan: 100 Deploys/Tag, parallele Builds limitiert. Banner zeigt Throttling.
+4. **Vercel → Project → Deployments**
+   Steht der letzte Commit dort als „Queued", „Skipped", oder fehlt er ganz?
+   - **Fehlt komplett** → Webhook-Problem (Schritt 1).
+   - **„Skipped"** → Ignored Build Step / Branch-Filter.
+   - **„Queued" > 5 min** → Vercel-Plattform-Incident (status.vercel.com) oder Account-Limit.
 
-**Neu:** Einen einzigen Icon-Button (Sun/Moon je nach aktivem Theme), der ein Popover-Menü öffnet. Im Popover dann die drei Optionen Hell / Dunkel / System untereinander mit Label + Häkchen am aktiven Eintrag. Standard-shadcn `DropdownMenu`.
+## Schritt 2 — Repo-seitiger Fallback (nur wenn Schritt 1 nichts findet)
 
-- `src/components/ThemeToggle.tsx` umbauen von Segmented Control → `DropdownMenu` mit Trigger-Icon (h-9 w-9, ≥44px Touch-Target).
-- Aktives Icon wechselt: light → Sun, dark → Moon, system → Monitor.
-- Aria-Label: "Farbschema ändern".
-- Kein Aufruf in `AppShell.tsx` zu ändern (bleibt `<ThemeToggle />`).
+Falls Webhook ok ist aber Builds trotzdem nicht starten, kann ein leerer Commit / Re-Trigger helfen — das machst du lokal, nicht Lovable:
+```bash
+git commit --allow-empty -m "chore: retrigger vercel"
+git push origin main
+```
+Alternativ in Vercel: **Deployments → letzten Commit → … → Redeploy**.
 
-### 2. Tab-Bar überlagert Footer
+## Schritt 3 — Optional: GitHub Action als Deploy-Trigger
 
-**Heute:** Footer (Daten von Open-Meteo / Impressum / Version) wird von der fixed Mobile-Tab-Bar überlappt, weil `pb-28` auf dem Shell zu knapp ist, sobald der Footer + Safe-Area dazukommen.
+Wenn die GitHub↔Vercel-Integration dauerhaft unzuverlässig ist, ersetze sie durch einen direkten Deploy-Hook:
+1. Vercel → Project → Settings → Git → **Deploy Hooks** → neuen Hook für `main` erstellen, URL kopieren.
+2. Hook-URL als GitHub Secret `VERCEL_DEPLOY_HOOK` hinterlegen.
+3. `.github/workflows/vercel-deploy.yml` (kann ich im Build-Modus anlegen):
+   ```yaml
+   on: { push: { branches: [main] } }
+   jobs:
+     trigger:
+       runs-on: ubuntu-latest
+       steps:
+         - run: curl -X POST "${{ secrets.VERCEL_DEPLOY_HOOK }}"
+   ```
+   Das umgeht die Vercel-GitHub-App komplett.
 
-**Neu:** Padding-Bottom des Page-Containers in `AppShell.tsx` so erhöhen, dass Footer + Tab-Bar + Safe-Area Platz haben. Konkret: `pb-36` auf Mobile (statt `pb-28`), und Footer bekommt `pb-[env(safe-area-inset-bottom)]` zusätzlich, damit auf Geräten mit Home-Indicator nichts klemmt. Desktop (`sm:pb-12`) bleibt unverändert.
+## Was ich (Lovable) im Build-Modus tun kann
 
-Optional: Footer-Block in ein eigenes `<div className="mb-[88px] md:mb-0">` wrappen, damit die Logik lokal sichtbar ist.
+- Workflow-Datei aus Schritt 3 anlegen.
+- `vercel.json` aufräumen falls du Functions reduzieren willst (z.B. `api/_lib/**` Include prüfen).
+- Sonst: nichts. Die Queue-Blockade selbst muss in Vercel/GitHub gelöst werden.
 
-### 3. Doppelte Loader auf Home
+## Empfehlung
 
-**Heute:** `HeutePage` rendert `CurrentPage` + `NowcastPage` untereinander. Beide hängen am selben `useWeather`-Context und beide zeigen unabhängig `PageState` → `WeatherLoader` mit identischem Text "Lädt Daten für Berlin…". Beim ersten Laden sieht man zwei gleiche Loader-Karten.
-
-**Neu:** Auf der Home-Seite einmal zentral laden:
-
-- `src/pages/Heute.tsx`: `useWeather()` direkt konsumieren. Wenn `isLoading && !data` → einen einzigen `WeatherLoader` rendern. Wenn `isError && !data` → einen einzigen Error-State. Sonst die beiden Sektionen rendern.
-- `CurrentPage` und `NowcastPage` rendern ihre internen `PageState`-Wrapper weiter — auf anderen Routen (z. B. zukünftig isoliert) bleiben sie nutzbar. Auf Home werden sie nur sichtbar, wenn Daten da sind, also greift der innere Loader nicht mehr doppelt.
-
-Alternativ minimaler Eingriff: in `NowcastPage` `PageState` durch eine Variante ersetzen, die im Loading-State `null` zurückgibt (also nur die Current-Karte zeigt den Loader). Ich nehme die zentrale Variante in `Heute.tsx`, weil sie auch den "Nowcast für Berlin"-Header während des Loadings unterdrückt.
-
----
-
-### Geänderte Dateien
-- `src/components/ThemeToggle.tsx` — Umbau auf DropdownMenu
-- `src/components/AppShell.tsx` — pb erhöhen, Safe-Area am Footer
-- `src/pages/Heute.tsx` — zentraler Loader/Error-State
-
-### Out of Scope (für später)
-- Hero-Karten-Hierarchie (Temperatur groß)
-- Suchleiste kompakter
-- Badge-System vereinheitlichen
-- DEV-Marker entfernen
+Erst **Schritt 1** durchgehen und mir zurückmelden, was du in **Vercel → Deployments** für den letzten Commit siehst (Queued? Skipped? Fehlt?). Davon hängt ab, ob wir Schritt 3 brauchen oder die Sache mit einem Webhook-Reauth erledigt ist.
