@@ -254,9 +254,10 @@ export function SearchBar({ onSelect, recent, onClearRecent }: Props) {
           onFocus={() => setOpen(true)}
           onKeyDown={onKeyDown}
           inputMode="search"
+          aria-label="Ort oder Postleitzahl suchen"
           placeholder="Ort oder PLZ suchen…"
           disabled={gpsStatus === "loading"}
-          className="min-w-0 flex-1 bg-transparent pr-1 text-sm outline-none placeholder:text-muted-foreground/70 disabled:opacity-60"
+          className="min-w-0 flex-1 bg-transparent pr-1 text-sm outline-none placeholder:text-muted-foreground disabled:opacity-60"
         />
 
         <div className="flex shrink-0 items-center gap-1.5">
