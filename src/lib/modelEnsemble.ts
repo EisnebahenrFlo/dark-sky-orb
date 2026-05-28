@@ -406,21 +406,56 @@ export function buildEnsemble(
   });
 
   // Per-Stunde Code-Disagreement: wie viele *unterschiedliche* weather_codes liefern die Modelle?
+  // Wir berechnen pro Modell den *effektiven* Code (Cirrus-Downgrade berücksichtigt),
+  // damit Modelle die nominell "bewölkt" sagen aber nur Cirren sehen nicht künstlich übereinstimmen.
+  const effectiveModelCode = (id: string, i: number): number | null => {
+    const raw = (rawHourly?.[`weather_code_${id}`] as number[] | undefined)?.[i];
+    if (raw == null || !Number.isFinite(raw)) return null;
+    const code = Math.round(raw);
+    if (code !== 2 && code !== 3) return code;
+    const low = (rawHourly?.[`cloud_cover_low_${id}`] as number[] | undefined)?.[i];
+    const mid = (rawHourly?.[`cloud_cover_mid_${id}`] as number[] | undefined)?.[i];
+    if (low == null || !Number.isFinite(low)) return code;
+    const lowMid = low + 0.5 * (Number.isFinite(mid as number) ? (mid as number) : 0);
+    if (lowMid < 12) return 0;
+    if (lowMid < 30) return 1;
+    if (lowMid < 60) return 2;
+    return 3;
+  };
   const codeDisagreement: number[] = (hourlyOut.time as string[]).map((_, i) => {
     const codes = new Set<number>();
     for (const id of modelIds) {
-      const arr = rawHourly?.[`weather_code_${id}`] as number[] | undefined;
-      const v = arr?.[i];
-      if (v != null && Number.isFinite(v)) codes.add(Math.round(v));
+      const v = effectiveModelCode(id, i);
+      if (v != null) codes.add(v);
     }
     return codes.size; // 1 = alle einig, 4 = volle Uneinigkeit
+  });
+
+  // Mismatch-Penalty: weicht der ensemble-Code vom *effektiven* Code nach Cirrus-Downgrade ab,
+  // ist die Anzeige unsicher (Modell sagt "bewölkt", Himmel ist real klar).
+  const ensembleCodes = (hourlyOut.weather_code as number[] | undefined) ?? [];
+  const cloudLowOut = (hourlyOut.cloud_cover_low as number[] | undefined) ?? [];
+  const cloudMidOut = (hourlyOut.cloud_cover_mid as number[] | undefined) ?? [];
+  const effectiveMismatch: number[] = (hourlyOut.time as string[]).map((_, i) => {
+    const code = Math.round(ensembleCodes[i] ?? -1);
+    if (code !== 2 && code !== 3) return 0;
+    const low = cloudLowOut[i];
+    if (low == null || !Number.isFinite(low)) return 0;
+    const lowMid = low + 0.5 * (Number.isFinite(cloudMidOut[i]) ? cloudMidOut[i] : 0);
+    let eff = code;
+    if (lowMid < 12) eff = 0;
+    else if (lowMid < 30) eff = 1;
+    else if (lowMid < 60) eff = 2;
+    else eff = 3;
+    return eff !== code ? 1 : 0;
   });
 
   const hourlyConfidence = spread.temp.map((t, i) => {
     const base = confidenceFromSpread(t, spread.pop[i] ?? 0, activeModelCounts[i] ?? 1);
     // Bestrafe Code-Uneinigkeit (jeder zusätzliche unterschiedliche Code = -10)
     const codePenalty = Math.max(0, (codeDisagreement[i] - 1) * 10);
-    let score = Math.max(0, base - codePenalty);
+    const mismatchPenalty = effectiveMismatch[i] ? 15 : 0;
+    let score = Math.max(0, base - codePenalty - mismatchPenalty);
     // Clamp: wenn nur 1 Modell aktiv ist, ist hohe Sicherheit nicht begründbar
     if ((activeModelCounts[i] ?? 1) < 2) score = Math.min(score, 60);
     return score;
@@ -436,6 +471,8 @@ export function buildEnsemble(
     currentConfidence = confidenceFromSpread(stddev(currentTemps), spread.pop[0] ?? 0, currentTemps.length);
     // Code-Disagreement der aktuellen Stunde auch hier einrechnen
     currentConfidence = Math.max(0, currentConfidence - Math.max(0, (codeDisagreement[0] - 1) * 10));
+    // Mismatch zwischen Roh-Code und effektivem (Cirrus-bereinigtem) Code → klare Unsicherheit
+    if (effectiveMismatch[0]) currentConfidence = Math.max(0, currentConfidence - 15);
   } else {
     const first3 = hourlyConfidence.slice(0, 3).filter((v) => Number.isFinite(v));
     currentConfidence = first3.length
