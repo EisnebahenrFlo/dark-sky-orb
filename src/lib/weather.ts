@@ -23,11 +23,17 @@ export interface CurrentWeather {
   wind_direction_10m: number;
   pressure_msl: number;
   precipitation: number;
+  /** Echte 10-Minuten-Summe vom Boden­messpunkt (mm), falls Station-Override aktiv.
+   *  Steht parallel zu `precipitation` (Modell-Stundenwert), damit UIs den richtigen
+   *  Bezugszeitraum anzeigen können. */
+  precipitation_10min?: number;
   cloud_cover: number;
   /** Low-/Mid-Wolken aus hourly[0] gespiegelt — für realistische Bewölkungs­beschreibung
    *  (Cirren sollen nicht „bedeckt" auslösen). */
   cloud_cover_low?: number;
   cloud_cover_mid?: number;
+  /** Sichtweite in Metern aus hourly[curIdx] für Hero-Nebel-Kachel. */
+  visibility?: number;
   is_day: number;
   uv_index?: number;
   time: string;
@@ -337,6 +343,84 @@ function getDayRepresentativeCode(
   return 0;
 }
 
+/**
+ * Tagessumme/-extrema aus der stündlichen Ensemble-Reihe rekonstruieren,
+ * damit Daily nicht mehr vom `best_match`-Modell der separaten Daily-API
+ * abweicht. Nur Tage mit ausreichend Abdeckung (≥ 12 h) werden überschrieben;
+ * für die hinteren Tage 3–7 bleibt die best_match-Daily erhalten.
+ *
+ * Sunrise/Sunset und UV-Index sind astronomisch/aus der langen Hourly,
+ * die werden absichtlich nicht überschrieben.
+ */
+function reconcileDailyFromHourly(
+  daily: DailyData,
+  hourlyTime: string[],
+  hourly: HourlyData,
+  representativeCodes: number[],
+): DailyData {
+  const out: DailyData = {
+    ...daily,
+    weather_code: [...daily.weather_code],
+    temperature_2m_max: [...daily.temperature_2m_max],
+    temperature_2m_min: [...daily.temperature_2m_min],
+    apparent_temperature_max: [...daily.apparent_temperature_max],
+    apparent_temperature_min: [...daily.apparent_temperature_min],
+    precipitation_sum: [...daily.precipitation_sum],
+    precipitation_hours: [...daily.precipitation_hours],
+    precipitation_probability_max: [...daily.precipitation_probability_max],
+    wind_speed_10m_max: [...daily.wind_speed_10m_max],
+    wind_gusts_10m_max: [...daily.wind_gusts_10m_max],
+    wind_direction_10m_dominant: [...daily.wind_direction_10m_dominant],
+    snowfall_sum: [...daily.snowfall_sum],
+  };
+
+  // Indizes der Stunden pro Datum sammeln
+  const byDate = new Map<string, number[]>();
+  for (let i = 0; i < hourlyTime.length; i++) {
+    const d = hourlyTime[i].slice(0, 10);
+    let arr = byDate.get(d);
+    if (!arr) { arr = []; byDate.set(d, arr); }
+    arr.push(i);
+  }
+
+  for (let d = 0; d < daily.time.length; d++) {
+    const dateStr = daily.time[d].slice(0, 10);
+    const idxs = byDate.get(dateStr);
+    if (!idxs || idxs.length < 12) continue; // unzureichende Ensemble-Abdeckung
+
+    const pick = (arr: number[] | undefined): number[] =>
+      arr ? idxs.map((i) => arr[i]).filter((v): v is number => typeof v === "number" && Number.isFinite(v)) : [];
+
+    const temps = pick(hourly.temperature_2m);
+    const apps = pick(hourly.apparent_temperature);
+    const precs = pick(hourly.precipitation);
+    const winds = pick(hourly.wind_speed_10m);
+    const gusts = pick(hourly.wind_gusts_10m);
+    const pops = pick(hourly.precipitation_probability);
+    const snows = pick(hourly.snowfall);
+
+    if (temps.length) {
+      out.temperature_2m_max[d] = Math.max(...temps);
+      out.temperature_2m_min[d] = Math.min(...temps);
+    }
+    if (apps.length) {
+      out.apparent_temperature_max[d] = Math.max(...apps);
+      out.apparent_temperature_min[d] = Math.min(...apps);
+    }
+    if (precs.length) {
+      out.precipitation_sum[d] = precs.reduce((s, v) => s + Math.max(0, v), 0);
+      out.precipitation_hours[d] = precs.filter((v) => v >= 0.1).length;
+    }
+    if (winds.length) out.wind_speed_10m_max[d] = Math.max(...winds);
+    if (gusts.length) out.wind_gusts_10m_max[d] = Math.max(...gusts);
+    if (pops.length) out.precipitation_probability_max[d] = Math.max(...pops);
+    if (snows.length) out.snowfall_sum[d] = snows.reduce((s, v) => s + Math.max(0, v), 0);
+    if (representativeCodes[d] != null) out.weather_code[d] = representativeCodes[d];
+  }
+
+  return out;
+}
+
 export async function fetchWeather(lat: number, lon: number, countryCode?: string): Promise<WeatherData> {
   const models = getWeatherModels(countryCode);
   const isEnsemble = models.length > 1;
@@ -464,14 +548,29 @@ export async function fetchWeather(lat: number, lon: number, countryCode?: strin
   })();
   const lowAt = (mergedHourly.cloud_cover_low as number[] | undefined)?.[curTimeIdx];
   const midAt = (mergedHourly.cloud_cover_mid as number[] | undefined)?.[curTimeIdx];
+  const visAt = (mergedHourly.visibility as number[] | undefined)?.[curTimeIdx];
 
   const finalCurrent = {
     ...(mergedCurrent as unknown as CurrentWeather),
     uv_index: currentUv,
     cloud_cover_low: typeof lowAt === "number" ? lowAt : undefined,
     cloud_cover_mid: typeof midAt === "number" ? midAt : undefined,
+    visibility: typeof visAt === "number" ? visAt : undefined,
     _confidence: ensembleMeta?.currentConfidence,
   };
+
+  const finalHourly: HourlyData = {
+    ...(mergedHourly as unknown as HourlyData),
+    uv_index: alignedUv,
+    precipitation_probability: alignedPop,
+  };
+
+  const reconciledDaily = reconcileDailyFromHourly(
+    { ...longJson.daily, weather_code: representativeDailyCodes },
+    finalHourly.time,
+    finalHourly,
+    representativeDailyCodes,
+  );
 
   const json: WeatherData = {
     latitude: Number((shortRaw as { latitude?: number }).latitude ?? lat),
@@ -479,15 +578,8 @@ export async function fetchWeather(lat: number, lon: number, countryCode?: strin
     timezone: String((shortRaw as { timezone?: string }).timezone ?? "auto"),
     current: finalCurrent,
     minutely_15: mergedMinutely as unknown as MinutelyData,
-    hourly: {
-      ...(mergedHourly as unknown as HourlyData),
-      uv_index: alignedUv,
-      precipitation_probability: alignedPop,
-    },
-    daily: {
-      ...longJson.daily,
-      weather_code: representativeDailyCodes,
-    },
+    hourly: finalHourly,
+    daily: reconciledDaily,
     _ensemble: ensembleMeta,
   };
 

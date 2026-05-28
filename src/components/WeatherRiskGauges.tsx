@@ -22,6 +22,9 @@ const NAME_LABEL: Record<RiskIconId, string> = {
   schneesturm: "Schneesturm",
   glatteis: "Glatteis",
   nebel: "Nebel",
+  frost: "Frost",
+  hitze: "Hitze",
+  uv: "UV",
 };
 
 /**
@@ -91,7 +94,7 @@ function RiskRing({ risk, index, isDark }: { risk: RiskItem; index: number; isDa
   const levelLabel = `${risk.isEstimate ? "~" : ""}${risk.label}`;
 
   return (
-    <div className="flex flex-col items-center">
+    <div className="flex flex-col items-center" title={`${NAME_LABEL[risk.id as RiskIconId]}: ${risk.label} · Score ${score} · ${risk.dwdLabel}`}>
       <div className="relative" style={{ width: RING_SIZE, height: RING_SIZE }}>
         <svg
           width={RING_SIZE}

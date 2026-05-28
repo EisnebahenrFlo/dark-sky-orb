@@ -15,9 +15,31 @@ export type RiskId =
   | "sturm"
   | "schneesturm"
   | "glatteis"
-  | "nebel";
+  | "nebel"
+  | "frost"
+  | "hitze"
+  | "uv";
 
 export type RiskLevel = "none" | "low" | "moderate" | "high" | "extreme";
+
+/** DWD-Warnstufen-Mapping aus dem 0–100-Score.
+ *  Angelehnt an die offiziellen Stufen 1–4 (Wetterhinweis → extreme Unwetter). */
+export type DwdStufe = 0 | 1 | 2 | 3 | 4;
+export function dwdStufeForScore(score: number): DwdStufe {
+  if (score >= 89) return 4; // extreme Unwetterwarnung (violett)
+  if (score >= 71) return 3; // Unwetterwarnung (rot)
+  if (score >= 51) return 2; // markante Wetterwarnung (orange)
+  if (score >= 26) return 1; // Wetterhinweis / Warnung Stufe 1 (gelb)
+  return 0;
+}
+
+export const DWD_STUFE_LABEL: Record<DwdStufe, string> = {
+  0: "Keine Warnung",
+  1: "Wetterhinweis · Stufe 1",
+  2: "Markant · Stufe 2",
+  3: "Unwetter · Stufe 3",
+  4: "Extrem · Stufe 4",
+};
 
 export interface RiskItem {
   id: RiskId;
@@ -25,6 +47,8 @@ export interface RiskItem {
   level: RiskLevel;
   label: string;
   isEstimate: boolean;
+  dwdStufe: DwdStufe;
+  dwdLabel: string;
 }
 
 export interface UseWeatherRisksResult {
@@ -49,6 +73,9 @@ const TIEBREAKER: RiskId[] = [
   "hagel",
   "schneesturm",
   "glatteis",
+  "frost",
+  "hitze",
+  "uv",
   "nebel",
 ];
 
@@ -67,7 +94,14 @@ function clampScore(score: number): number {
 function makeRisk(id: RiskId, rawScore: number, isEstimate: boolean): RiskItem {
   const score = clampScore(rawScore);
   const level = levelForScore(score);
-  return { id, score, level, label: LEVEL_LABEL[level], isEstimate };
+  const dwdStufe = dwdStufeForScore(score);
+  return {
+    id, score, level,
+    label: LEVEL_LABEL[level],
+    isEstimate,
+    dwdStufe,
+    dwdLabel: DWD_STUFE_LABEL[dwdStufe],
+  };
 }
 
 export function useWeatherRisks(): UseWeatherRisksResult {
@@ -187,7 +221,41 @@ export function useWeatherRisks(): UseWeatherRisksResult {
               : 85 + Math.min(15, ((50 - vis) / 50) * 15);
     const nebel = makeRisk("nebel", nebelScore, false);
 
-    const all: RiskItem[] = [gewitter, starkregen, hagel, sturm, schneesturm, glatteis, nebel];
+    // FROST — Tagesminimum der Lufttemperatur in den nächsten 24h
+    const next24 = hourly?.temperature_2m?.slice(i, i + 24) ?? [];
+    const minT = next24.length ? Math.min(...next24) : 99;
+    const frostScore =
+      minT > 3 ? 0
+      : minT > 0 ? ((3 - minT) / 3) * 25
+      : minT > -5 ? 25 + ((-minT) / 5) * 35
+      : minT > -10 ? 60 + ((-minT - 5) / 5) * 25
+      : 85 + Math.min(15, ((-minT - 10) / 5) * 15);
+    const frost = makeRisk("frost", frostScore, false);
+
+    // HITZE — gefühlte Maximaltemperatur + Tropennacht-Bonus
+    const nextApp = hourly?.apparent_temperature?.slice(i, i + 24) ?? [];
+    const maxApp = nextApp.length ? Math.max(...nextApp) : -99;
+    const tropennacht = next24.length ? Math.min(...next24) >= 20 : false;
+    const hitzeBase =
+      maxApp < 30 ? 0
+      : maxApp < 32 ? ((maxApp - 30) / 2) * 25
+      : maxApp < 35 ? 25 + ((maxApp - 32) / 3) * 35
+      : maxApp < 38 ? 60 + ((maxApp - 35) / 3) * 25
+      : 85 + Math.min(15, ((maxApp - 38) / 4) * 15);
+    const hitzeScore = hitzeBase + (tropennacht ? 15 : 0);
+    const hitze = makeRisk("hitze", hitzeScore, false);
+
+    // UV — Tagesmax aus den nächsten 24h
+    const nextUv = hourly?.uv_index?.slice(i, i + 24) ?? [];
+    const maxUv = nextUv.length ? Math.max(...nextUv) : 0;
+    const uvScore =
+      maxUv < 6 ? 0
+      : maxUv < 8 ? ((maxUv - 6) / 2) * 25
+      : maxUv < 11 ? 25 + ((maxUv - 8) / 3) * 40
+      : 65 + Math.min(35, ((maxUv - 11) / 2) * 35);
+    const uv = makeRisk("uv", uvScore, false);
+
+    const all: RiskItem[] = [gewitter, starkregen, hagel, sturm, schneesturm, glatteis, nebel, frost, hitze, uv];
 
     // Top 4 nach Score, mit fester Tiebreaker-Reihenfolge
     const sorted = [...all].sort((a, b) => {

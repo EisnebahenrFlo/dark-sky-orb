@@ -368,7 +368,7 @@ export function NowcastPage() {
                       Echtzeit-Nowcast nicht verfügbar – Fallback auf Open-Meteo.
                     </div>
                   )}
-                  <Nowcast minutely={data.minutely_15} count={range} showHeader={false} />
+                  <Nowcast minutely={data.minutely_15} hourly={data.hourly} count={range} showHeader={false} />
                   <NowcastContextBox hourly={data.hourly} />
                 </div>
               )}

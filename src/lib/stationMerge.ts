@@ -55,9 +55,13 @@ export function mergeStationIntoWeather(
     wind_gusts_10m: obs.windGust ?? current.wind_gusts_10m,
     wind_direction_10m: obs.windDirection ?? current.wind_direction_10m,
     pressure_msl: obs.pressure ?? current.pressure_msl,
-    // Convert 10-min sum to hourly-ish rate for display consistency
-    precipitation:
-      obs.precipitation10min != null ? obs.precipitation10min : current.precipitation,
+    // Modell-Stundenwert bleibt erhalten (für Risiko/Beschreibungs-Logik),
+    // die echte 10-Min-Summe der Station wird in einem separaten Feld geführt.
+    precipitation: current.precipitation,
+    precipitation_10min:
+      obs.precipitation10min != null && Number.isFinite(obs.precipitation10min)
+        ? Math.max(0, obs.precipitation10min)
+        : undefined,
     cloud_cover: obs.cloudCover != null ? obs.cloudCover : current.cloud_cover,
     weather_code: reconcileCode(current.weather_code, obs),
     _source: "station",

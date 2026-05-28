@@ -19,6 +19,7 @@ import { weekdayLabel, windDirectionLabel } from "@/lib/weather";
 import { RealisticWeatherIcon } from "./RealisticWeatherIcon";
 import { SectionHeader } from "./SectionHeader";
 import { computeThunderstormRiskSeries } from "@/hooks/useThunderstormRisk";
+import { getEffectiveCode } from "@/components/WeatherIcon";
 
 function timeOnly(iso: string) {
   return new Date(iso).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" });
@@ -111,6 +112,7 @@ function Chip({
 function DayRow({
   daily,
   i,
+  hourly,
   thunderScore,
   weekMin,
   weekMax,
@@ -128,7 +130,7 @@ function DayRow({
   const [open, setOpen] = useState(false);
   const min = daily.temperature_2m_min[i];
   const max = daily.temperature_2m_max[i];
-  const code = daily.weather_code[i];
+  const rawCode = daily.weather_code[i];
   const pop = daily.precipitation_probability_max[i] ?? 0;
   const precip = daily.precipitation_sum[i] ?? 0;
   const wind = daily.wind_speed_10m_max[i];
@@ -136,6 +138,29 @@ function DayRow({
   const uv = daily.uv_index_max[i] ?? 0;
   const storm = stormPill(thunderScore);
   const wet = precip >= 1;
+
+  // Tagesmittel der low/mid-Bewölkung für effective-code-Korrektur
+  // (Cirrus-Downgrade + Niederschlags-Konsistenz). Nur wenn hourly vorliegt
+  // und ≥ 6 Werte zur Verfügung stehen, sonst Roh-Code beibehalten.
+  const dateStr = daily.time[i].slice(0, 10);
+  let code = rawCode;
+  if (hourly?.time?.length) {
+    const idxs: number[] = [];
+    for (let k = 0; k < hourly.time.length; k++) {
+      if (hourly.time[k].slice(0, 10) === dateStr) idxs.push(k);
+    }
+    if (idxs.length >= 6) {
+      const mean = (arr?: number[]) => {
+        if (!arr) return undefined;
+        const vs = idxs.map((k) => arr[k]).filter((v): v is number => Number.isFinite(v));
+        return vs.length ? vs.reduce((s, v) => s + v, 0) / vs.length : undefined;
+      };
+      const cloudLow = mean(hourly.cloud_cover_low);
+      const cloudMid = mean(hourly.cloud_cover_mid);
+      const cloudTotal = mean(hourly.cloud_cover) ?? 50;
+      code = getEffectiveCode(rawCode, precip / Math.max(1, idxs.length), cloudTotal, undefined, 12, cloudLow, cloudMid);
+    }
+  }
 
   const isHottest = i === highlights.hottest;
   const isColdest = i === highlights.coldest;

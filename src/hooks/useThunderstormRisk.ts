@@ -122,14 +122,24 @@ const EMPTY: ThunderstormRisk = makeRisk(0, "lpi");
 
 /**
  * Berechnet den Composite-Score für eine einzelne Stunde.
+ *
+ *   basis (CAPE)        instabile Schichtung
+ * + Bonus (LPI)         direktes Blitz-Signal vom Modell
+ * + Bonus (Böen)        Sturmböen bei Konvektion = organisierte Zelle
+ * × liFactor            Lifted Index als Verstärker/Dämpfer der Instabilität
+ * × cinFactor           Convective Inhibition als Gate-Keeper (Sperrschicht)
+ * × daytimeFactor       Konvektion entsteht meist tagsüber durch Erwärmung
+ *
+ * Bei sehr hohem LPI (≥ 8) wird die Tageszeit ignoriert, weil dann eine
+ * organisierte Front-/Squall-Lage vorliegt, die auch nachts kräftig blitzt.
  */
 function computeHourScore(
   lpiVal: number | null | undefined,
   capeVal: number | null | undefined,
-  _liVal: number | null | undefined,
-  _cinVal: number | null | undefined,
+  liVal: number | null | undefined,
+  cinVal: number | null | undefined,
   gustVal: number | null | undefined,
-  _isoTime: string,
+  isoTime: string,
 ): { score: number; source: "lpi" | "cape" } {
   const basis = scoreFromCAPE(capeVal);
 
@@ -141,7 +151,11 @@ function computeHourScore(
   const gust = typeof gustVal === "number" && !Number.isNaN(gustVal) ? gustVal : 0;
   if (gust > 50) bonus += 5;
 
-  const score = Math.min(100, basis + bonus);
+  const li = liFactor(liVal);
+  const cin = cinFactor(cinVal);
+  const time = lpi >= 8 ? 1.0 : daytimeFactor(isoTime);
+
+  const score = Math.min(100, (basis + bonus) * li * cin * time);
   const source: "lpi" | "cape" = lpi > 0 ? "lpi" : "cape";
   return { score, source };
 }
