@@ -1,50 +1,25 @@
 import { useState } from "react";
-import { useQueryClient } from "@tanstack/react-query";
 import { HourlyPage } from "@/pages/Hourly";
 import { DailyPage } from "@/pages/Daily";
-import { RefreshButton } from "@/components/RefreshButton";
-import { useWeather } from "@/contexts/WeatherContext";
+import { SegmentedControl } from "@/components/ui/segmented-control";
 
 type View = "hourly" | "daily";
 
 export function VorhersagePage() {
   const [view, setView] = useState<View>("hourly");
-  const queryClient = useQueryClient();
-  const { dataUpdatedAt } = useWeather();
-
-  const handleRefresh = async () => {
-    await queryClient.invalidateQueries({ queryKey: ["weather"] });
-  };
 
   return (
     <div className="space-y-4">
-      <div
-        className="flex w-full rounded-[10px] p-[3px]"
-        style={{ background: "#f0f4f8" }}
-      >
-        {[
-          { v: "hourly" as View, label: "Stündlich" },
-          { v: "daily" as View, label: "7-Tage" },
-        ].map(({ v, label }) => {
-          const active = view === v;
-          return (
-            <button
-              key={v}
-              onClick={() => setView(v)}
-              className="flex-1 rounded-lg border-0 px-0 py-[7px] text-[12px] font-semibold transition-all"
-              style={{
-                background: active ? "white" : "transparent",
-                color: active ? "#1a2a3a" : "#8a9ab0",
-                boxShadow: active ? "0 1px 4px rgba(0,0,0,0.12)" : "none",
-                cursor: "pointer",
-              }}
-            >
-              {label}
-            </button>
-          );
-        })}
-      </div>
-      <RefreshButton variant="statusbar" onRefresh={handleRefresh} lastUpdated={dataUpdatedAt} />
+      <h1 className="sr-only">Vorhersage</h1>
+      <SegmentedControl<View>
+        ariaLabel="Vorhersage-Zeitraum"
+        value={view}
+        onChange={setView}
+        options={[
+          { value: "hourly", label: "Stündlich" },
+          { value: "daily", label: "7-Tage" },
+        ]}
+      />
       {view === "hourly" ? <HourlyPage /> : <DailyPage />}
     </div>
   );
