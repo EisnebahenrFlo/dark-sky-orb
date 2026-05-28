@@ -141,10 +141,13 @@ export default function RadarMap({ refreshKey = 0 }: { refreshKey?: number }) {
     <div>
       <div className="glass relative overflow-hidden rounded-3xl">
         {isDev && (
-          <div className="pointer-events-none absolute left-3 top-3 z-[500] rounded-full bg-yellow-400/95 px-2.5 py-1 text-[10px] font-medium uppercase tracking-wider text-yellow-950 shadow-md">
-            DEV: Rainbow.ai Test
+          <div className="pointer-events-none absolute left-3 top-3 z-[500]">
+            <StatusBadge tone="warn" size="xs" uppercase>
+              Dev · Rainbow.ai Test
+            </StatusBadge>
           </div>
         )}
+
         <div className="h-[420px] w-full sm:h-[520px]">
           <MapContainer
             center={[location.latitude, location.longitude]}
