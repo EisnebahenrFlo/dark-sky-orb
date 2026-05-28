@@ -118,7 +118,7 @@ export function Nowcast({
             >
               {points.map((p, i) => (
                 <div key={i} className="flex justify-center text-muted-foreground">
-                  <EffectiveWeatherIcon code={p.code} precipitation={p.precip} cloudCover={50} isDay={1} className="h-4 w-4" />
+                  <EffectiveWeatherIcon code={p.code} precipitation={p.precip} cloudCover={p.cloud} cloudCoverLow={p.cloudLow} cloudCoverMid={p.cloudMid} isDay={p.isDay} className="h-4 w-4" />
                 </div>
               ))}
             </div>
