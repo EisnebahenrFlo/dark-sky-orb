@@ -231,6 +231,12 @@ export function WeatherHeroStats({
     precipSub = "aktuelle Stunde";
   }
 
+  // Effektive Bewölkung ohne Cirren (gleiche Logik wie in WeatherHero)
+  const lowMidCloud =
+    data.cloud_cover_low != null
+      ? Math.min(100, Math.round(data.cloud_cover_low + 0.5 * (data.cloud_cover_mid ?? 0)))
+      : data.cloud_cover;
+
   return (
     <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
       <Stat
