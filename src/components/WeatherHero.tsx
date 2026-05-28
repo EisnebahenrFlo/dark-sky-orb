@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { safeFixed } from "@/lib/safeFormat";
-import { Wind, Droplets, Gauge, CloudRain, Thermometer, Cloud, Navigation, Eye } from "lucide-react";
+import { Wind, Droplets, Gauge, CloudRain, Thermometer, Cloud, Navigation } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { CurrentWeather, GeoResult, MinutelyData } from "@/lib/weather";
 import { windDirectionLabel } from "@/lib/weather";
@@ -94,7 +94,7 @@ export function WeatherHero({ location, data, updatedAt, onRefresh, ensemble }: 
       }}
     >
       <WeatherHeroCanvas weatherCode={effectiveCode} isDay={(data.is_day ? 1 : 0) as 0 | 1} />
-      {onRefresh && <RefreshButton variant="hero" onRefresh={onRefresh} />}
+      {onRefresh && <RefreshButton variant="hero" onRefresh={onRefresh} heroTextColor={palette.text} />}
       <div style={{ position: "relative", zIndex: 10 }}>
         {/* Ort-Zeile: dezent, klein */}
         <div className="flex items-baseline gap-2">
@@ -250,13 +250,34 @@ export function WeatherHeroStats({
       ? Math.min(100, Math.round(data.cloud_cover_low + 0.5 * (data.cloud_cover_mid ?? 0)))
       : data.cloud_cover;
 
+  // Sicht-Label (kompakt) — wird in den Bewölkungs-Sub gemerged, damit das
+  // 4-Spalten-Grid bei 8 Kacheln symmetrisch bleibt statt mit 9 zu hängen.
+  const visibilityLabel = (() => {
+    if (data.visibility == null) return null;
+    const v = data.visibility;
+    const dist = v >= 1000 ? `${(v / 1000).toFixed(1)} km` : `${Math.round(v)} m`;
+    const desc = v < 1000 ? "Nebel" : v < 4000 ? "diesig" : v < 10000 ? "leicht trüb" : "klar";
+    return `Sicht ${dist} · ${desc}`;
+  })();
+
+  const cloudSub = (() => {
+    const cirrenNote =
+      data.cloud_cover_low != null && data.cloud_cover > lowMidCloud + 5
+        ? `gesamt ${Math.round(data.cloud_cover)}% inkl. Cirren`
+        : null;
+    return [cirrenNote, visibilityLabel].filter(Boolean).join(" · ") || undefined;
+  })();
+
+  const bft = beaufortBadge(data.wind_speed_10m);
+  const windDir = windDirectionLabel(data.wind_direction_10m);
+
   return (
     <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
       <Stat
         icon={Wind}
         label="Wind"
         value={`${Math.round(data.wind_speed_10m)} km/h`}
-        sub={`${beaufortBadge(data.wind_speed_10m)} · ${windDirectionLabel(data.wind_direction_10m)} · Böen ${Math.round(data.wind_gusts_10m)}`}
+        sub={`${bft} · ${windDir} · Böen ${Math.round(data.wind_gusts_10m)}`}
         accent="#38bdf8"
       />
       <div className="glass relative overflow-hidden rounded-2xl p-4">
@@ -296,7 +317,7 @@ export function WeatherHeroStats({
                 {Math.round(data.wind_direction_10m)}°
               </div>
               <div className="mt-1 text-[11px] text-muted-foreground">
-                {windDirectionLabel(data.wind_direction_10m)}
+                {windDir}
               </div>
             </div>
           </div>
@@ -307,33 +328,12 @@ export function WeatherHeroStats({
         icon={Cloud}
         label="Bewölkung"
         value={`${Math.round(lowMidCloud)}%`}
-        sub={
-          data.cloud_cover_low != null && data.cloud_cover > lowMidCloud + 5
-            ? `gesamt ${Math.round(data.cloud_cover)}% inkl. Cirren`
-            : undefined
-        }
+        sub={cloudSub}
         accent="#94a3b8"
       />
       <Stat icon={Droplets} label="Luftfeuchte" value={`${data.relative_humidity_2m}%`} accent="#06b6d4" />
       <Stat icon={Gauge} label="Luftdruck" value={`${Math.round(data.pressure_msl)} hPa`} accent="#a78bfa" />
       <Stat icon={Thermometer} label="Gefühlt" value={`${Math.round(data.apparent_temperature)}°`} accent="#fb923c" />
-      {data.visibility != null && (
-        <Stat
-          icon={Eye}
-          label="Sicht"
-          value={data.visibility >= 1000 ? `${(data.visibility / 1000).toFixed(1)} km` : `${Math.round(data.visibility)} m`}
-          sub={
-            data.visibility < 1000
-              ? "Nebel"
-              : data.visibility < 4000
-              ? "diesig"
-              : data.visibility < 10000
-              ? "leicht trüb"
-              : "klar"
-          }
-          accent="#22d3ee"
-        />
-      )}
       {children}
     </div>
   );

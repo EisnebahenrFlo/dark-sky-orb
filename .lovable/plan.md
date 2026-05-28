@@ -1,142 +1,96 @@
-## Meteorologisches Audit — Befunde nach Durchsicht aller Tabs
 
-Ich habe alle Berechnungs- und Anzeigepfade (Hero, Heute, Hourly, Daily, Nowcast, Analyse, Karte, Risiko-Hooks) gegen meteorologische Standards geprüft. Hier die Befunde nach Priorität, danach der Implementierungsplan.
+# UI/Layout-Audit aus User-Sicht
 
----
+Methode: jeden Tab (Heute, Vorhersage, Analyse, Karte, Nowcast) im Code durchgegangen, AppShell + globale States gelesen, Theme-Verhalten und a11y geprüft. Bewertet als jemand, der die App täglich nutzt und auf Mobile + Desktop wechselt.
 
-### 🔴 Kritische Datenfehler
+## 🔴 Kritisch (Funktion / Vertrauen / Konsistenz kaputt)
 
-**K1. Gewitter-Composite ignoriert LI & CIN trotz Dokumentation**
-`useThunderstormRisk.ts → computeHourScore` nimmt `_liVal` / `_cinVal` (Underscore = ungenutzt!) und ruft die definierten `liFactor` / `cinFactor` nie auf. Auch der `daytimeFactor` ist toter Code. Der Composite ist faktisch nur `CAPE + LPI-Bonus + Böen-Bonus`. → Stabile Sperrschichten (hohes CIN) werden ignoriert, der Score überschätzt sommerliche Tage mit viel CAPE aber „Deckel".
+**K1 — Gestern eingebaute Etappe-3-Änderungen landen in totem Code.**
+Bft-Label, Böen-Linie und Gewitter-Marker habe ich in `src/components/HourlyForecast.tsx` geschrieben, aber `Hourly` rendert `src/components/hourly/HourlyForecastChart.tsx` + `HourlyStrip.tsx`. Nichts davon ist sichtbar. Genauso `src/components/Nowcast.tsx` vs. der tatsächlich verwendete `src/pages/Nowcast.tsx` (Hauptcontainer). Konsequenz: aus User-Sicht ist seit gestern nichts neu. Muss in die richtigen Dateien portiert oder die Duplikate gelöscht werden.
 
-**K2. Daily-Tab nutzt ein anderes Modell als Hero/Hourly**
-Daily-API-Call: `models=best_match`. Hero/Hourly: 4-Modell-Ensemble (`icon_d2,icon_eu,ecmwf,knmi`). → Tagesmax kann von der stündlichen Kurve abweichen, Tages-Icon kann „sonnig" zeigen während Hourly Gewitter rechnet.
+**K2 — Drei Segmented Controls, drei Styles, einer davon hardcoded hellblau.**
+- `src/pages/Vorhersage.tsx` (Stündlich/7-Tage) und der äußere Tab in `src/pages/Analyse.tsx` (Warnungen/Analyse) nutzen inline-Style `background: "#f0f4f8"` / `color: "#1a2a3a"`. Im Dark-Mode sieht das aus wie ein hellblauer Verbandskasten quer über dem Glas-UI — bricht Theme-Vertrag und Kontrast.
+- `src/pages/Nowcast.tsx` nutzt `bg-muted/60` (passt).
+- `HourlyForecastChart` Metric-Tabs nutzen `border-border/40 bg-muted/40` (passt).
+- `Map` nutzt eine glass-Pill mit `bg-primary`.
+Vier Tab-Komponenten = vier Optiken. Ein gemeinsames `<SegmentedControl>` (oder shadcn Tabs) ist überfällig.
 
-**K3. Daily-Icon ohne effective-code-Logik**
-`DailyForecast.tsx` zeigt `daily.weather_code[i]` direkt. Der Cirrus-Downgrade- und Gewitter-Guard-Schutz aus `getEffectiveCode` greift nicht. Tages-Icon kann „bewölkt" zeigen, obwohl es nur Cirren sind — oder umgekehrt „leichter Regen" bei `precipitation_sum = 0`.
+**K3 — Suchfeld ohne Label.**
+`SearchBar`-Input hat nur `placeholder=`, kein `aria-label` und kein verbundenes `<label>`. Screenreader sagen "Edit". WCAG-Fail.
 
-**K4. Station-Merge labelt 10-Min-Summe als „aktuelle Stunde"**
-`stationMerge.ts` schreibt `obs.precipitation10min` in `current.precipitation`. Das Feld wird woanders als „letzte Stunde" interpretiert (Risiko-Hook, Bewölkungs-Override). → Wert um Faktor ~6 zu klein.
+**K4 — `min-h-screen` statt `min-h-dvh` in AppShell.**
+`AppShell` Zeile 90 nutzt `min-h-screen`. Auf iOS/Android springt das Layout, wenn die URL-Bar ein-/ausblendet. Direkt durch `min-h-dvh` ersetzen.
 
-**K5. Nowcast-Icons hardcoded `cloudCover=50`**
-`Nowcast.tsx` ruft `EffectiveWeatherIcon` mit `cloudCover={50}`. Damit greift weder der Cirrus-Downgrade noch der Niederschlags-Override sauber. Mini-Icons im Nowcast können falsch klassifizieren.
+**K5 — Stats-Grid bricht jetzt asymmetrisch.**
+`WeatherHeroStats` ist auf Desktop `md:grid-cols-4`. Inhalt: Wind, Richtung, Niederschlag, Bewölkung, Luftfeuchte, Luftdruck, Gefühlt, Sicht (neu) + UV (children) = **9 Kacheln** → 2 volle Reihen + 1 hängende Kachel. Vorher (ohne Sicht) waren es 8 = sauber. Optionen: Sicht in eine Detailkarte verschieben, oder Layout auf `md:grid-cols-3` umstellen, oder Richtung+Wind in einer Kombikachel kombinieren.
 
----
+**K6 — Header hat keinen `<h1>`, viele Pages auch nicht.**
+`<h1>` existiert nur im Hero (Ortsname). Hourly, Daily, Map, Analyse, Nowcast haben keinen `h1` und überspringen direkt zu `h2`. SEO + Screenreader-Navigation leidet. Mindestens pro Route ein semantischer `h1`.
 
-### 🟠 Konsistenz-Probleme
+**K7 — Doppeltes Update-Signal.**
+Header zeigt globalen Spinner (`Loader2` bei `isFetching`), gleichzeitig hat jede Page ihren eigenen `RefreshButton variant="statusbar"`, und der Hero hat eigene Refresh-Schaltfläche. Drei verschiedene "Daten werden gerade aktualisiert"-Signale, oft gleichzeitig. User weiß nicht, was Quelle der Wahrheit ist.
 
-**KO1. Daily vs. Hero divergieren**
-Lösung: Daily ebenfalls aus Ensemble ableiten, oder Hero-relevante Daily-Werte (Tagesmax/min, Wind-Max) aus der stündlichen Ensemble-Reihe rekonstruieren.
+**K8 — Refresh-Button auf hellem Hero unsichtbar.**
+`WeatherHero` rendert `RefreshButton variant="hero"` ohne Kontrastgarantie. Bei `clear-day`-Palette ist der Hintergrund nahezu weiß. Button-Stroke muss aus der `palette.text`-Variable kommen, nicht aus Tailwind-Token.
 
-**KO2. `current.uv_index` nicht im Current-API-Request**
-Hero zeigt UV aus `hourly[0]` — bei Stunde 0 = nachts oft 0, aber bei Tagesmitte könnte direkter Current-Wert sinnvoller sein. Open-Meteo unterstützt `uv_index` im current-Block.
+## 🟠 Wichtig (degradiert UX merklich)
 
-**KO3. Visibility fehlt in Hero-Stats**
-Bei Nebel/Dunst kein direkter Sichtwert sichtbar, obwohl `hourly.visibility` vorhanden.
+**W1 — Bottom-Nav-Padding auf Desktop unnötig.**
+`pb-[calc(env(safe-area-inset-bottom)+9rem)]` auf der Wrapper-Div gilt initial für alle Breakpoints; auf `sm:` wird es überschrieben. Mobile passt; aber 9rem = 144px ist auch dort üppig. Bottom-Nav misst ca. 76px inkl. Padding — `+5rem` reicht.
 
----
+**W2 — Analyse-Tab Warnungsstufen ausschließlich farbcodiert.**
+"Critical" (rot), "Official" (orange), "AI" (amber) unterscheiden sich nur in der Sättigung. Für Farbenblinde nahezu identisch. Es gibt zwar einen Badge mit Zahl, aber nur bei `critical`. Lösung: bei `official`/`ai` einen kleinen Indikator-Dot vor dem Label oder unterschiedliche Icon-Strokes.
 
-### 🟡 Fehlende Risiko-Tachos
+**W3 — Daily-DayRow zeigt "—" für Regenwahrscheinlichkeit 0%.**
+Bei sonnigen Tagen erscheint ein toter Droplets-Chip mit "—". Wirkt wie fehlende Daten. Komplett ausblenden wenn pop ≤ 0.
 
-**R1. Frost / Bodenfrost** — Tachometer bei `temperature_2m_min ≤ 3°C` (Bodenfrost ab Lufttemp ~3°C wahrscheinlich), Eskalation bis −10°C. Wichtig für Landwirtschaft, Straßenglätte.
+**W4 — `HighlightStrip` ungerade bei 3 Items.**
+Mobile: `grid-cols-2`, bei 3 Highlights (nass dabei) hängt der dritte allein in der zweiten Reihe. Lösung: `grid-cols-3` auf mobile mit kleinerem Text, oder horizontaler Scroll-Strip.
 
-**R2. Hitze** — Tachometer ab `apparent_temperature ≥ 30°C`. UBA/DWD-relevante Gesundheitsschwellen: 32 / 35 / 38°C. Mit Tropennacht-Erkennung (`temperature_2m_min ≥ 20°C`).
+**W5 — Lange Wind-Sub-Zeile bricht.**
+`Wind`-Kachel zeigt jetzt `Bft 4 · Mäßige Brise · NNO · Böen 32`. Bei 4-Spalten-Grid auf 1280px sind das ~200px Breite — Text wrappt in 2 Zeilen, springt zwischen den Kacheln in der Höhe. Kürzer: nur Bft-Zahl + Richtung; volles Label im `title`.
 
-**R3. UV** — `uv_index ≥ 8` ist gesundheitsrelevant (Hautkrebsrisiko). Aktuell nur als Stat-Kachel, nicht als Risiko-Tacho.
+**W6 — Nowcast-Hero in zwei Stufen geladen.**
+Erst zeigt `PageState` einen ganzseitigen Loader, dann ist Hero/Stats da, aber `Rainbow.ai`-Strip ist noch `glass h-56 animate-pulse rounded-3xl`. Drei Sekunden lang sieht der User "geladen → leer → geladen". Skeleton sollte vom Anfang an als Strip-Form gezeigt werden, nicht als generischer Block.
 
----
+**W7 — Fehler-Empty-State ohne Spinner beim Retry.**
+"Erneut versuchen" ändert beim Klick weder Text noch Disabled-State. User klickt zweimal, drei Requests laufen.
 
-### 🟢 Beschreibungen / UX
+**W8 — Mobile Bottom-Nav-Tap-Target.**
+`Link` in der Bottom-Nav hat keinen `min-h-11`; aktueller Pill ist ca. 48px hoch (durch `py-2 + Icon 22 + Label 10`). Knapp WCAG-konform. Mit `min-h-12` und etwas mehr `gap` deutlich sicherer auf kleinen Geräten.
 
-**B1. `getContextualDescription` hat Lücken** — Nacht-Beschreibungen für Schnee, gefrierender Regen, „Teilweise bewölkt", „Aufkommendes Gewitter" fehlen. Fällt auf generisches `wmoDescription` zurück.
+**W9 — `placeholder:text-muted-foreground/70` im Suchfeld.**
+70% Opacity auf `muted-foreground` unterläuft den AA-Kontrast im Dark-Mode. Full token nutzen.
 
-**B2. DWD-Warnstufen-Mapping fehlt** — interne 0–100-Scores ohne Bezug zu offiziellen Stufen 1–4. Nutzer können nicht einschätzen „ist 60 viel?".
+## 🟡 Polish
 
-**B3. Wind in Bft** — Hero/Daily zeigen nur km/h. Bft-Label (Bft 8 = Sturmböen) macht Severity intuitiv erfassbar.
+**P1 — Footer-Links zeigen auf GitHub-Repo.**
+`Impressum`/`Datenschutz` öffnen `EisnebahnerFlo/dark-sky-orb/IMPRESSUM.md`. Für Production: eigene Route oder zumindest gerendertes Markdown statt Repo-Tree.
 
-**B4. HourlyForecast-Chart ohne Böen / Gewitter** — `HourlyList` zeigt beides, `HourlyForecast`-Chart nicht. Inkonsistent.
+**P2 — Hero Ort-Subtitle abgeschnitten.**
+`admin1 · country` mit `truncate` bei vielen Standorten unsichtbar. Auf Mobile in zweite Zeile umbrechen.
 
----
+**P3 — `LiveBadge` auf Karte ohne Funktion ohne aktive WS-Verbindung.**
+Zeigt "live" auch wenn Blitz-Layer nicht aktiv. Nur in Lightning-Tab anzeigen.
 
-## Implementierungsplan
+**P4 — `WetterNerdsCard`-Disclosure Animation fehlt.**
+`open && (...)` ohne Transition, ploppt schlagartig auf. `details/summary` oder Radix Collapsible.
 
-Aufgeteilt in 3 Etappen, jede in sich abgeschlossen testbar.
+**P5 — `MeteoFlo`-Brand im Header nicht klickbar erkennbar.**
+Punkt + uppercase-Text in `text-muted-foreground` — niemand würde dort klicken. Auf Hover/Focus sichtbar machen.
 
-### Etappe 1 — Kritische Datenfehler beheben (höchste Priorität)
+**P6 — `EntwicklungTabs` (24h/48h/3–7T) als pillförmige Mini-Tabs noch eine 5. Variante des Segmented Controls.**
+Vereinheitlichen sobald K2 angegangen wird.
 
-**E1.1 Gewitter-Composite reparieren** (`src/hooks/useThunderstormRisk.ts`)
-- `computeHourScore` wirklich mit `liFactor`, `cinFactor`, `daytimeFactor` rechnen lassen.
-- Formel: `score = clamp((basis + bonus) × liFactor × cinFactor × daytimeFactor, 0, 100)`.
-- LPI bleibt Hauptindikator (wenn vorhanden), CAPE Fallback.
+**P7 — Footer-DEV-Badge dauerhaft sichtbar.**
+`isDevEnvironment()` ist auf der Preview-Domain immer true. Im publizierten Build wird er weg sein — Tatsache vermerken, sonst wird das später unnötig debuggt.
 
-**E1.2 Daily-Konsistenz** (`src/hooks/useWeatherData.ts` + neuer Helper)
-- Daily nicht mehr aus separatem `best_match`-Call ableiten, sondern aus Ensemble-Hourly rekonstruieren (Tagesmax/min Temperatur, Tagesmax Wind/Böen, Tages-Niederschlagssumme, dominanter Code, max UV, max PoP).
-- Sunrise/Sunset bleiben aus Daily-API (rein astronomisch, modellunabhängig).
-- Resultat: Hero/Hourly/Daily basieren garantiert auf demselben Datensatz.
+## Vorgeschlagene Reihenfolge
 
-**E1.3 Daily-Icon mit effective-code** (`src/components/DailyForecast.tsx`)
-- `daily.weather_code[i]` durch `getEffectiveCode` schicken — mit `precipitation_sum`, `cloud_cover_mean` (aus hourly Tagesmittel).
+1. **K1 + K2** zuerst zusammen — Etappe-3-Inhalte in die echten Komponenten ziehen UND einheitlichen `SegmentedControl` einführen, da die Tab-Logik in Vorhersage/Analyse sowieso angefasst werden muss.
+2. **K3 + K4 + K6** — a11y-Pakete, schnell und unabhängig.
+3. **K5 + K7 + K8** — Hero-/Stats-Sanierung (Layout-Räume, ein zentrales Refresh-Signal).
+4. Wichtige (W1–W9) als zweiter Batch.
+5. Polish optional, je nach Lust.
 
-**E1.4 Station-Merge Niederschlag korrigieren** (`src/lib/stationMerge.ts`)
-- 10-Min-Summe behalten, aber neues Feld `current.precipitation_10min`. `current.precipitation` weiter aus Modell (Stundenwert).
-- Oder: 10-Min × 6 als Hochrechnung — sauberer ist neues Feld.
-
-**E1.5 Nowcast-Icons mit echten Daten** (`src/components/Nowcast.tsx`)
-- `cloudCover` aus den 4 zeitlich passenden Stunden interpolieren statt `50`.
-
-### Etappe 2 — Fehlende Risiken & DWD-Stufen
-
-**E2.1 Frost-Risiko** in `useWeatherRisks.ts`
-- Score aus `Math.min(temperature_2m_next24h)`: ≤ 3°C → low, ≤ 0°C → moderate, ≤ −5°C → high, ≤ −10°C → extreme.
-
-**E2.2 Hitze-Risiko**
-- Aus `Math.max(apparent_temperature_next24h)`: ≥ 30 → low, ≥ 32 → moderate, ≥ 35 → high, ≥ 38 → extreme.
-- Bei Tropennacht (`min ≥ 20`) +20 Punkte Bonus.
-
-**E2.3 UV-Risiko**
-- Aus `uv_index_max` heute: ≥ 6 → low (3 ist Mittel, ab 6 hoch), ≥ 8 → moderate, ≥ 11 → high.
-
-**E2.4 DWD-Warnstufen-Mapping** in Tooltip/Sublabel der Tachos
-- 0–25 = keine Warnung
-- 26–50 = Wetterhinweis (gelb, Stufe 1)
-- 51–70 = markante Warnung (orange, Stufe 2)
-- 71–88 = Unwetterwarnung (rot, Stufe 3)
-- 89–100 = extreme Unwetterwarnung (violett, Stufe 4)
-- Anzeige z.B. „Hoch · Stufe 2" auf den Tachos.
-
-### Etappe 3 — Beschreibungs- & UI-Politur
-
-**E3.1 `getContextualDescription` ergänzen** (`src/lib/weather.ts`)
-- Nachtlabels für 51–67, 71–77, 80–86, 95–99.
-- Tagsüber: „Gewitter zieht auf" bei `code ∈ {95–99}` und `lightning_potential > 5`.
-- „Gefrierender Regen" bei 56/57/66/67 explizit hervorheben (kritisch für Verkehr).
-
-**E3.2 Bft-Label** in Wind-Kacheln (Hero + DailyForecast)
-- Helper `bftLabel(kmh)` → „Bft 7 · Steifer Wind", „Bft 9 · Sturm".
-
-**E3.3 Visibility-Kachel in Hero-Stats**
-- Nur einblenden wenn `visibility < 5000 m`, sonst weglassen (kein Mehrwert bei klarer Sicht).
-
-**E3.4 HourlyForecast-Chart**: Böen-Linie + Gewitter-Marker
-- Zweite Linie für `wind_gusts_10m` (gestrichelt).
-- Punkt-Marker bei Stunden mit Gewitter-Score > 50.
-
----
-
-### Geänderte Dateien (Übersicht)
-
-Etappe 1: `useThunderstormRisk.ts`, `useWeatherData.ts`, `weather.ts` (API-Request), neuer Helper `dailyFromHourly.ts`, `DailyForecast.tsx`, `stationMerge.ts`, `Nowcast.tsx`.
-
-Etappe 2: `useWeatherRisks.ts`, `WeatherRiskGauges.tsx` (DWD-Label im Tooltip).
-
-Etappe 3: `weather.ts` (Descriptions), `WeatherHero.tsx` (Bft, Visibility), `DailyForecast.tsx` (Bft), `HourlyForecast.tsx` (Böen/Gewitter), neuer Helper `bft.ts`.
-
-### Außerhalb des Scopes
-
-- KI-Analyse (`/api/synoptik`): Server-seitig, betrifft keine Frontend-Berechnung.
-- Karte: Rainbow-Tiles sind Drittanbieter-Layer, unverändert.
-- Blitzortung-WebSocket: liefert externe Echtzeit-Daten, keine Berechnung.
-
-### Reihenfolge
-
-Vorschlag: Etappe 1 zuerst (behebt die echten Datenfehler), dann freigeben für Etappe 2 & 3 nach Sichtprüfung. Soll ich alle drei Etappen in einem Rutsch bauen oder Etappe 1 separat?
+Sag mir, ob ich mit der vollständigen Reihenfolge weitermachen soll oder zuerst nur **K1 (Etappe-3-Code in die richtigen Dateien)** fixen — das ist der einzige Punkt, bei dem du sofort einen sichtbaren Unterschied im Vorhersage-Tab merken wirst.

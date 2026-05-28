@@ -30,6 +30,7 @@ import { RiskHero } from "@/components/warnings/RiskHero";
 import { WarningCard } from "@/components/warnings/WarningCard";
 import { OfficialWarningsSection } from "@/components/warnings/OfficialWarningsSection";
 import { useThunderstormRisk } from "@/hooks/useThunderstormRisk";
+import { SegmentedControl } from "@/components/ui/segmented-control";
 
 type Tab = "warnungen" | "analyse";
 
@@ -322,29 +323,16 @@ export function AnalysePage() {
 
   return (
     <div className="space-y-4">
-      <div className="flex w-full rounded-[10px] p-[3px]" style={{ background: "#f0f4f8" }}>
-        {[
-          { v: "warnungen" as Tab, label: "Warnungen" },
-          { v: "analyse" as Tab, label: "Analyse" },
-        ].map(({ v, label }) => {
-          const active = tab === v;
-          return (
-            <button
-              key={v}
-              onClick={() => setTab(v)}
-              className="flex-1 rounded-lg border-0 px-0 py-[7px] text-[12px] font-semibold transition-all"
-              style={{
-                background: active ? "white" : "transparent",
-                color: active ? "#1a2a3a" : "#8a9ab0",
-                boxShadow: active ? "0 1px 4px rgba(0,0,0,0.12)" : "none",
-                cursor: "pointer",
-              }}
-            >
-              {label}
-            </button>
-          );
-        })}
-      </div>
+      <h1 className="sr-only">Warnungen &amp; Analyse</h1>
+      <SegmentedControl<Tab>
+        ariaLabel="Analyse-Ansicht"
+        value={tab}
+        onChange={setTab}
+        options={[
+          { value: "warnungen", label: "Warnungen" },
+          { value: "analyse", label: "Analyse" },
+        ]}
+      />
 
       {tab === "warnungen" ? <WarnungenTab /> : <AnalyseTab />}
     </div>

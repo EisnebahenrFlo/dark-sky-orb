@@ -313,6 +313,7 @@ export function NowcastPage() {
 
   return (
     <div className="space-y-5">
+      <h1 className="sr-only">Nowcast</h1>
       <div className="flex items-center gap-2 text-sm text-muted-foreground">
         <Radio className="h-4 w-4 text-accent" strokeWidth={1.75} />
         <span>

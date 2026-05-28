@@ -87,11 +87,15 @@ export function AppShell() {
   );
 
   return (
-    <div className="mx-auto min-h-screen w-full max-w-6xl px-4 pb-[calc(env(safe-area-inset-bottom)+9rem)] pt-6 transition-colors duration-200 sm:px-6 sm:pb-12 sm:pt-10">
+    <div className="mx-auto min-h-dvh w-full max-w-6xl px-4 pb-[calc(env(safe-area-inset-bottom)+5.5rem)] pt-6 transition-colors duration-200 sm:px-6 sm:pb-12 sm:pt-10">
       <header className="mb-6 flex items-center justify-between gap-4">
-        <Link to="/" aria-label="MeteoFlo Startseite" className="flex items-center gap-2">
+        <Link
+          to="/"
+          aria-label="MeteoFlo Startseite"
+          className="group flex items-center gap-2 rounded-md outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+        >
           <div className="h-2 w-2 rounded-full bg-primary shadow-[0_0_12px_var(--primary)]" aria-hidden />
-          <span className="font-display text-sm uppercase tracking-[0.3em] text-muted-foreground">
+          <span className="font-display text-sm uppercase tracking-[0.3em] text-muted-foreground transition-colors group-hover:text-foreground">
             MeteoFlo
           </span>
         </Link>
@@ -194,7 +198,7 @@ export function AppShell() {
                   onClick={() => haptic("light")}
                   aria-label={label}
                   aria-current={active ? "page" : undefined}
-                  className={`relative flex flex-1 flex-col items-center justify-center gap-1 rounded-xl px-1 py-2 transition-all ${textCls}`}
+                  className={`relative flex flex-1 flex-col items-center justify-center gap-1 rounded-xl px-1 py-2.5 min-h-12 transition-all ${textCls}`}
                 >
                   <span
                     className={`absolute inset-x-1 inset-y-0.5 -z-0 rounded-xl transition-all ${pillCls}`}

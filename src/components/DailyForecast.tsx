@@ -213,9 +213,11 @@ function DayRow({
         <div className="flex min-w-0 flex-1 flex-col gap-1.5">
           {/* Metrics row */}
           <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[12px]">
-            <Chip icon={Droplets} tone={pop >= 40 ? "primary" : "muted"} title="Regenwahrscheinlichkeit">
-              <span className={popColor(pop)}>{pop > 0 ? `${pop}%` : "—"}</span>
-            </Chip>
+            {pop > 0 && (
+              <Chip icon={Droplets} tone={pop >= 40 ? "primary" : "muted"} title="Regenwahrscheinlichkeit">
+                <span className={popColor(pop)}>{pop}%</span>
+              </Chip>
+            )}
             {precip > 0 && (
               <Chip icon={CloudRain} tone="muted" title="Niederschlagssumme">
                 {safeFixed(precip, 1)} mm
@@ -367,7 +369,7 @@ function HighlightStrip({
     });
   }
   return (
-    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+    <div className={`grid gap-2 ${items.length >= 3 ? "grid-cols-3" : "grid-cols-2"} sm:grid-cols-3`}>
       {items.map((it, idx) => (
         <div
           key={idx}
