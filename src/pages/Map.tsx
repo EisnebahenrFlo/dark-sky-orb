@@ -80,7 +80,7 @@ export function MapPage() {
       {tab === "radar" ? (
         mounted ? (
           <Suspense fallback={<MapFallback />}>
-            <RadarMap refreshKey={refreshKey} />
+            <RadarMap refreshKey={0} />
           </Suspense>
         ) : (
           <MapFallback />
