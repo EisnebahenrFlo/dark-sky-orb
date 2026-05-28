@@ -149,12 +149,12 @@ export function SearchBar({ onSelect, recent, onClearRecent }: Props) {
   return (
     <div ref={ref} className="relative w-full">
       <div
-        className={`glass relative flex items-center gap-3 rounded-2xl px-4 py-3.5 sm:px-5 transition-all ${
+        className={`glass relative flex items-center gap-2.5 rounded-xl px-3.5 py-2 sm:px-4 transition-all ${
           open ? "ring-2 ring-primary/30 shadow-lg" : "ring-1 ring-border/50"
         }`}
       >
         <Search
-          className={`h-5 w-5 shrink-0 transition-colors ${open ? "text-primary" : "text-muted-foreground"}`}
+          className={`h-4 w-4 shrink-0 transition-colors ${open ? "text-primary" : "text-muted-foreground"}`}
           strokeWidth={1.75}
         />
         <input
@@ -167,10 +167,10 @@ export function SearchBar({ onSelect, recent, onClearRecent }: Props) {
           onFocus={() => setOpen(true)}
           onKeyDown={onKeyDown}
           inputMode="search"
-          placeholder="Stadt oder Postleitzahl suchen…"
-          className="flex-1 bg-transparent pr-24 text-base outline-none placeholder:text-muted-foreground/70"
+          placeholder="Ort oder PLZ"
+          className="flex-1 bg-transparent pr-1 text-sm outline-none placeholder:text-muted-foreground/70"
         />
-        {loading && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
+        {loading && <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />}
         {q && !loading && (
           <button
             onClick={() => {
@@ -178,9 +178,9 @@ export function SearchBar({ onSelect, recent, onClearRecent }: Props) {
               inputRef.current?.focus();
             }}
             aria-label="Eingabe löschen"
-            className="grid h-7 w-7 place-items-center rounded-full text-muted-foreground transition hover:bg-foreground/10 hover:text-foreground"
+            className="grid h-6 w-6 place-items-center rounded-full text-muted-foreground transition hover:bg-foreground/10 hover:text-foreground"
           >
-            <X className="h-4 w-4" />
+            <X className="h-3.5 w-3.5" />
           </button>
         )}
         {showShortcutHint && (
@@ -197,15 +197,16 @@ export function SearchBar({ onSelect, recent, onClearRecent }: Props) {
           disabled={gpsStatus === "loading"}
           aria-label="Aktuellen Standort verwenden"
           title="Aktuellen Standort verwenden"
-          className="absolute right-3 top-1/2 grid h-9 w-9 -translate-y-1/2 shrink-0 place-items-center rounded-full bg-primary/10 text-primary transition hover:bg-primary/20 disabled:opacity-60"
+          className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-primary/10 text-primary transition hover:bg-primary/20 disabled:opacity-60"
         >
           {gpsStatus === "loading" ? (
-            <Loader2 className="h-5 w-5 animate-spin" strokeWidth={1.75} />
+            <Loader2 className="h-4 w-4 animate-spin" strokeWidth={1.75} />
           ) : (
-            <Navigation className="h-5 w-5" strokeWidth={1.75} />
+            <Navigation className="h-4 w-4" strokeWidth={1.75} />
           )}
         </button>
       </div>
+
 
       {gpsStatus === "error" && gpsError && (
         <div
