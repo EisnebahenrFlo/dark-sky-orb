@@ -11,9 +11,15 @@ import { formatClockTime } from "@/lib/rainbowNowcast";
 import { RelativeTime } from "./RelativeTime";
 import { WeatherHeroCanvas, getWeatherGroup, getHeroPalette } from "./WeatherHeroCanvas";
 import { RealisticWeatherIcon } from "./RealisticWeatherIcon";
-import { RefreshButton } from "./RefreshButton";
+import { ConfidenceBadge } from "./ConfidenceBadge";
 
-interface Props { location: GeoResult; data: CurrentWeather; updatedAt: number; onRefresh?: () => Promise<void> | void }
+interface Props {
+  location: GeoResult;
+  data: CurrentWeather;
+  updatedAt: number;
+  onRefresh?: () => Promise<void> | void;
+  ensemble?: { models: string[]; spreadTemp?: number; spreadPop?: number };
+}
 
 /**
  * Kompakte Stat-Kachel mit dezenter Hintergrundgrafik.
