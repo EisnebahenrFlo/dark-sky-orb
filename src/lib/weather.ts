@@ -548,14 +548,29 @@ export async function fetchWeather(lat: number, lon: number, countryCode?: strin
   })();
   const lowAt = (mergedHourly.cloud_cover_low as number[] | undefined)?.[curTimeIdx];
   const midAt = (mergedHourly.cloud_cover_mid as number[] | undefined)?.[curTimeIdx];
+  const visAt = (mergedHourly.visibility as number[] | undefined)?.[curTimeIdx];
 
   const finalCurrent = {
     ...(mergedCurrent as unknown as CurrentWeather),
     uv_index: currentUv,
     cloud_cover_low: typeof lowAt === "number" ? lowAt : undefined,
     cloud_cover_mid: typeof midAt === "number" ? midAt : undefined,
+    visibility: typeof visAt === "number" ? visAt : undefined,
     _confidence: ensembleMeta?.currentConfidence,
   };
+
+  const finalHourly: HourlyData = {
+    ...(mergedHourly as unknown as HourlyData),
+    uv_index: alignedUv,
+    precipitation_probability: alignedPop,
+  };
+
+  const reconciledDaily = reconcileDailyFromHourly(
+    { ...longJson.daily, weather_code: representativeDailyCodes },
+    finalHourly.time,
+    finalHourly,
+    representativeDailyCodes,
+  );
 
   const json: WeatherData = {
     latitude: Number((shortRaw as { latitude?: number }).latitude ?? lat),
@@ -563,15 +578,8 @@ export async function fetchWeather(lat: number, lon: number, countryCode?: strin
     timezone: String((shortRaw as { timezone?: string }).timezone ?? "auto"),
     current: finalCurrent,
     minutely_15: mergedMinutely as unknown as MinutelyData,
-    hourly: {
-      ...(mergedHourly as unknown as HourlyData),
-      uv_index: alignedUv,
-      precipitation_probability: alignedPop,
-    },
-    daily: {
-      ...longJson.daily,
-      weather_code: representativeDailyCodes,
-    },
+    hourly: finalHourly,
+    daily: reconciledDaily,
     _ensemble: ensembleMeta,
   };
 
