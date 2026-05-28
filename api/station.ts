@@ -26,6 +26,7 @@ export interface StationObservation {
   pressure: number | null;         // hPa MSL
   precipitation10min: number | null; // mm in last 10 min
   weatherCode: number | null;      // WMO
+  cloudCover: number | null;       // 0..100 %
   visibility: number | null;       // m
   observedAt: string;              // ISO
   stationName: string;
