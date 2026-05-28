@@ -1,3 +1,5 @@
+import { buildEnsemble } from "@/lib/modelEnsemble";
+
 export interface GeoResult {
   id: number;
   name: string;
@@ -33,6 +35,15 @@ export interface CurrentWeather {
     ageMin: number;
     source: "brightsky" | "metar";
   };
+  /** Confidence 0..100 from multi-model spread (100 when station-overridden). */
+  _confidence?: number;
+}
+
+export interface EnsembleMeta {
+  models: string[];
+  hourlyConfidence: number[];
+  currentConfidence: number;
+  spread: { temp: number[]; pop: number[] };
 }
 
 export interface MinutelyData {
@@ -119,6 +130,8 @@ export interface WeatherData {
   hourly: HourlyData;
   daily: DailyData;
   timezone: string;
+  /** Multi-model ensemble metadata (spread + per-hour confidence). */
+  _ensemble?: EnsembleMeta;
 }
 
 const ALLOWED_COUNTRIES = new Set(["DE", "AT", "CH", "IT"]);
@@ -196,21 +209,38 @@ export async function searchCities(query: string): Promise<GeoResult[]> {
   return results.filter((r) => ALLOWED_COUNTRIES.has(r.country_code?.toUpperCase() ?? ""));
 }
 
-function getWeatherModel(countryCode?: string): string {
+/**
+ * Multi-model ensemble per region. Open-Meteo accepts comma-separated models
+ * in a single request; we then merge them in `buildEnsemble`.
+ */
+export function getWeatherModels(countryCode?: string): string[] {
   switch (countryCode?.toUpperCase()) {
-    case "DE": return "icon_d2";
-    case "IT": return "italia_meteo_arpae_icon_2i";
-    default:   return "best_match";
+    case "DE":
+      return ["icon_d2", "icon_eu", "ecmwf_ifs025", "knmi_harmonie_arome_europe"];
+    case "AT":
+      return ["icon_d2", "icon_eu", "arpae_cosmo_2i", "ecmwf_ifs025"];
+    case "CH":
+      return ["icon_ch2", "icon_d2", "ecmwf_ifs025", "knmi_harmonie_arome_europe"];
+    case "IT":
+      return ["italia_meteo_arpae_icon_2i", "arpae_cosmo_5m", "icon_eu", "ecmwf_ifs025"];
+    default:
+      return ["best_match"];
   }
 }
 
 export function getWeatherModelLabel(countryCode?: string): string {
+  const models = getWeatherModels(countryCode).join(", ");
   switch (countryCode?.toUpperCase()) {
-    case "DE": return "Kurzzeit: DWD ICON D2 · 2 km · Vorhersage: Open-Meteo Best Match";
-    case "AT": return "Kurzzeit: GeoSphere Austria · 2 km · Vorhersage: Open-Meteo Best Match";
-    case "CH": return "Kurzzeit: MeteoSwiss ICON CH2 · 1 km · Vorhersage: Open-Meteo Best Match";
-    case "IT": return "Kurzzeit: ItaliaMeteo ARPAE · 2 km · Vorhersage: Open-Meteo Best Match";
-    default:   return "Datenquelle: Open-Meteo Best Match";
+    case "DE":
+      return `Ensemble: DWD ICON-D2 · ICON-EU · ECMWF IFS · KNMI Harmonie (Konsens)`;
+    case "AT":
+      return `Ensemble: ICON-D2 · ICON-EU · ARPAE COSMO 2i · ECMWF IFS (Konsens)`;
+    case "CH":
+      return `Ensemble: MeteoSwiss ICON-CH2 · ICON-D2 · ECMWF IFS · KNMI Harmonie (Konsens)`;
+    case "IT":
+      return `Ensemble: ItaliaMeteo ARPAE · ARPAE COSMO 5m · ICON-EU · ECMWF IFS (Konsens)`;
+    default:
+      return `Datenquelle: ${models}`;
   }
 }
 
@@ -279,6 +309,8 @@ function getDayRepresentativeCode(
 }
 
 export async function fetchWeather(lat: number, lon: number, countryCode?: string): Promise<WeatherData> {
+  const models = getWeatherModels(countryCode);
+  const isEnsemble = models.length > 1;
 
   const shortParams = new URLSearchParams({
     latitude: String(lat),
@@ -291,7 +323,7 @@ export async function fetchWeather(lat: number, lon: number, countryCode?: strin
       "temperature_2m,apparent_temperature,precipitation,precipitation_probability,weather_code,wind_speed_10m,wind_gusts_10m,wind_direction_10m,cloud_cover,cloud_cover_low,cloud_cover_mid,cloud_cover_high,relative_humidity_2m,uv_index,is_day,lightning_potential,snowfall,visibility,wet_bulb_temperature_2m,freezing_level_height,dewpoint_2m,cape,lifted_index,convective_inhibition,temperature_850hPa,temperature_700hPa,temperature_500hPa,temperature_300hPa,geopotential_height_500hPa,geopotential_height_850hPa,wind_speed_850hPa,wind_direction_850hPa,wind_speed_500hPa,wind_direction_500hPa,wind_speed_300hPa,wind_direction_300hPa,relative_humidity_850hPa,relative_humidity_700hPa,vertical_velocity_700hPa",
     forecast_hours: "48",
     timezone: "auto",
-    models: getWeatherModel(countryCode),
+    models: models.join(","),
   });
 
   const longParams = new URLSearchParams({
@@ -311,12 +343,57 @@ export async function fetchWeather(lat: number, lon: number, countryCode?: strin
   ]);
 
   if (!shortRes.ok || !longRes.ok) throw new Error("Wetterdaten fehlgeschlagen");
-  const [shortJson, longJson] = (await Promise.all([shortRes.json(), longRes.json()])) as [
-    WeatherData,
+  const [shortRaw, longJson] = (await Promise.all([shortRes.json(), longRes.json()])) as [
+    Record<string, unknown>,
     WeatherData,
   ];
-  const currentUv = getCurrentUvFromLongTerm(shortJson.current.time, longJson.hourly);
-  const currentHour = new Date(shortJson.current.time).getHours();
+
+  // Multi-model: fold suffixed keys into consensus values.
+  let mergedHourly: Record<string, unknown>;
+  let mergedCurrent: Record<string, unknown>;
+  let mergedMinutely: Record<string, unknown>;
+  let ensembleMeta: WeatherData["_ensemble"];
+
+  if (isEnsemble) {
+    const ens = buildEnsemble(
+      shortRaw.hourly as Record<string, unknown>,
+      shortRaw.current as Record<string, unknown>,
+      models,
+    );
+    mergedHourly = ens.hourly;
+    mergedCurrent = ens.current;
+    ensembleMeta = {
+      models: ens.meta.models,
+      hourlyConfidence: ens.meta.hourlyConfidence,
+      currentConfidence: ens.meta.currentConfidence,
+      spread: ens.meta.spread,
+    };
+    // Minutely_15: pick the first model that has data (high-res local model wins).
+    const rawMinutely = shortRaw.minutely_15 as Record<string, unknown> | undefined;
+    mergedMinutely = { time: rawMinutely?.time ?? [] };
+    if (rawMinutely) {
+      for (const field of ["precipitation", "weather_code", "temperature_2m", "wind_speed_10m"]) {
+        for (const m of models) {
+          const arr = rawMinutely[`${field}_${m}`] as unknown[] | undefined;
+          if (Array.isArray(arr) && arr.some((v) => v != null)) {
+            mergedMinutely[field] = arr;
+            break;
+          }
+        }
+        if (mergedMinutely[field] == null && rawMinutely[field] != null) {
+          mergedMinutely[field] = rawMinutely[field];
+        }
+      }
+    }
+  } else {
+    mergedHourly = (shortRaw.hourly as Record<string, unknown>) ?? {};
+    mergedCurrent = (shortRaw.current as Record<string, unknown>) ?? {};
+    mergedMinutely = (shortRaw.minutely_15 as Record<string, unknown>) ?? {};
+  }
+
+  const currentTime = String(mergedCurrent.time ?? new Date().toISOString());
+  const currentUv = getCurrentUvFromLongTerm(currentTime, longJson.hourly);
+  const currentHour = new Date(currentTime).getHours();
   const representativeDailyCodes = longJson.daily.time.map((dateStr: string, idx: number) =>
     getDayRepresentativeCode(
       longJson.hourly.time,
@@ -328,48 +405,61 @@ export async function fetchWeather(lat: number, lon: number, countryCode?: strin
   );
 
   // Map long-term hourly arrays (uv_index, precipitation_probability) onto the
-  // short hourly time grid by matching ISO timestamps (both are timezone=auto local).
+  // short hourly time grid by matching ISO timestamps.
   const longIdxByTime = new Map<string, number>();
   (longJson.hourly?.time ?? []).forEach((t, i) => longIdxByTime.set(t, i));
-  const alignedUv = shortJson.hourly.time.map((t, i) => {
+  const shortTimes = (mergedHourly.time as string[]) ?? [];
+  const alignedUv = shortTimes.map((t, i) => {
     const j = longIdxByTime.get(t);
-    return j != null ? longJson.hourly.uv_index?.[j] ?? 0 : shortJson.hourly.uv_index?.[i] ?? 0;
+    const shortUv = (mergedHourly.uv_index as number[] | undefined)?.[i] ?? 0;
+    return j != null ? longJson.hourly.uv_index?.[j] ?? 0 : shortUv;
   });
-  const longPop = (longJson.hourly as any)?.precipitation_probability as number[] | undefined;
-  const shortPop = shortJson.hourly.precipitation_probability;
+  const longPop = (longJson.hourly as unknown as { precipitation_probability?: number[] })
+    ?.precipitation_probability;
+  const shortPop = mergedHourly.precipitation_probability as number[] | undefined;
   const hasShortPop = Array.isArray(shortPop) && shortPop.some((v) => v != null && v > 0);
   const alignedPop = hasShortPop
-    ? shortPop
-    : shortJson.hourly.time.map((t, i) => {
+    ? (shortPop as number[])
+    : shortTimes.map((t, i) => {
         const j = longIdxByTime.get(t);
         return j != null ? longPop?.[j] ?? 0 : shortPop?.[i] ?? 0;
       });
 
+  const finalCurrent = {
+    ...(mergedCurrent as unknown as CurrentWeather),
+    uv_index: currentUv,
+    _confidence: ensembleMeta?.currentConfidence,
+  };
+
   const json: WeatherData = {
-    ...shortJson,
-    current: {
-      ...shortJson.current,
-      uv_index: currentUv,
+    latitude: Number((shortRaw as { latitude?: number }).latitude ?? lat),
+    longitude: Number((shortRaw as { longitude?: number }).longitude ?? lon),
+    timezone: String((shortRaw as { timezone?: string }).timezone ?? "auto"),
+    current: finalCurrent,
+    minutely_15: mergedMinutely as unknown as MinutelyData,
+    hourly: {
+      ...(mergedHourly as unknown as HourlyData),
+      uv_index: alignedUv,
+      precipitation_probability: alignedPop,
     },
     daily: {
       ...longJson.daily,
       weather_code: representativeDailyCodes,
     },
-    hourly: {
-      ...shortJson.hourly,
-      uv_index: alignedUv,
-      precipitation_probability: alignedPop,
-    },
+    _ensemble: ensembleMeta,
   };
 
   // eslint-disable-next-line no-console
-  console.log("[weather] models=", { short: getWeatherModel(countryCode), long: "best_match" }, {
-    lat,
-    lon,
+  console.log("[weather] ensemble", {
+    models,
     countryCode,
-    hasHourly: !!json.hourly,
-    hasDaily: !!json.daily,
-    hasMinutely15: !!json.minutely_15,
+    currentConfidence: ensembleMeta?.currentConfidence,
+    avgHourlyConfidence: ensembleMeta
+      ? Math.round(
+          ensembleMeta.hourlyConfidence.reduce((s, v) => s + v, 0) /
+            Math.max(1, ensembleMeta.hourlyConfidence.length),
+        )
+      : null,
   });
   return json;
 }

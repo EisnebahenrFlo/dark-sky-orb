@@ -12,8 +12,15 @@ import { RelativeTime } from "./RelativeTime";
 import { WeatherHeroCanvas, getWeatherGroup, getHeroPalette } from "./WeatherHeroCanvas";
 import { RealisticWeatherIcon } from "./RealisticWeatherIcon";
 import { RefreshButton } from "./RefreshButton";
+import { ConfidenceBadge } from "./ConfidenceBadge";
 
-interface Props { location: GeoResult; data: CurrentWeather; updatedAt: number; onRefresh?: () => Promise<void> | void }
+interface Props {
+  location: GeoResult;
+  data: CurrentWeather;
+  updatedAt: number;
+  onRefresh?: () => Promise<void> | void;
+  ensemble?: { models: string[]; spreadTemp?: number; spreadPop?: number };
+}
 
 /**
  * Kompakte Stat-Kachel mit dezenter Hintergrundgrafik.
@@ -52,7 +59,7 @@ function Stat({
   );
 }
 
-export function WeatherHero({ location, data, updatedAt, onRefresh }: Props) {
+export function WeatherHero({ location, data, updatedAt, onRefresh, ensemble }: Props) {
   const effective = getEffectiveWeather(
     data.weather_code,
     data.precipitation,
@@ -113,19 +120,30 @@ export function WeatherHero({ location, data, updatedAt, onRefresh }: Props) {
         </div>
 
         <div
-          className="mt-6 flex items-center justify-between gap-3 text-[10px] sm:text-xs"
+          className="mt-6 flex flex-wrap items-center justify-between gap-2 text-[10px] sm:text-xs"
           style={{ color: palette.subtext }}
         >
           <RelativeTime timestamp={updatedAt} />
-          <span className="truncate text-right opacity-80" title={
-            data._station
-              ? `Messstation ${data._station.name} · ${data._station.distanceKm} km · vor ${data._station.ageMin} Min · Quelle: ${data._station.source === "brightsky" ? "DWD Bright Sky" : "METAR"}`
-              : "Modellwert (Open-Meteo)"
-          }>
-            {data._station
-              ? `📡 ${data._station.name} · ${data._station.distanceKm} km`
-              : "Open-Meteo (Modell)"}
-          </span>
+          <div className="flex items-center gap-2">
+            {data._confidence != null && (
+              <ConfidenceBadge
+                score={data._confidence}
+                models={ensemble?.models}
+                spreadTemp={ensemble?.spreadTemp}
+                spreadPop={ensemble?.spreadPop}
+                size="sm"
+              />
+            )}
+            <span className="truncate text-right opacity-80" title={
+              data._station
+                ? `Messstation ${data._station.name} · ${data._station.distanceKm} km · vor ${data._station.ageMin} Min · Quelle: ${data._station.source === "brightsky" ? "DWD Bright Sky" : "METAR"}`
+                : "Modell-Ensemble (Open-Meteo)"
+            }>
+              {data._station
+                ? `📡 ${data._station.name} · ${data._station.distanceKm} km`
+                : "Modell-Ensemble"}
+            </span>
+          </div>
         </div>
       </div>
     </div>
