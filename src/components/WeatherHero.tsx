@@ -74,6 +74,7 @@ export function WeatherHero({ location, data, updatedAt, onRefresh, ensemble }: 
     data.relative_humidity_2m,
     new Date(data.time).getHours(),
     data.cloud_cover_low,
+    data.cloud_cover_mid,
   );
   const group = getWeatherGroup(data.weather_code, (data.is_day ? 1 : 0) as 0 | 1);
   const palette = getHeroPalette(group);
