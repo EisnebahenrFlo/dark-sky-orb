@@ -112,6 +112,7 @@ function Chip({
 function DayRow({
   daily,
   i,
+  hourly,
   thunderScore,
   weekMin,
   weekMax,
