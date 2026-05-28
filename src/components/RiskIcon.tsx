@@ -124,14 +124,55 @@ function RiskIcon({ id, size = 20, color = "currentColor" }: RiskIconProps): JSX
         return (
           <>
             <path d={CLOUD_D} {...cloudFill} />
-            {/* Nebelschwaden */}
             <g stroke={color} strokeWidth={2} strokeLinecap="round" fill="none">
               <line x1={5} y1={18} x2={15} y2={18} />
               <line x1={8} y1={21} x2={19} y2={21} />
             </g>
           </>
         );
+      case "frost":
+        return (
+          <>
+            <g stroke={color} strokeWidth={2} strokeLinecap="round" fill="none">
+              <line x1={12} y1={3} x2={12} y2={21} />
+              <line x1={3} y1={12} x2={21} y2={12} />
+              <line x1={5.5} y1={5.5} x2={18.5} y2={18.5} />
+              <line x1={18.5} y1={5.5} x2={5.5} y2={18.5} />
+            </g>
+            <circle cx={12} cy={12} r={2} {...solid} />
+          </>
+        );
+      case "hitze":
+        return (
+          <>
+            <circle cx={12} cy={12} r={4} {...solid} />
+            <g stroke={color} strokeWidth={2} strokeLinecap="round" fill="none">
+              <line x1={12} y1={2} x2={12} y2={5} />
+              <line x1={12} y1={19} x2={12} y2={22} />
+              <line x1={2} y1={12} x2={5} y2={12} />
+              <line x1={19} y1={12} x2={22} y2={12} />
+              <line x1={4.9} y1={4.9} x2={7} y2={7} />
+              <line x1={17} y1={17} x2={19.1} y2={19.1} />
+              <line x1={4.9} y1={19.1} x2={7} y2={17} />
+              <line x1={17} y1={7} x2={19.1} y2={4.9} />
+            </g>
+          </>
+        );
+      case "uv":
+        return (
+          <>
+            <circle cx={12} cy={12} r={4} fill={color} opacity={0.35} />
+            <g stroke={color} strokeWidth={2} strokeLinecap="round" fill="none">
+              <line x1={12} y1={2.5} x2={12} y2={5} />
+              <line x1={12} y1={19} x2={12} y2={21.5} />
+              <line x1={2.5} y1={12} x2={5} y2={12} />
+              <line x1={19} y1={12} x2={21.5} y2={12} />
+            </g>
+            <text x={12} y={14.5} textAnchor="middle" fontSize={6} fontWeight={700} fill={color}>UV</text>
+          </>
+        );
     }
+    return <></>;
   };
 
   return (
