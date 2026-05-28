@@ -14,6 +14,7 @@ import { useInterval } from "@/hooks/useInterval";
 import { fetchRainbow, frameTileUrl } from "@/lib/rainbow";
 import { isDevEnvironment } from "@/lib/environment";
 import { RadarControls } from "./RadarControls";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { RadarLegend } from "./RadarLegend";
 
 // Fix default marker icons in bundlers
