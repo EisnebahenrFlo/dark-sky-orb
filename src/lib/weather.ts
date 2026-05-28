@@ -128,6 +128,8 @@ export interface WeatherData {
   hourly: HourlyData;
   daily: DailyData;
   timezone: string;
+  /** Multi-model ensemble metadata (spread + per-hour confidence). */
+  _ensemble?: EnsembleMeta;
 }
 
 const ALLOWED_COUNTRIES = new Set(["DE", "AT", "CH", "IT"]);
