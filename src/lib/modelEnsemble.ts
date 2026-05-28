@@ -28,8 +28,6 @@ const MODEL_WEIGHT: Record<string, number> = {
   icon_d2: 1.0,
   icon_ch2: 1.0,
   italia_meteo_arpae_icon_2i: 1.0,
-  arpae_cosmo_2i: 1.0,
-  arpae_cosmo_5m: 0.85,
   // Regional
   icon_eu: 0.7,
   knmi_harmonie_arome_europe: 0.65,
