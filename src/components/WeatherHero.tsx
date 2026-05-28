@@ -60,13 +60,20 @@ function Stat({
 }
 
 export function WeatherHero({ location, data, updatedAt, onRefresh, ensemble }: Props) {
+  // Effektive Bewölkung für Beschreibung/Icon: low + 0.5·mid (Cirren ignorieren).
+  // Fällt auf Total zurück, wenn low/mid nicht vorliegen.
+  const lowMidCloud =
+    data.cloud_cover_low != null
+      ? Math.min(100, Math.round(data.cloud_cover_low + 0.5 * (data.cloud_cover_mid ?? 0)))
+      : data.cloud_cover;
   const effective = getEffectiveWeather(
     data.weather_code,
     data.precipitation,
-    data.cloud_cover,
+    lowMidCloud,
     data.is_day,
     data.relative_humidity_2m,
     new Date(data.time).getHours(),
+    data.cloud_cover_low,
   );
   const group = getWeatherGroup(data.weather_code, (data.is_day ? 1 : 0) as 0 | 1);
   const palette = getHeroPalette(group);
@@ -224,6 +231,12 @@ export function WeatherHeroStats({
     precipSub = "aktuelle Stunde";
   }
 
+  // Effektive Bewölkung ohne Cirren (gleiche Logik wie in WeatherHero)
+  const lowMidCloud =
+    data.cloud_cover_low != null
+      ? Math.min(100, Math.round(data.cloud_cover_low + 0.5 * (data.cloud_cover_mid ?? 0)))
+      : data.cloud_cover;
+
   return (
     <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
       <Stat
@@ -277,7 +290,17 @@ export function WeatherHeroStats({
         </div>
       </div>
       <Stat icon={CloudRain} label="Niederschlag" value={precipValue} sub={precipSub} accent="#60a5fa" />
-      <Stat icon={Cloud} label="Bewölkung" value={`${data.cloud_cover}%`} accent="#94a3b8" />
+      <Stat
+        icon={Cloud}
+        label="Bewölkung"
+        value={`${Math.round(lowMidCloud)}%`}
+        sub={
+          data.cloud_cover_low != null && data.cloud_cover > lowMidCloud + 5
+            ? `gesamt ${Math.round(data.cloud_cover)}% inkl. Cirren`
+            : undefined
+        }
+        accent="#94a3b8"
+      />
       <Stat icon={Droplets} label="Luftfeuchte" value={`${data.relative_humidity_2m}%`} accent="#06b6d4" />
       <Stat icon={Gauge} label="Luftdruck" value={`${Math.round(data.pressure_msl)} hPa`} accent="#a78bfa" />
       <Stat icon={Thermometer} label="Gefühlt" value={`${Math.round(data.apparent_temperature)}°`} accent="#fb923c" />
