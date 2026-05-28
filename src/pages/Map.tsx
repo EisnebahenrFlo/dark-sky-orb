@@ -1,8 +1,6 @@
 import { lazy, Suspense, useEffect, useState } from "react";
-import { useQueryClient } from "@tanstack/react-query";
 import { Loader2, Map as MapIcon, Radar, Zap } from "lucide-react";
 import { useWeather } from "@/contexts/WeatherContext";
-import { RefreshButton } from "@/components/RefreshButton";
 import { LiveBadge } from "@/components/LiveBadge";
 const RadarMap = lazy(() => import("@/components/RadarMap"));
 const LightningMap = lazy(() => import("@/components/lightning/LightningMap"));
@@ -20,20 +18,12 @@ function MapFallback() {
 export function MapPage() {
   const [tab, setTab] = useState<SubTab>("radar");
   const [mounted, setMounted] = useState(false);
-  const [refreshKey, setRefreshKey] = useState(0);
-  const [lastRefresh, setLastRefresh] = useState<number>(() => Date.now());
   const { location } = useWeather();
-  const queryClient = useQueryClient();
   useEffect(() => setMounted(true), []);
-
-  const handleRefresh = async () => {
-    await queryClient.invalidateQueries({ queryKey: ["rainbow"] });
-    setRefreshKey((k) => k + 1);
-    setLastRefresh(Date.now());
-  };
 
   return (
     <section className="space-y-4">
+      <h1 className="sr-only">Karte</h1>
       <div className="flex items-center gap-2 text-sm text-muted-foreground">
         <MapIcon className="h-4 w-4 text-accent" strokeWidth={1.75} />
         <span>
@@ -45,7 +35,7 @@ export function MapPage() {
         <div className="flex flex-col gap-1">
           <div className="flex items-center gap-2">
             <h2 className="font-display text-lg font-medium tracking-tight">Karte</h2>
-            <LiveBadge />
+            {tab === "lightning" && <LiveBadge />}
           </div>
           <span className="text-xs uppercase tracking-wider text-muted-foreground">
             {tab === "radar" ? "Niederschlagsradar" : "Live-Blitze"}
@@ -85,7 +75,7 @@ export function MapPage() {
         </div>
       </div>
 
-      <RefreshButton variant="statusbar" onRefresh={handleRefresh} lastUpdated={lastRefresh} />
+
 
       {tab === "radar" ? (
         mounted ? (
