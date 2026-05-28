@@ -44,7 +44,17 @@ export function Nowcast({
 }) {
   const { resolved } = useTheme();
   const KIND_COLOR = kindColors(resolved === "dark");
-  const points = minutely.time.slice(0, count).map((t, i) => {
+
+  // Filter: zukünftige/aktuelle 15-Min-Slots, keine vergangenen.
+  const nowMs = Date.now();
+  const futureIdxs: number[] = [];
+  for (let i = 0; i < minutely.time.length; i++) {
+    const ts = new Date(minutely.time[i]).getTime();
+    if (ts + 15 * 60 * 1000 >= nowMs) futureIdxs.push(i);
+    if (futureIdxs.length >= count) break;
+  }
+  const points = futureIdxs.map((i) => {
+    const t = minutely.time[i];
     const hIdx = nearestHourIdx(hourly?.time, t);
     return {
       time: formatTime(t),

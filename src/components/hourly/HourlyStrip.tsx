@@ -50,7 +50,22 @@ export function HourlyStrip({
   const now = current?.time ? new Date(current.time).getTime() : Date.now();
   const risk = useMemo(() => computeThunderstormRiskSeries(hourly), [hourly]);
 
-  const cells: Cell[] = hourly.time.slice(0, HOURS).map((t, i) => {
+  // Startindex = aktuelle/naheliegendste Stunde (nicht Mitternacht).
+  // Damit ist die Strip-Ansicht synchron zum HourlyForecastChart.
+  let startIdx = 0;
+  let bestDiff = Infinity;
+  for (let i = 0; i < hourly.time.length; i++) {
+    const diff = Math.abs(new Date(hourly.time[i]).getTime() - now);
+    if (diff < bestDiff) {
+      bestDiff = diff;
+      startIdx = i;
+    }
+  }
+  const endIdx = Math.min(startIdx + HOURS, hourly.time.length);
+
+  const cells: Cell[] = [];
+  for (let i = startIdx; i < endIdx; i++) {
+    const t = hourly.time[i];
     const ts = new Date(t).getTime();
     const isCurrent = ts <= now && now < ts + 60 * 60 * 1000;
     const rawCode = hourly.weather_code[i];
@@ -65,7 +80,7 @@ export function HourlyStrip({
       hourly.cloud_cover_low?.[i],
       hourly.cloud_cover_mid?.[i],
     );
-    return {
+    cells.push({
       iso: t,
       label: isCurrent ? "Jetzt" : fmtHour(t),
       temp: hourly.temperature_2m[i],
@@ -78,8 +93,8 @@ export function HourlyStrip({
       isCurrent,
       thunder: risk.hourly[i] ?? { score: 0, level: "none", label: "Kein Risiko", source: "lpi" },
       hour: new Date(t).getHours(),
-    };
-  });
+    });
+  }
 
   // Sun events inside window
   const startMs = cells[0] ? new Date(cells[0].iso).getTime() : 0;
