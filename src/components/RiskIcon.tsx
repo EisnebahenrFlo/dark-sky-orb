@@ -14,7 +14,10 @@ export type RiskIconId =
   | "sturm"
   | "schneesturm"
   | "glatteis"
-  | "nebel";
+  | "nebel"
+  | "frost"
+  | "hitze"
+  | "uv";
 
 interface RiskIconProps {
   id: RiskIconId;
