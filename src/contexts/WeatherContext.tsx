@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useMemo, useState, type ReactNode
 import { useWeatherData, type UseWeatherDataResult } from "@/hooks/useWeatherData";
 import { useStationObservation } from "@/hooks/useStationObservation";
 import { mergeStationIntoWeather, applyNowcastEvidence } from "@/lib/stationMerge";
+import { reconcileWeatherData } from "@/lib/weatherReconciliation";
 import type { GeoResult } from "@/lib/weather";
 
 const RECENT_KEY = "weather:recent";
@@ -69,7 +70,9 @@ export function WeatherProvider({ children }: { children: ReactNode }) {
   const merged = useMemo<UseWeatherDataResult>(() => {
     if (!data.data) return data;
     const withStation = mergeStationIntoWeather(data.data, observation);
-    return { ...data, data: applyNowcastEvidence(withStation) };
+    const withNowcast = applyNowcastEvidence(withStation);
+    const reconciled = reconcileWeatherData(withNowcast);
+    return { ...data, data: reconciled };
   }, [data, observation]);
 
   return (
