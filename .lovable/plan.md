@@ -1,76 +1,31 @@
-# Datenqualität verbessern: Stationsdaten für DACH + Italien
+# Bewölkung der Station übernehmen
 
-## Ziel
-Der angezeigte „Jetzt"-Wert (Temperatur, Niederschlag, Wind, Wetterzustand) soll mit der Realität übereinstimmen. Heute kommt alles aus dem Modell **ICON-D2**, das nur alle ~3 h läuft und an einem ~2 km Gitterpunkt interpoliert – nicht am echten Standort gemessen. Lösung: nächstgelegene **Wetterstation** abrufen und ihren Wert als Wahrheit nehmen, Modell nur noch für Vorhersage & Trend.
+## Problem
+„Weizierlein – real klarer Himmel, App zeigt 100 % / bedeckt." Ursache: nach dem Stations-Merge wird `cloud_cover` weiterhin aus dem ICON-Modell genommen. UI-Stellen lesen es direkt:
+- `WeatherHeroStats` → Kachel „Bewölkung 100 %"
+- `getEffectiveWeather` → leitet Beschreibung & Icon aus `cloud_cover` ab
+→ selbst wenn `weather_code` korrigiert wäre, kippt die Tie-Breaker-Logik den Zustand wieder auf „bedeckt".
 
-## Datenquellen (alle kostenlos, kein Key)
+## Fix in drei Schritten
 
-| Region | Quelle | Update | Endpoint |
-|---|---|---|---|
-| DE | Bright Sky (DWD MOSMIX + SYNOP) | 10–60 min | `api.brightsky.dev/current_weather` |
-| AT | GeoSphere Austria | 10 min | `dataset.api.hub.geosphere.at` (TAWES) |
-| CH | MeteoSwiss SMN OGD | 10 min | `data.geo.admin.ch` (ogd-smn) |
-| IT | Aviation METAR (Flughäfen) | 30 min | `aviationweather.gov/api/data/metar` |
+### 1. Stations-Endpoint um `cloudCover` erweitern (`api/station.ts`)
+- **Bright Sky**: `current_weather.cloud_cover` ist direkt verfügbar (0–100 %) – einfach mit übernehmen.
+- **METAR**: aus `clouds[]` (FEW=25, SCT=50, BKN=85, OVC=100, CLR/SKC/NCD/NSC=0) den höchsten Layer als Gesamtdeckungsgrad ableiten. Wenn `clouds` fehlt, aus `wxString` herleiten oder `null`.
+- Falls die Station keinen Wert hat (z. B. METAR ohne Wolkenangabe), `cloudCover: null` zurückgeben → Modell bleibt Quelle.
 
-Fallback überall, wenn keine Station < 25 km: aktuell verwendetes ICON-Modell.
+### 2. Merge in `src/lib/stationMerge.ts`
+- `cloud_cover` überschreiben, wenn `obs.cloudCover != null`.
+- `reconcileCode` erweitern: bei `cloudCover < 20` und Modell sagt „bedeckt" (Code 3) → Code 0 oder 1. Bei `cloudCover > 80` und Modell sagt „klar" → Code 3.
+- Beim Mergen das `cloudCover` auch dann übernehmen, wenn es z. B. mit Modell-Niederschlag in Konflikt steht – Station ist Wahrheit für sichtbaren Himmel.
 
-## Architektur
+### 3. Konsistenz im Frontend
+- Keine UI-Änderung nötig: `WeatherHeroStats` liest `data.cloud_cover` aus dem gemergten Objekt, `getEffectiveWeather` ebenfalls. Nach Schritt 2 ist alles korrekt.
+- Optional: im Station-Badge zusätzlich Alter zeigen, damit der Nutzer erkennt, ob die Beobachtung wirklich frisch ist (für spätere Debug-Fragen wie diese).
 
-```text
-useWeatherData (Modell, hourly/daily)        ── unverändert ──┐
-                                                              │
-useStationObservation (NEU, current only) ───────────────────►│ merge in WeatherContext
-   └─ /api/station?lat&lon&country                            │
-        ├─ DE → Bright Sky                                    ▼
-        ├─ AT → GeoSphere                              data.current = {
-        ├─ CH → MeteoSwiss                               ...modelCurrent,
-        ├─ IT → METAR nearest airport                    ...stationOverride,
-        └─ else → null (Modell bleibt Quelle)             source: "station"|"model",
-                                                          stationName, stationDistKm
-                                                        }
-```
+## Bonus-Robustheit (gleiche Iteration)
+- Akzeptiere Bright-Sky-Stationen auch bis **35 km** (statt 25 km) – Weizierlein/Mittelfranken hat nicht überall < 25 km Stationsdichte; ICON ist trotzdem schlechter.
+- Logge im Endpoint kurz `console.log` mit Stationsname + Distanz, damit du in den Vercel-Logs sehen kannst, welche Station gezogen wurde.
 
-## Umsetzungsschritte
-
-1. **`api/station.ts`** (neuer Vercel Serverless Endpoint)
-   - Input: `lat`, `lon`, `country`
-   - Routing nach `country` zur passenden Quelle, einheitliches Response-Schema:
-     `{ temperature, apparentTemperature, humidity, windSpeed, windGust, windDirection, pressure, precipitation10min, weatherCode, observedAt, stationName, stationDistanceKm }`
-   - 5-min In-Memory Cache (Reuse `api/_lib/cache.ts`)
-   - Bei METAR: nächsten ICAO via statischer Flughafen-Liste DACH+IT (ca. 80 Einträge, eingebettet)
-
-2. **`src/hooks/useStationObservation.ts`** (neu)
-   - React-Query, `staleTime` 5 min, `refetchInterval` 5 min
-   - Liefert `{ data, isStale, source, ageMinutes }`
-
-3. **`WeatherContext` erweitern**
-   - Station-Hook parallel zu `useWeatherData` aufrufen
-   - Wenn Station < 25 km **und** Observation < 30 min alt: `current.temperature/humidity/wind/precipitation/weather_code` überschreiben
-   - Felder, die nur das Modell hat (UV, CAPE, Geopotential …), bleiben aus dem Modell
-   - Neues Feld `data.current._source = "station" | "model"` + `_station = { name, distanceKm, ageMin }`
-
-4. **Plausibilitätsregeln in `getEffectiveCode`** (Erweiterung)
-   - Wenn Stations-Niederschlag = 0 mm/10 min UND Modell sagt Regen → Code → Wolke
-   - Wenn Stations-Sichtweite > 5 km UND Modell sagt Nebel (45/48) → Code → 3
-   - Stations-Temperatur weicht > 3 °C von Modell ab → Stationswert gewinnt, Modell-Hourly bleibt für Verlauf
-
-5. **UI-Mini-Anzeige im `WeatherHero`**
-   - Unter dem Temperaturwert: kleines Badge „Messstation Berlin-Tempelhof · vor 8 Min · 4,2 km" (klickbar → Tooltip mit Quelle)
-   - Bei Modell-Fallback: „Modellwert ICON-D2"
-   - Zeigt sofort, ob Wert „echt" oder „berechnet" ist → erklärt Diskrepanzen statt sie zu verstecken
-
-6. **Konfidenz im bestehenden `ConfidenceBadge`**
-   - Score +20 wenn Stationsbeleg vorhanden und < 15 min alt
-   - Score −15 wenn Modell und Station um > 3 °C / > 5 mm auseinander
-
-## Was sich für den Nutzer ändert
-- „Jetzt"-Temperatur kommt aus echter Messung (typ. Abweichung 0,3 °C statt 1,5–2 °C)
-- Regen-Icon und Beschreibung stimmen mit dem überein, was draußen tatsächlich passiert
-- Vorhersage (stündlich/täglich) bleibt unverändert ICON-basiert
-- Sichtbares Vertrauenssignal: Messstation + Alter sichtbar
-
-## Nicht im Scope
-- Multi-Model-Ensemble (separates späteres Projekt)
-- Bias-Korrektur der stündlichen Vorhersage (komplex, separat)
-- Stationen außerhalb DACH+IT (Modell-Fallback)
-- Historische Stationsdaten / Verläufe
+## Nicht im Scope (separat)
+- Sub-Stations-Genauigkeit über Sat-basierte Cloud-Layer (würde EUMETSAT brauchen)
+- Bias-Korrektur auf die stündliche Vorhersage
