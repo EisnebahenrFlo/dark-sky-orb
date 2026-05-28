@@ -1,7 +1,12 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { useWeatherData, type UseWeatherDataResult } from "@/hooks/useWeatherData";
 import { useStationObservation } from "@/hooks/useStationObservation";
-import { mergeStationIntoWeather, applyNowcastEvidence } from "@/lib/stationMerge";
+import { useRainbowNowcastFor } from "@/hooks/useRainbowNowcast";
+import {
+  mergeStationIntoWeather,
+  applyNowcastEvidence,
+  applyRainbowEvidence,
+} from "@/lib/stationMerge";
 import { reconcileWeatherData } from "@/lib/weatherReconciliation";
 import type { GeoResult } from "@/lib/weather";
 
@@ -66,14 +71,20 @@ export function WeatherProvider({ children }: { children: ReactNode }) {
     location?.country_code,
     !!location,
   );
+  const rainbow = useRainbowNowcastFor(
+    location?.latitude ?? null,
+    location?.longitude ?? null,
+    !!location,
+  );
 
   const merged = useMemo<UseWeatherDataResult>(() => {
     if (!data.data) return data;
     const withStation = mergeStationIntoWeather(data.data, observation);
     const withNowcast = applyNowcastEvidence(withStation);
-    const reconciled = reconcileWeatherData(withNowcast);
+    const withRainbow = applyRainbowEvidence(withNowcast, rainbow.data?.forecast);
+    const reconciled = reconcileWeatherData(withRainbow);
     return { ...data, data: reconciled };
-  }, [data, observation]);
+  }, [data, observation, rainbow.data]);
 
   return (
     <Ctx.Provider value={{ ...merged, location: location ?? DEFAULT, recent, selectLocation, clearRecent }}>
@@ -87,3 +98,4 @@ export function useWeather() {
   if (!c) throw new Error("useWeather must be used inside WeatherProvider");
   return c;
 }
+

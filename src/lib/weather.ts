@@ -450,16 +450,26 @@ export async function fetchWeather(lat: number, lon: number, countryCode?: strin
     models: "best_match",
   });
 
-  const [shortRes, longRes] = await Promise.all([
-    fetch(`/api/weather?${shortParams.toString()}`),
-    fetch(`/api/weather?${longParams.toString()}`),
-  ]);
+  const fetchWithFallback = async (params: URLSearchParams) => {
+    // 1) Versuche projekteigene Function (bessere Caches, eigener API-Key)
+    try {
+      const r = await fetch(`/api/weather?${params.toString()}`);
+      if (r.ok) return r.json();
+    } catch {
+      /* network / 503 → fallback */
+    }
+    // 2) Direkt zu Open-Meteo (CORS-fähig, kostenfrei) — funktioniert auch
+    //    in Dev-Previews, in denen /api/* mit 503 geblockt wird.
+    const direct = await fetch(`https://api.open-meteo.com/v1/forecast?${params.toString()}`);
+    if (!direct.ok) throw new Error("Wetterdaten fehlgeschlagen");
+    return direct.json();
+  };
 
-  if (!shortRes.ok || !longRes.ok) throw new Error("Wetterdaten fehlgeschlagen");
-  const [shortRaw, longJson] = (await Promise.all([shortRes.json(), longRes.json()])) as [
-    Record<string, unknown>,
-    WeatherData,
-  ];
+  const [shortRaw, longJson] = (await Promise.all([
+    fetchWithFallback(shortParams),
+    fetchWithFallback(longParams),
+  ])) as [Record<string, unknown>, WeatherData];
+
 
   // Multi-model: fold suffixed keys into consensus values.
   let mergedHourly: Record<string, unknown>;

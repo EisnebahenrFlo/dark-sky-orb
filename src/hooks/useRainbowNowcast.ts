@@ -21,16 +21,16 @@ export interface RainbowNowcastResponse {
 
 const TEN_MIN = 10 * 60 * 1000;
 
-export function useRainbowNowcast() {
-  const { location } = useWeather();
-  const lat = location.latitude;
-  const lon = location.longitude;
-
+/**
+ * Standalone fetcher that does not depend on WeatherContext — used by
+ * WeatherProvider itself to avoid a hook cycle.
+ */
+export function useRainbowNowcastFor(lat: number | null, lon: number | null, enabled: boolean) {
   const query = useQuery<RainbowNowcastResponse>({
     queryKey: ["rainbow-nowcast", lat, lon],
     queryFn: async () => {
       const res = await fetch(
-        `/api/rainbow-nowcast?lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lon)}`,
+        `/api/rainbow-nowcast?lat=${encodeURIComponent(String(lat))}&lon=${encodeURIComponent(String(lon))}`,
       );
       if (!res.ok) throw new Error("Nowcast nicht verfügbar");
       return (await res.json()) as RainbowNowcastResponse;
@@ -38,6 +38,8 @@ export function useRainbowNowcast() {
     staleTime: TEN_MIN,
     refetchInterval: TEN_MIN,
     refetchOnWindowFocus: false,
+    enabled: enabled && lat != null && lon != null,
+    retry: 1,
   });
 
   return {
@@ -48,4 +50,9 @@ export function useRainbowNowcast() {
       query.refetch();
     },
   };
+}
+
+export function useRainbowNowcast() {
+  const { location } = useWeather();
+  return useRainbowNowcastFor(location.latitude, location.longitude, true);
 }
