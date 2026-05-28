@@ -1,110 +1,50 @@
+Ich behebe das als Daten-Pipeline-Problem, nicht als Icon-/Text-Einzelfix.
+
 ## Ziel
+Alle Tabs sollen dieselbe bereinigte Wetterlage verwenden: Heute, Nowcast, Vorhersage stündlich, 7-Tage, Analyse/Risiken und Warnkarten. Wenn Nowcast/Radar aktiven Regen zeigt, darf der Hero nicht „Sonnig“ anzeigen.
 
-Die App soll nicht mehr widersprüchliche Wetterlagen anzeigen, z. B. „Sonnig“ trotz Regen/Gewitter-/Warnsignalen. Aktuell, Nowcast, stündlich, täglich, Analyse und Hero müssen dieselbe bereinigte Wetterwahrheit verwenden.
+## Plan
 
-## Befund aus dem Code
+1. **Echtzeit-Nowcast als zentrale Datenquelle einbinden**
+   - Den Rainbow.ai-Nowcast aus dem separaten Nowcast-Tab in die zentrale Weather-Datenbereinigung aufnehmen.
+   - Dafür den bestehenden `useRainbowNowcast` entkoppeln, damit er auch im `WeatherProvider` für den aktuell gewählten Standort genutzt werden kann.
+   - Ergebnis: Hero, Statistik-Kachel, stündliche Vorschau und Risiken sehen dieselbe Radar-Evidenz wie der Nowcast-Tab.
 
-1. **Korrektur gilt bisher fast nur für den Hero**
-   - `applyNowcastEvidence()` korrigiert nur `current.weather_code`.
-   - Stündliche Karten, Tagesforecast, Charts und Analyse nutzen weiterhin teils rohe/abweichende Modellcodes.
+2. **Nowcast zeitlich korrekt auswerten**
+   - `applyNowcastEvidence` arbeitet aktuell auf den ersten Array-Einträgen und nicht zuverlässig auf „jetzt + Zukunft“.
+   - Ich stelle die Logik auf Zeitstempel um: nur aktuelle/zukünftige 15-Minuten- bzw. 10-Minuten-Slots werden gewertet.
+   - Vergangene Slots dürfen keine aktuelle Anzeige mehr verfälschen.
 
-2. **Stündlicher Tab ist wahrscheinlich zeitlich falsch ausgerichtet**
-   - `HourlyForecastChart` startet bei der aktuellen Stunde.
-   - `HourlyStrip` nimmt aber `hourly.time.slice(0, 24)` und kann dadurch vergangene Stunden ab Mitternacht zeigen.
-   - Das erzeugt „Vorhersage stimmt nicht“-Eindruck und Inkonsistenzen zwischen Komponenten.
+3. **Aktuelle Wetterlage gegen Live-Regen absichern**
+   - Wenn Rainbow/Open-Meteo-Minutely aktuell Regen meldet, wird `current.weather_code` auf Regen/Schauer gesetzt und `current.precipitation` plausibel angehoben.
+   - Gewittercodes bleiben weiterhin unangetastet und werden nie auf Sonne/Wolken reduziert.
+   - „Sonnig“ ist nur noch möglich, wenn keine aktuelle Niederschlags-Evidenz vorhanden ist.
 
-3. **Daily-Code wird aus separatem `best_match` abgeleitet**
-   - Die Tageswerte werden zwar teilweise aus dem Ensemble rekonstruiert, der repräsentative Tages-Wettercode kommt aber aus der separaten Long-Term/`best_match`-Hourly-Reihe.
-   - Dadurch kann Tagesanzeige etwas anderes zeigen als die stündliche Ensemble-Lage.
+4. **Stündliche Vorhersage mit Nowcast überblenden**
+   - Für die nächsten Stunden werden Radar-/Nowcast-Raten in die stündlichen Niederschlagswerte projiziert.
+   - Stündliche Icons und Regenwerte werden dadurch mit dem Nowcast synchronisiert.
+   - Das betrifft insbesondere den Fall aus dem Screenshot: Nowcast zeigt starken Regen, während die Stunde/der Hero trocken bleibt.
 
-4. **Stationen sind noch nicht vollständig als Qualitätsquelle modelliert**
-   - Entfernte METAR-Stationen werden nach dem letzten Fix nicht mehr als Hero-Wahrheit übernommen, aber die Datenpipeline hat noch keine klare, zentrale Regel: „Station darf Temperatur/Wind helfen, aber nicht lokale Niederschlags-/Gewitterlage überstimmen“.
+5. **Tagesprognose aus den final bereinigten Stunden ableiten**
+   - 7-Tage-Codes und Tagesniederschlag werden aus den bereits bereinigten Stunden neu abgeleitet.
+   - Heute wird stärker nach den kommenden Stunden gewichtet, nicht nach vergangenen Tagesabschnitten.
 
-5. **Kostenfreie Quellen sind vorhanden, aber nicht sauber priorisiert**
-   - Open-Meteo Multi-Model-Ensemble: DWD ICON-D2/ICON-EU, MeteoSwiss ICON-CH, ItaliaMeteo ARPAE ICON-2i, ECMWF/KNMI wo verfügbar.
-   - Bright Sky/DWD Stationsdaten für Deutschland.
-   - METAR nur vorsichtig, da Flughäfen lokal oft unpassend sind.
-   - Nowcast/Radar/Rainbow-Fallbacks sind vorhanden, müssen aber konsistent in alle Tabs einfließen.
-   - Offizielle Warnungen/Risikoanalyse sind vorhanden, dürfen aber nicht isoliert neben „Sonnig“ stehen.
+6. **Stationsdaten sicherer behandeln**
+   - METAR bleibt nur unterstützend und darf keine lokale Nowcast-/Modell-Evidenz überschreiben, wenn die Station zu weit weg, zu alt oder widersprüchlich ist.
+   - Ich prüfe zusätzlich, dass Distanzanzeige und Override-Entscheidung getrennt bleiben: eine entfernte Station darf sichtbar sein, aber nicht die lokale Wetterlage bestimmen.
 
-## Umsetzungsplan
+7. **Dev-/Preview-Datenfehler beseitigen**
+   - In der aktuellen Preview sind `/api/weather` und `/api/rainbow-nowcast` laut Netzwerk-Snapshot mit `503 API not available in dev preview` blockiert.
+   - Für Open-Meteo stelle ich auf direkte kostenlose Public-API-Fetches um, wenn kein privater API-Key nötig ist.
+   - Für Rainbow bleibt der API-Fallback bestehen: wenn Rainbow nicht erreichbar ist, nutzt die App Open-Meteo-Minutely statt widersprüchlicher/alter Radarwerte.
 
-### 1. Zentrale Wetter-Reconciliation einbauen
-
-Eine gemeinsame Bereinigungsfunktion für `WeatherData` erstellen/erweitern, die nach Fetch, Ensemble, Station und Nowcast einmalig angewendet wird.
-
-Regeln:
-- Aktiver oder unmittelbar bevorstehender Niederschlag schlägt „klar/sonnig“.
-- Gewittercodes werden nie auf sonnig/bewölkt downgraded.
-- Bei `precipitation > 0`, hoher Niederschlagswahrscheinlichkeit oder Nowcast-Regen wird der Code mindestens auf Regen/Schauer gesetzt.
-- Bei hoher Gewitterevidenz aus LPI/CAPE/LI/Gusts wird stündlich mindestens „Gewittergefahr“ visualisiert, ohne echte Gewitter zu überbehaupten.
-- Station darf klare/trockene Lage nur überschreiben, wenn nah, frisch und nicht im Konflikt mit Nowcast/Modell/Warnsignalen.
-
-### 2. Aktuelle Anzeige, Nowcast und stündliche Prognose synchronisieren
-
-- `current` mit der tatsächlich nächsten/aktuellen stündlichen und minutely Lage abgleichen.
-- Den aktuellen Stunden-Slot in `hourly` mit der bereinigten `current`-Lage konsistent halten, soweit sinnvoll.
-- `HourlyStrip` auf denselben Startindex wie `HourlyForecastChart` umstellen: ab aktueller/naheliegendster Stunde, nicht ab Array-Anfang.
-- Nowcast-Punkte auf zukünftige/aktuelle Zeit filtern, damit keine alten 15-Minuten-Slots angezeigt werden.
-
-### 3. Tagesforecast aus bereinigter stündlicher Lage ableiten
-
-- Repräsentative Tagescodes aus `finalHourly`/bereinigten stündlichen Codes berechnen, nicht aus separatem `best_match`.
-- Tages-Niederschlag, Regenwahrscheinlichkeit und Gewitterindikator mit den stündlichen Daten abgleichen.
-- Für heute die nächsten Stunden stärker gewichten; vergangene Stunden ignorieren.
-
-### 4. Quellenstrategie kostenfrei optimieren
-
-- Pro Land weiterhin die besten kostenlosen Open-Meteo-Modelle nutzen:
-  - DE/AT: ICON-D2 + ICON-EU + ECMWF + KNMI/Harmonie, soweit verfügbar.
-  - CH: MeteoSwiss ICON-CH + ICON-D2 + ECMWF + KNMI/Harmonie.
-  - IT: ItaliaMeteo ARPAE ICON-2i + ICON-EU + ECMWF + KNMI/Harmonie.
-- Falls ein regionales Modell für einen Standort keine Werte liefert, automatisch sauber auf verfügbare Modelle degradieren statt falsche Null-/Sonnigwerte zu erzeugen.
-- METAR nur als unterstützende Messquelle verwenden, nicht als alleinige lokale Wetterwahrheit bei größerer Distanz.
-- Bright Sky/DWD in Deutschland als Stationsquelle bevorzugen, aber ebenfalls mit Konfliktprüfung gegen Nowcast/Niederschlag.
-
-### 5. Einheitliche Anzeige in allen Tabs
-
-Alle Tabs sollen die bereinigten Felder aus derselben Datenstruktur verwenden:
-- Aktuell/Hero
-- Heute/Nowcast
-- Vorhersage stündlich
-- Vorhersage 7 Tage
-- Analyse/Warnungen/Risiko
-- Karten-/Favoriten-Kompaktanzeigen, soweit sie eigene Fetches nutzen
-
-Dabei werden bestehende UI-Komponenten nur gezielt angepasst, keine neue Oberfläche gebaut.
-
-### 6. Validierung mit kritischen Szenarien
-
-Nach der Umsetzung prüfe ich gezielt diese Fälle:
-- Codogno/IT mit entfernter METAR-Station: keine 27-km-Flughafenstation als „Sonnig“-Wahrheit.
-- Regen in Minutely/Nowcast: Hero, Hourly, Daily zeigen nicht „Sonnig“.
-- Gewitterrisiko/Warnungen: keine widersprüchliche „Sonnig + aktives Unwetter“-Kombination.
-- Trockene Schönwetterlage: keine künstliche Überwarnung/Regenanzeige.
-- Stündliche Ansicht: Startet ab jetzt und stimmt mit Chart und Tagesansicht überein.
-
-## Technische Änderungen
-
-Betroffene Kernbereiche:
-- `src/lib/stationMerge.ts` oder neues zentrales Reconciliation-Modul
+## Dateien, die ich anfassen würde
+- `src/contexts/WeatherContext.tsx`
+- `src/hooks/useRainbowNowcast.ts`
+- `src/lib/weatherReconciliation.ts`
+- `src/lib/stationMerge.ts`
 - `src/lib/weather.ts`
-- `src/lib/modelEnsemble.ts`
-- `src/components/hourly/HourlyStrip.tsx`
-- `src/components/hourly/HourlyForecastChart.tsx` nur falls nötig
-- `src/components/DailyForecast.tsx`
-- ggf. Favoriten-/Kompaktfetch, wenn dort noch ungefilterte Open-Meteo-Daten direkt genutzt werden
+- ggf. `src/lib/rainbowNowcast.ts`, `src/components/Nowcast.tsx`, `src/components/WeatherHero.tsx`
 
-## Erwartetes Ergebnis
-
-Die App bleibt kostenlos quellenbasiert, nutzt aber eine klare Priorität:
-
-```text
-lokaler Nowcast / tatsächlicher Niederschlag
-> frische nahe Stationsmessung
-> hochauflösendes Regionalmodell
-> Multi-Modell-Konsens
-> grobe/entfernte Quellen nur unterstützend
-```
-
-Dadurch werden aktuelle Anzeige, stündliche Vorhersage und Tagesforecast konsistent und deutlich robuster gegen genau die falschen „Sonnig trotz Unwetter“-Fälle.
+## Ergebnis
+Nach der Änderung gibt es eine zentrale „bereinigte Wahrheit“: Wenn Nowcast/Regen aktiv ist, zeigen Hero, Heute-Kacheln, Nowcast, stündlich, täglich und Analyse konsistent Regen bzw. Gewitterrisiko statt Sonne.
