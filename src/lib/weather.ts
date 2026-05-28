@@ -1,3 +1,5 @@
+import { buildEnsemble } from "@/lib/modelEnsemble";
+
 export interface GeoResult {
   id: number;
   name: string;
