@@ -19,6 +19,7 @@ import { weekdayLabel, windDirectionLabel } from "@/lib/weather";
 import { RealisticWeatherIcon } from "./RealisticWeatherIcon";
 import { SectionHeader } from "./SectionHeader";
 import { computeThunderstormRiskSeries } from "@/hooks/useThunderstormRisk";
+import { getEffectiveCode } from "@/components/WeatherIcon";
 
 function timeOnly(iso: string) {
   return new Date(iso).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" });
