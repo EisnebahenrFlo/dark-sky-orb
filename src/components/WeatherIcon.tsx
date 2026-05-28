@@ -59,6 +59,7 @@ export function EffectiveWeatherIcon({
   precipitation,
   cloudCover,
   cloudCoverLow,
+  cloudCoverMid,
   humidity,
   hour,
   isDay = 1,
@@ -68,12 +69,13 @@ export function EffectiveWeatherIcon({
   precipitation: number;
   cloudCover: number;
   cloudCoverLow?: number;
+  cloudCoverMid?: number;
   humidity?: number;
   hour?: number;
   isDay?: number;
   className?: string;
 }) {
-  const effective = getEffectiveCode(code, precipitation, cloudCover, humidity, hour, cloudCoverLow);
+  const effective = getEffectiveCode(code, precipitation, cloudCover, humidity, hour, cloudCoverLow, cloudCoverMid);
   const Icon = getWeatherIcon(effective, isDay);
   return <Icon className={className} strokeWidth={1.25} />;
 }
