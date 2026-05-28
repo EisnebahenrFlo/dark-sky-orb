@@ -25,7 +25,10 @@ const blockApiDev = {
 export default defineConfig({
   plugins: [
     blockApiDev,
-    TanStackRouterVite({ target: "react", autoCodeSplitting: true }),
+    // Route-level lazy imports caused intermittent HTML fallbacks to be loaded
+    // as JavaScript on tab changes in Safari/iOS. Keep routes in the main app
+    // graph so /vorhersage is available immediately after navigation.
+    TanStackRouterVite({ target: "react", autoCodeSplitting: false }),
     react(),
     tailwindcss(),
   ],
