@@ -13,8 +13,14 @@ export interface CurrentWithSource extends CurrentWeather {
   _station?: StationMeta;
 }
 
-const MAX_DIST_KM = 35;
-const MAX_AGE_MIN = 90;
+// Source-specific thresholds. METAR sind Flughafen-Stationen und oft
+// 20–40 km vom eigentlichen Ort entfernt — bei dieser Distanz spiegelt der
+// Flughafenzustand das lokale Wetter nicht zuverlässig wider (z.B. trockener
+// Flughafen während im Umland eine Gewitterzelle steht). Bright Sky deckt
+// das DWD-Netz dicht ab und darf großzügiger gelten.
+const MAX_DIST_KM_BRIGHTSKY = 35;
+const MAX_DIST_KM_METAR = 15;
+const MAX_AGE_MIN = 60;
 
 /**
  * Merge a real-world station observation into the model "current" block.
@@ -39,7 +45,8 @@ export function mergeStationIntoWeather(
     Math.round((Date.now() - new Date(obs.observedAt).getTime()) / 60000),
   );
 
-  if (obs.stationDistanceKm > MAX_DIST_KM || ageMin > MAX_AGE_MIN) {
+  const maxDist = obs.source === "metar" ? MAX_DIST_KM_METAR : MAX_DIST_KM_BRIGHTSKY;
+  if (obs.stationDistanceKm > maxDist || ageMin > MAX_AGE_MIN) {
     return { ...data, current: { ...current, _source: "model" } };
   }
 

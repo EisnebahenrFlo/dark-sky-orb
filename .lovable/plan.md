@@ -1,45 +1,27 @@
-# Fix: Vorhersage-Tab zeigt keinen Inhalt
+Ich habe die Ursache eingegrenzt: Für Codogno wird ein METAR-Flughafenwert aus Piacenza in 27,7 km Entfernung als „Ground truth“ akzeptiert. Dieser Stationswert setzt Wolken/Wetter auf trocken/sonnig, während Nowcast, Warnungen und Risiko-Logik gleichzeitig Regen/Gewitter melden.
 
-## Diagnose
+Plan:
 
-Im Preview-Browser wechselt der Klick auf "Vorhersage" die URL korrekt auf `/vorhersage` und rendert die Seite (Segmented Control + Status). Auf dem iPhone berichtet der User: URL wechselt, aber **Inhalt fehlt**.
+1. Stationsdaten nicht mehr zu großzügig als Wahrheit übernehmen
+- METAR-Stationen werden nur noch bei kurzer Distanz und frischer Messung für Hero-Zustand/Wettertext genutzt.
+- Eine Station in ~27 km Entfernung darf den lokalen Zustand nicht mehr auf „Sonnig“ überschreiben.
+- Wenn eine Station wegen Distanz verworfen wird, wird sie nicht mehr als 100%-vertrauenswürdige Anzeige im Hero gezeigt.
 
-Wahrscheinlichste Ursache: `WeatherTabTransition` umschließt den `<Outlet />` mit `<div key={pathname} className="animate-tab-fade">`. Die zugehörige Keyframe startet bei `opacity: 0; translateY(6px)` und nutzt `animation-fill-mode: both`. Wenn die Animation auf iOS Safari nicht startet (Tab-Wechsel, Paint-Skip, Fokus-Restore, Reduced Motion + Cache-Edge-Case), bleibt der Inhalt auf `opacity: 0` hängen — die Seite ist da, aber unsichtbar.
+2. Niederschlags-/Nowcast-Evidenz vor „Sonnig“ priorisieren
+- Der aktuelle Hero-Zustand darf nicht „Sonnig“ anzeigen, wenn lokaler Nowcast oder Minutely-Daten gerade/zeitnah deutlichen Regen melden.
+- In diesem Fall wird der Wettercode auf Regen/Schauer statt Sonne gesetzt, damit Text, Icon, Hero-Farbe und Niederschlagskarte zusammenpassen.
+- Gewittercodes bleiben weiterhin nicht downgradebar.
 
-## Fix (klein, fokussiert)
+3. Konfliktregel einbauen
+- Wenn Stationsdaten „trocken/klar“ melden, aber lokale Regen-/Warn-/Nowcast-Daten deutlich dagegen sprechen, gewinnt die lokale Niederschlagslage.
+- Ziel: keine Kombination mehr aus „Sonnig“ + „3 aktive Unwetterwarnungen“ + „Regen hält länger als 2h“.
 
-### 1. `WeatherTabTransition` robust machen
+4. Anzeige transparenter machen
+- Die Quellenzeile soll nur dann eine Station als maßgeblich zeigen, wenn sie wirklich für den aktuellen Zustand verwendet wird.
+- Bei verworfenen/far-away Stationsdaten bleibt der Hero beim lokalen Modell/Nowcast statt eine entfernte Flughafenstation zu suggerieren.
 
-`src/components/transitions/WeatherTabTransition.tsx`:
-- `key={pathname}` entfernen — der Outlet rendert die richtige Route auch ohne Force-Remount, und der Remount ist genau das, was die fragile Animation triggert.
-- Den umschließenden `<div className="animate-tab-fade">` durch einen neutralen Wrapper ersetzen, der **immer sichtbar** ist (`opacity: 1`), und die Animation per CSS-Klasse `tab-fade-enter` nur als reine Einblend-Animation ohne `both`-Fill auf das Kind anwenden. Fallback: Wenn die Animation nicht läuft, ist Opacity trotzdem 1.
-
-Konkret: Komponente vereinfachen zu
-
-```tsx
-export function WeatherTabTransition({ children }: { children: ReactNode }) {
-  const { pathname } = useLocation();
-  return (
-    <div key={pathname} className="tab-fade-in">
-      {children}
-    </div>
-  );
-}
-```
-
-### 2. `src/styles.css` – Animation safe machen
-
-- Keyframe `tab-fade` umbenennen/anpassen, sodass `from` und `to` beide eine **sichtbare** Opacity haben (z.B. `from: opacity .85, translateY(4px)` → `to: opacity 1, translateY(0)`). Damit ist der Worst-Case (Animation läuft nicht) trotzdem ein vollständig sichtbarer Inhalt.
-- Neue Utility-Klasse `.tab-fade-in { animation: tab-fade 220ms cubic-bezier(0.22, 0.61, 0.36, 1); }` — **ohne** `both` Fill-Mode. Default-Opacity bleibt 1.
-- `prefers-reduced-motion`-Block aktualisieren: nur `animation: none` — Inhalt bleibt sichtbar.
-- Alte `--animate-tab-fade` Token und `.animate-tab-fade`-Referenz entfernen (wurde nur dort genutzt).
-
-### 3. Verifikation
-
-- Im Preview-Browser auf `/`, `/vorhersage`, `/analyse`, `/map` navigieren und sicherstellen, dass jeder Tab-Inhalt sofort sichtbar ist.
-- Screenshot von `/vorhersage` nach dem Fix.
-
-## Out of Scope
-
-- Wetter-API-Fehler ("Konnte Daten nicht laden") — das ist ein separates Daten-/Network-Problem (betrifft alle Tabs), nicht der Tab-Bug.
-- Andere Animationen oder Layout-Änderungen.
+Technische Details:
+- Änderung in `src/lib/stationMerge.ts`: Distanz-/Frische-Schwellen source-spezifisch machen und METAR deutlich strenger behandeln.
+- Änderung in `src/pages/Current.tsx` oder Hilfslogik: Hero-Current vor dem Rendern mit lokaler Nowcast-/Minutely-Evidenz korrigieren.
+- Ggf. kleine Erweiterung in `WeatherHero`: Quelle/Confidence nicht als Stations-Truth anzeigen, wenn Station verworfen oder durch Nowcast überstimmt wurde.
+- Danach prüfe ich Codogno und die Heute-Ansicht visuell: Hero, Risiko, Warnung und Nowcast müssen konsistent sein.
