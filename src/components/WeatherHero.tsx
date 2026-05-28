@@ -284,7 +284,17 @@ export function WeatherHeroStats({
         </div>
       </div>
       <Stat icon={CloudRain} label="Niederschlag" value={precipValue} sub={precipSub} accent="#60a5fa" />
-      <Stat icon={Cloud} label="Bewölkung" value={`${data.cloud_cover}%`} accent="#94a3b8" />
+      <Stat
+        icon={Cloud}
+        label="Bewölkung"
+        value={`${Math.round(lowMidCloud)}%`}
+        sub={
+          data.cloud_cover_low != null && data.cloud_cover > lowMidCloud + 5
+            ? `gesamt ${Math.round(data.cloud_cover)}% inkl. Cirren`
+            : undefined
+        }
+        accent="#94a3b8"
+      />
       <Stat icon={Droplets} label="Luftfeuchte" value={`${data.relative_humidity_2m}%`} accent="#06b6d4" />
       <Stat icon={Gauge} label="Luftdruck" value={`${Math.round(data.pressure_msl)} hPa`} accent="#a78bfa" />
       <Stat icon={Thermometer} label="Gefühlt" value={`${Math.round(data.apparent_temperature)}°`} accent="#fb923c" />
