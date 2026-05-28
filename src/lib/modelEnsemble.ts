@@ -90,25 +90,51 @@ function circularMean(vals: number[], weights: number[]): number {
 }
 
 function severityMode(vals: number[], weights: number[]): number {
-  const buckets = new Map<number, { weight: number; severity: number }>();
+  // "severity_mode" name kept for API stability, but logic is now consensus-first:
+  //   1. Bucket codes, summing model weights.
+  //   2. Pick the bucket with the highest summed weight (= lokales Hochauflösungs­modell
+  //      wie ICON-D2 schlägt globale Modelle wie ECMWF/GFS, die Cirrus-/Mittelwolken
+  //      systematisch überschätzen).
+  //   3. Severity wird nur als Tie-Breaker bei *echtem* Gleichstand (Δgewicht < 5 %)
+  //      benutzt — und auch dann nur, wenn der schwerere Code wirklich gefährlich ist
+  //      (Niederschlag/Gewitter ≥ 51). Sonst bleibt der weniger pessimistische Code.
+  const buckets = new Map<number, { weight: number; severity: number; count: number }>();
   for (let i = 0; i < vals.length; i++) {
     const v = vals[i];
     const w = weights[i];
     if (!Number.isFinite(v) || w <= 0) continue;
     const code = Math.round(v);
     const cur = buckets.get(code);
-    if (cur) cur.weight += w;
-    else buckets.set(code, { weight: w, severity: codeSeverity(code) });
+    if (cur) {
+      cur.weight += w;
+      cur.count += 1;
+    } else {
+      buckets.set(code, { weight: w, severity: codeSeverity(code), count: 1 });
+    }
   }
   if (buckets.size === 0) return NaN;
-  let best: { code: number; weight: number; severity: number } | null = null;
+  const totalWeight = Array.from(buckets.values()).reduce((s, b) => s + b.weight, 0);
+  let best: { code: number; weight: number; severity: number; count: number } | null = null;
   for (const [code, info] of buckets) {
-    if (!best) best = { code, ...info };
-    else if (
-      info.weight > best.weight + 1e-9 ||
-      (Math.abs(info.weight - best.weight) < 1e-9 && info.severity > best.severity)
-    ) {
+    if (!best) {
       best = { code, ...info };
+      continue;
+    }
+    const dw = info.weight - best.weight;
+    const closeEnough = Math.abs(dw) < 0.05 * totalWeight;
+    if (dw > 0 && !closeEnough) {
+      best = { code, ...info };
+    } else if (closeEnough) {
+      // Tie-Break 1: häufiger gemeldet gewinnt
+      if (info.count > best.count) {
+        best = { code, ...info };
+      } else if (info.count === best.count) {
+        // Tie-Break 2: nur dann zum schwereren Code wechseln, wenn dieser
+        // wirklich Niederschlag/Gewitter (≥ 51) markiert.
+        if (info.severity > best.severity && code >= 51) {
+          best = { code, ...info };
+        }
+      }
     }
   }
   return best!.code;
