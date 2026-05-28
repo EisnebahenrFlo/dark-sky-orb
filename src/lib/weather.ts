@@ -432,9 +432,22 @@ export async function fetchWeather(lat: number, lon: number, countryCode?: strin
         return j != null ? longPop?.[j] ?? 0 : shortPop?.[i] ?? 0;
       });
 
+  // Map low-/mid-cloud aus hourly auf "current" (Open-Meteo liefert sie nur stündlich).
+  // Index der Stunde, die am nächsten an current.time liegt.
+  const shortTimesForCloud = (mergedHourly.time as string[]) ?? [];
+  const curTimeIdx = (() => {
+    const t = currentTime.slice(0, 13); // YYYY-MM-DDTHH
+    const i = shortTimesForCloud.findIndex((s) => s.slice(0, 13) === t);
+    return i >= 0 ? i : 0;
+  })();
+  const lowAt = (mergedHourly.cloud_cover_low as number[] | undefined)?.[curTimeIdx];
+  const midAt = (mergedHourly.cloud_cover_mid as number[] | undefined)?.[curTimeIdx];
+
   const finalCurrent = {
     ...(mergedCurrent as unknown as CurrentWeather),
     uv_index: currentUv,
+    cloud_cover_low: typeof lowAt === "number" ? lowAt : undefined,
+    cloud_cover_mid: typeof midAt === "number" ? midAt : undefined,
     _confidence: ensembleMeta?.currentConfidence,
   };
 
