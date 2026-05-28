@@ -676,7 +676,18 @@ export function getContextualDescription(
   if (h >= 23 || (h >= 0 && h <= 4)) {
     if (code === 0) return "Klare Nacht";
     if (code === 1) return "Ruhige Nacht";
+    if (code === 2) return "Wolkige Nacht";
+    if (code === 3) return "Bedeckte Nacht";
+    if (code === 45 || code === 48) return "Nächtlicher Nebel";
+    if (code === 51 || code === 53 || code === 55) return "Nieselregen in der Nacht";
     if (code === 61 || code === 63 || code === 65) return "Nächtlicher Regen";
+    if (code === 66 || code === 67) return "Gefrierender Regen, Nacht";
+    if (code === 71 || code === 73 || code === 75) return "Schneefall in der Nacht";
+    if (code === 77) return "Schneegriesel, Nacht";
+    if (code === 80 || code === 81 || code === 82) return "Nächtliche Schauer";
+    if (code === 85 || code === 86) return "Schneeschauer, Nacht";
+    if (code === 95) return "Nachtgewitter";
+    if (code === 96 || code === 99) return "Nachtgewitter mit Hagel";
   }
 
   return wmoDescription(code);
