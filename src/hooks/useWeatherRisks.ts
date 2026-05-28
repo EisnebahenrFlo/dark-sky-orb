@@ -221,7 +221,41 @@ export function useWeatherRisks(): UseWeatherRisksResult {
               : 85 + Math.min(15, ((50 - vis) / 50) * 15);
     const nebel = makeRisk("nebel", nebelScore, false);
 
-    const all: RiskItem[] = [gewitter, starkregen, hagel, sturm, schneesturm, glatteis, nebel];
+    // FROST — Tagesminimum der Lufttemperatur in den nächsten 24h
+    const next24 = hourly?.temperature_2m?.slice(i, i + 24) ?? [];
+    const minT = next24.length ? Math.min(...next24) : 99;
+    const frostScore =
+      minT > 3 ? 0
+      : minT > 0 ? ((3 - minT) / 3) * 25
+      : minT > -5 ? 25 + ((-minT) / 5) * 35
+      : minT > -10 ? 60 + ((-minT - 5) / 5) * 25
+      : 85 + Math.min(15, ((-minT - 10) / 5) * 15);
+    const frost = makeRisk("frost", frostScore, false);
+
+    // HITZE — gefühlte Maximaltemperatur + Tropennacht-Bonus
+    const nextApp = hourly?.apparent_temperature?.slice(i, i + 24) ?? [];
+    const maxApp = nextApp.length ? Math.max(...nextApp) : -99;
+    const tropennacht = next24.length ? Math.min(...next24) >= 20 : false;
+    const hitzeBase =
+      maxApp < 30 ? 0
+      : maxApp < 32 ? ((maxApp - 30) / 2) * 25
+      : maxApp < 35 ? 25 + ((maxApp - 32) / 3) * 35
+      : maxApp < 38 ? 60 + ((maxApp - 35) / 3) * 25
+      : 85 + Math.min(15, ((maxApp - 38) / 4) * 15);
+    const hitzeScore = hitzeBase + (tropennacht ? 15 : 0);
+    const hitze = makeRisk("hitze", hitzeScore, false);
+
+    // UV — Tagesmax aus den nächsten 24h
+    const nextUv = hourly?.uv_index?.slice(i, i + 24) ?? [];
+    const maxUv = nextUv.length ? Math.max(...nextUv) : 0;
+    const uvScore =
+      maxUv < 6 ? 0
+      : maxUv < 8 ? ((maxUv - 6) / 2) * 25
+      : maxUv < 11 ? 25 + ((maxUv - 8) / 3) * 40
+      : 65 + Math.min(35, ((maxUv - 11) / 2) * 35);
+    const uv = makeRisk("uv", uvScore, false);
+
+    const all: RiskItem[] = [gewitter, starkregen, hagel, sturm, schneesturm, glatteis, nebel, frost, hitze, uv];
 
     // Top 4 nach Score, mit fester Tiebreaker-Reihenfolge
     const sorted = [...all].sort((a, b) => {
