@@ -13,8 +13,8 @@ export interface CurrentWithSource extends CurrentWeather {
   _station?: StationMeta;
 }
 
-const MAX_DIST_KM = 25;
-const MAX_AGE_MIN = 60;
+const MAX_DIST_KM = 35;
+const MAX_AGE_MIN = 90;
 
 /**
  * Merge a real-world station observation into the model "current" block.
@@ -58,6 +58,7 @@ export function mergeStationIntoWeather(
     // Convert 10-min sum to hourly-ish rate for display consistency
     precipitation:
       obs.precipitation10min != null ? obs.precipitation10min : current.precipitation,
+    cloud_cover: obs.cloudCover != null ? obs.cloudCover : current.cloud_cover,
     weather_code: reconcileCode(current.weather_code, obs),
     _source: "station",
     _station: {
@@ -79,14 +80,28 @@ function reconcileCode(modelCode: number, obs: StationObservation): number {
   // Station reports rain/snow/thunder -> trust station classification
   if (obs.weatherCode != null && obs.weatherCode >= 45) return obs.weatherCode;
 
-  // Station reports dry (code < 45) but model says precipitation:
-  // if station's 10-min precip is exactly 0, downgrade to cloud cover.
+  // Cloud-cover wins over model when it disagrees with sky condition
+  if (obs.cloudCover != null) {
+    if (obs.cloudCover <= 15 && modelCode >= 2 && modelCode < 45) {
+      // Model says cloudy/overcast, station sees clear sky
+      return obs.weatherCode === 0 || obs.weatherCode === 1 ? obs.weatherCode : 0;
+    }
+    if (obs.cloudCover >= 85 && modelCode <= 1) {
+      // Model says clear, station sees overcast
+      return 3;
+    }
+    if (obs.cloudCover >= 40 && obs.cloudCover < 85 && (modelCode === 0 || modelCode === 3)) {
+      return 2;
+    }
+  }
+
+  // Station reports dry but model says precipitation
   if (
     obs.precipitation10min === 0 &&
     modelCode >= 51 &&
     modelCode < 95
   ) {
-    return obs.weatherCode ?? 3;
+    return obs.weatherCode ?? (obs.cloudCover != null && obs.cloudCover < 30 ? 1 : 3);
   }
 
   // Visibility good but model says fog
