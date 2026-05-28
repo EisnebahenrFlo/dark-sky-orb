@@ -1,9 +1,10 @@
 import type { ReactNode } from "react";
 import { safeFixed } from "@/lib/safeFormat";
-import { Wind, Droplets, Gauge, CloudRain, Thermometer, Cloud, Navigation } from "lucide-react";
+import { Wind, Droplets, Gauge, CloudRain, Thermometer, Cloud, Navigation, Eye } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { CurrentWeather, GeoResult, MinutelyData } from "@/lib/weather";
 import { windDirectionLabel } from "@/lib/weather";
+import { beaufortBadge } from "@/lib/bft";
 import { getEffectiveWeather } from "@/lib/weatherDescription";
 import { summarizeNowcastPrecip } from "@/lib/nowcast";
 import { useRainbowNowcast } from "@/hooks/useRainbowNowcast";
@@ -255,7 +256,7 @@ export function WeatherHeroStats({
         icon={Wind}
         label="Wind"
         value={`${Math.round(data.wind_speed_10m)} km/h`}
-        sub={`${windDirectionLabel(data.wind_direction_10m)} · Böen ${Math.round(data.wind_gusts_10m)}`}
+        sub={`${beaufortBadge(data.wind_speed_10m)} · ${windDirectionLabel(data.wind_direction_10m)} · Böen ${Math.round(data.wind_gusts_10m)}`}
         accent="#38bdf8"
       />
       <div className="glass relative overflow-hidden rounded-2xl p-4">
@@ -316,6 +317,23 @@ export function WeatherHeroStats({
       <Stat icon={Droplets} label="Luftfeuchte" value={`${data.relative_humidity_2m}%`} accent="#06b6d4" />
       <Stat icon={Gauge} label="Luftdruck" value={`${Math.round(data.pressure_msl)} hPa`} accent="#a78bfa" />
       <Stat icon={Thermometer} label="Gefühlt" value={`${Math.round(data.apparent_temperature)}°`} accent="#fb923c" />
+      {data.visibility != null && (
+        <Stat
+          icon={Eye}
+          label="Sicht"
+          value={data.visibility >= 1000 ? `${(data.visibility / 1000).toFixed(1)} km` : `${Math.round(data.visibility)} m`}
+          sub={
+            data.visibility < 1000
+              ? "Nebel"
+              : data.visibility < 4000
+              ? "diesig"
+              : data.visibility < 10000
+              ? "leicht trüb"
+              : "klar"
+          }
+          accent="#22d3ee"
+        />
+      )}
       {children}
     </div>
   );
