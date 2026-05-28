@@ -22,9 +22,10 @@ export function getEffectiveWeather(
   humidity?: number,
   hour?: number,
   cloudCoverLow?: number,
+  cloudCoverMid?: number,
 ): WeatherInfo {
   const dayNum = typeof isDay === "boolean" ? (isDay ? 1 : 0) : isDay;
-  const effective = getEffectiveCode(weatherCode, precipitation, cloudCover, humidity, hour, cloudCoverLow);
+  const effective = getEffectiveCode(weatherCode, precipitation, cloudCover, humidity, hour, cloudCoverLow, cloudCoverMid);
   // Bei Nacht dürfen "Sonnig"/"Heiter" nicht erscheinen — feste Nachtlabels für klare/bewölkte Codes.
   const nightLabels: Record<number, string> = {
     0: "Klar",
