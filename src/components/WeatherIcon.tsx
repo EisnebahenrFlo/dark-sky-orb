@@ -12,7 +12,8 @@ function isPrecipCode(code: number): boolean {
   );
 }
 
-/** Override the WMO code when "rain" is reported but no precipitation falls. */
+/** Override the WMO code when "rain" is reported but no precipitation falls,
+ *  or when "cloudy" codes are driven by cirrus only (low+mid clouds absent). */
 export function getEffectiveCode(
   code: number,
   precipitation: number,
@@ -20,6 +21,7 @@ export function getEffectiveCode(
   humidity?: number,
   hour?: number,
   cloudCoverLow?: number,
+  cloudCoverMid?: number,
 ): number {
   const effectiveCloud = cloudCoverLow !== undefined && cloudCoverLow !== null ? cloudCoverLow : cloudCover;
   // Bodennebel-Erkennung früh morgens
@@ -38,6 +40,16 @@ export function getEffectiveCode(
     if (effectiveCloud >= 50) return 2;
     if (effectiveCloud >= 20) return 1;
     return 0;
+  }
+  // Cirrus-Downgrade: "bewölkt" / "bedeckt"-Codes neu bewerten anhand low+mid.
+  // WMO 2/3 nutzen Gesamtbewölkung — bei reinen Cirren (high) ist der Himmel
+  // optisch blau, also Code an effektive low+mid-Bewölkung anpassen.
+  if ((code === 2 || code === 3) && cloudCoverLow !== undefined && cloudCoverLow !== null) {
+    const lowMid = cloudCoverLow + 0.5 * (cloudCoverMid ?? 0);
+    if (lowMid < 12) return 0;
+    if (lowMid < 30) return 1;
+    if (lowMid < 60) return 2;
+    return 3;
   }
   return code;
 }
