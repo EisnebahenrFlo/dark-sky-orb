@@ -15,9 +15,31 @@ export type RiskId =
   | "sturm"
   | "schneesturm"
   | "glatteis"
-  | "nebel";
+  | "nebel"
+  | "frost"
+  | "hitze"
+  | "uv";
 
 export type RiskLevel = "none" | "low" | "moderate" | "high" | "extreme";
+
+/** DWD-Warnstufen-Mapping aus dem 0–100-Score.
+ *  Angelehnt an die offiziellen Stufen 1–4 (Wetterhinweis → extreme Unwetter). */
+export type DwdStufe = 0 | 1 | 2 | 3 | 4;
+export function dwdStufeForScore(score: number): DwdStufe {
+  if (score >= 89) return 4; // extreme Unwetterwarnung (violett)
+  if (score >= 71) return 3; // Unwetterwarnung (rot)
+  if (score >= 51) return 2; // markante Wetterwarnung (orange)
+  if (score >= 26) return 1; // Wetterhinweis / Warnung Stufe 1 (gelb)
+  return 0;
+}
+
+export const DWD_STUFE_LABEL: Record<DwdStufe, string> = {
+  0: "Keine Warnung",
+  1: "Wetterhinweis · Stufe 1",
+  2: "Markant · Stufe 2",
+  3: "Unwetter · Stufe 3",
+  4: "Extrem · Stufe 4",
+};
 
 export interface RiskItem {
   id: RiskId;
@@ -25,6 +47,8 @@ export interface RiskItem {
   level: RiskLevel;
   label: string;
   isEstimate: boolean;
+  dwdStufe: DwdStufe;
+  dwdLabel: string;
 }
 
 export interface UseWeatherRisksResult {
@@ -49,6 +73,9 @@ const TIEBREAKER: RiskId[] = [
   "hagel",
   "schneesturm",
   "glatteis",
+  "frost",
+  "hitze",
+  "uv",
   "nebel",
 ];
 
@@ -67,7 +94,14 @@ function clampScore(score: number): number {
 function makeRisk(id: RiskId, rawScore: number, isEstimate: boolean): RiskItem {
   const score = clampScore(rawScore);
   const level = levelForScore(score);
-  return { id, score, level, label: LEVEL_LABEL[level], isEstimate };
+  const dwdStufe = dwdStufeForScore(score);
+  return {
+    id, score, level,
+    label: LEVEL_LABEL[level],
+    isEstimate,
+    dwdStufe,
+    dwdLabel: DWD_STUFE_LABEL[dwdStufe],
+  };
 }
 
 export function useWeatherRisks(): UseWeatherRisksResult {
