@@ -59,7 +59,7 @@ function Stat({
   );
 }
 
-export function WeatherHero({ location, data, updatedAt, onRefresh }: Props) {
+export function WeatherHero({ location, data, updatedAt, onRefresh, ensemble }: Props) {
   const effective = getEffectiveWeather(
     data.weather_code,
     data.precipitation,
