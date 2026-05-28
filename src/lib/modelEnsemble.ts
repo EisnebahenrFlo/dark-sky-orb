@@ -27,6 +27,8 @@ const MODEL_WEIGHT: Record<string, number> = {
   // High-res local models
   icon_d2: 1.0,
   icon_ch2: 1.0,
+  meteoswiss_icon_ch2: 1.0,
+  meteoswiss_icon_ch1: 1.0,
   italia_meteo_arpae_icon_2i: 1.0,
   // Regional
   icon_eu: 0.7,

@@ -227,7 +227,7 @@ export function getWeatherModels(countryCode?: string): string[] {
     case "AT":
       return ["icon_d2", "icon_eu", "ecmwf_ifs025", "knmi_harmonie_arome_europe"];
     case "CH":
-      return ["icon_ch2", "icon_d2", "ecmwf_ifs025", "knmi_harmonie_arome_europe"];
+      return ["meteoswiss_icon_ch2", "icon_d2", "ecmwf_ifs025", "knmi_harmonie_arome_europe"];
     case "IT":
       return ["italia_meteo_arpae_icon_2i", "icon_eu", "ecmwf_ifs025", "knmi_harmonie_arome_europe"];
     default:
@@ -244,6 +244,7 @@ export function getWeatherModelLabel(countryCode?: string): string {
       return `Ensemble: ICON-D2 · ICON-EU · ECMWF IFS · KNMI Harmonie (Konsens)`;
     case "CH":
       return `Ensemble: MeteoSwiss ICON-CH2 · ICON-D2 · ECMWF IFS · KNMI Harmonie (Konsens)`;
+    // (Modell-IDs siehe getWeatherModels)
     case "IT":
       return `Ensemble: ItaliaMeteo ARPAE ICON-2i · ICON-EU · ECMWF IFS · KNMI Harmonie (Konsens)`;
     default:
