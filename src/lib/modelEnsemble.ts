@@ -405,18 +405,44 @@ export function buildEnsemble(
     return c;
   });
 
-  const hourlyConfidence = spread.temp.map((t, i) =>
-    confidenceFromSpread(t, spread.pop[i] ?? 0, activeModelCounts[i] ?? 1),
-  );
+  // Per-Stunde Code-Disagreement: wie viele *unterschiedliche* weather_codes liefern die Modelle?
+  const codeDisagreement: number[] = (hourlyOut.time as string[]).map((_, i) => {
+    const codes = new Set<number>();
+    for (const id of modelIds) {
+      const arr = rawHourly?.[`weather_code_${id}`] as number[] | undefined;
+      const v = arr?.[i];
+      if (v != null && Number.isFinite(v)) codes.add(Math.round(v));
+    }
+    return codes.size; // 1 = alle einig, 4 = volle Uneinigkeit
+  });
 
-  // Current confidence: from first hour or from current-block temp spread
+  const hourlyConfidence = spread.temp.map((t, i) => {
+    const base = confidenceFromSpread(t, spread.pop[i] ?? 0, activeModelCounts[i] ?? 1);
+    // Bestrafe Code-Uneinigkeit (jeder zusätzliche unterschiedliche Code = -10)
+    const codePenalty = Math.max(0, (codeDisagreement[i] - 1) * 10);
+    let score = Math.max(0, base - codePenalty);
+    // Clamp: wenn nur 1 Modell aktiv ist, ist hohe Sicherheit nicht begründbar
+    if ((activeModelCounts[i] ?? 1) < 2) score = Math.min(score, 60);
+    return score;
+  });
+
+  // Current confidence: bevorzugt aus current-Block; sonst Mittel der ersten 3 Stunden
+  // (statt nur Stunde 0 — die hat oft Spread 0 und führt fälschlich zu 100 %).
   const currentTemps = modelIds
     .map((id) => rawCurrent?.[`temperature_2m_${id}`] as number | undefined)
     .filter((v): v is number => v != null && Number.isFinite(v));
-  const currentConfidence =
-    currentTemps.length >= 2
-      ? confidenceFromSpread(stddev(currentTemps), spread.pop[0] ?? 0, currentTemps.length)
-      : hourlyConfidence[0] ?? 50;
+  let currentConfidence: number;
+  if (currentTemps.length >= 2) {
+    currentConfidence = confidenceFromSpread(stddev(currentTemps), spread.pop[0] ?? 0, currentTemps.length);
+    // Code-Disagreement der aktuellen Stunde auch hier einrechnen
+    currentConfidence = Math.max(0, currentConfidence - Math.max(0, (codeDisagreement[0] - 1) * 10));
+  } else {
+    const first3 = hourlyConfidence.slice(0, 3).filter((v) => Number.isFinite(v));
+    currentConfidence = first3.length
+      ? Math.round(first3.reduce((s, v) => s + v, 0) / first3.length)
+      : 50;
+  }
+  if ((activeModelCounts[0] ?? 1) < 2) currentConfidence = Math.min(currentConfidence, 60);
 
   return {
     hourly: hourlyOut,
