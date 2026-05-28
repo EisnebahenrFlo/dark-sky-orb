@@ -1,6 +1,6 @@
 {
   "rewrites": [
-    { "source": "/((?!api/).*)", "destination": "/index.html" }
+    { "source": "/((?!api/|assets/|src/|node_modules/|@vite/|@react-refresh|manifest.json|.*\\.(?:js|mjs|css|map|json|png|jpg|jpeg|webp|svg|ico|woff2?)).*)", "destination": "/index.html" }
   ],
   "functions": {
     "api/synoptik.ts": {
