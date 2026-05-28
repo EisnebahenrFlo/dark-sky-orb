@@ -60,13 +60,20 @@ function Stat({
 }
 
 export function WeatherHero({ location, data, updatedAt, onRefresh, ensemble }: Props) {
+  // Effektive Bewölkung für Beschreibung/Icon: low + 0.5·mid (Cirren ignorieren).
+  // Fällt auf Total zurück, wenn low/mid nicht vorliegen.
+  const lowMidCloud =
+    data.cloud_cover_low != null
+      ? Math.min(100, Math.round(data.cloud_cover_low + 0.5 * (data.cloud_cover_mid ?? 0)))
+      : data.cloud_cover;
   const effective = getEffectiveWeather(
     data.weather_code,
     data.precipitation,
-    data.cloud_cover,
+    lowMidCloud,
     data.is_day,
     data.relative_humidity_2m,
     new Date(data.time).getHours(),
+    data.cloud_cover_low,
   );
   const group = getWeatherGroup(data.weather_code, (data.is_day ? 1 : 0) as 0 | 1);
   const palette = getHeroPalette(group);
