@@ -214,15 +214,18 @@ export async function searchCities(query: string): Promise<GeoResult[]> {
  * in a single request; we then merge them in `buildEnsemble`.
  */
 export function getWeatherModels(countryCode?: string): string[] {
+  // Hinweis: ARPAE COSMO 2i/5m wurden von Open-Meteo abgeschaltet
+  // ("ARPAE COSMO models are not available anymore") und sind hier entfernt.
+  // ItaliaMeteo ARPAE ICON 2i bleibt als hochauflösendes IT-Modell.
   switch (countryCode?.toUpperCase()) {
     case "DE":
       return ["icon_d2", "icon_eu", "ecmwf_ifs025", "knmi_harmonie_arome_europe"];
     case "AT":
-      return ["icon_d2", "icon_eu", "arpae_cosmo_2i", "ecmwf_ifs025"];
+      return ["icon_d2", "icon_eu", "ecmwf_ifs025", "knmi_harmonie_arome_europe"];
     case "CH":
       return ["icon_ch2", "icon_d2", "ecmwf_ifs025", "knmi_harmonie_arome_europe"];
     case "IT":
-      return ["italia_meteo_arpae_icon_2i", "arpae_cosmo_5m", "icon_eu", "ecmwf_ifs025"];
+      return ["italia_meteo_arpae_icon_2i", "icon_eu", "ecmwf_ifs025", "knmi_harmonie_arome_europe"];
     default:
       return ["best_match"];
   }
@@ -234,11 +237,11 @@ export function getWeatherModelLabel(countryCode?: string): string {
     case "DE":
       return `Ensemble: DWD ICON-D2 · ICON-EU · ECMWF IFS · KNMI Harmonie (Konsens)`;
     case "AT":
-      return `Ensemble: ICON-D2 · ICON-EU · ARPAE COSMO 2i · ECMWF IFS (Konsens)`;
+      return `Ensemble: ICON-D2 · ICON-EU · ECMWF IFS · KNMI Harmonie (Konsens)`;
     case "CH":
       return `Ensemble: MeteoSwiss ICON-CH2 · ICON-D2 · ECMWF IFS · KNMI Harmonie (Konsens)`;
     case "IT":
-      return `Ensemble: ItaliaMeteo ARPAE · ARPAE COSMO 5m · ICON-EU · ECMWF IFS (Konsens)`;
+      return `Ensemble: ItaliaMeteo ARPAE ICON-2i · ICON-EU · ECMWF IFS · KNMI Harmonie (Konsens)`;
     default:
       return `Datenquelle: ${models}`;
   }
