@@ -67,6 +67,8 @@ export function mergeStationIntoWeather(
       ageMin,
       source: obs.source,
     },
+    // Station = ground truth, override ensemble confidence
+    _confidence: 100,
   };
 
   return { ...data, current: merged };
