@@ -174,16 +174,40 @@ async function searchByPostalCode(plz: string): Promise<GeoResult[]> {
   return out;
 }
 
+/** Eingabe normalisieren: trim + kollabierte Whitespaces. */
+function normalizeQuery(q: string): string {
+  return q.trim().replace(/\s+/g, " ");
+}
+
+function dedupeGeo(list: GeoResult[]): GeoResult[] {
+  const seen = new Set<string>();
+  return list.filter((r) => {
+    const k = `${r.country_code}-${r.name.toLowerCase()}-${r.latitude.toFixed(2)}-${r.longitude.toFixed(2)}`;
+    if (seen.has(k)) return false;
+    seen.add(k);
+    return true;
+  });
+}
+
+let activeSearchController: AbortController | null = null;
+
 export async function searchCities(query: string): Promise<GeoResult[]> {
   const trimmed = query.trim();
   if (trimmed.length < 2) return [];
   if (/^\d{1,3}$/.test(trimmed)) return [];
 
+  // Vorherige Suche abbrechen
+  activeSearchController?.abort();
+  const controller = new AbortController();
+  activeSearchController = controller;
+  const { signal } = controller;
+
   // PLZ: Open-Meteo + Zippopotam (DACH+IT) parallel, dedupliziert
   if (/^\d{4,5}$/.test(trimmed)) {
     const [omRes, zipRes] = await Promise.all([
       fetch(
-        `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(trimmed)}&count=10&language=de`,
+        `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(trimmed)}&count=20&language=de`,
+        { signal },
       )
         .then((r) => (r.ok ? r.json() : { results: [] }))
         .catch(() => ({ results: [] })),
@@ -192,25 +216,22 @@ export async function searchCities(query: string): Promise<GeoResult[]> {
     const omFiltered: GeoResult[] = (omRes.results ?? []).filter((r: GeoResult) =>
       ALLOWED_COUNTRIES.has(r.country_code?.toUpperCase() ?? ""),
     );
-    const merged = [...omFiltered, ...zipRes];
-    const seen = new Set<string>();
-    const deduped = merged.filter((r) => {
-      const k = `${r.country_code}-${r.name}-${r.latitude.toFixed(2)}-${r.longitude.toFixed(2)}`;
-      if (seen.has(k)) return false;
-      seen.add(k);
-      return true;
-    });
+    const deduped = dedupeGeo([...omFiltered, ...zipRes]);
     deduped.sort((a, b) => (b.population ?? 0) - (a.population ?? 0));
     return deduped;
   }
 
-  // Stadtname-Suche (unverändert)
-  const url = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(trimmed)}&count=10&language=de`;
-  const res = await fetch(url);
+  // Stadtname-Suche mit größerem count + Dedupe + Population-Sortierung
+  const normalized = normalizeQuery(trimmed);
+  const url = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(normalized)}&count=20&language=de`;
+  const res = await fetch(url, { signal });
   if (!res.ok) throw new Error("Suche fehlgeschlagen");
   const data = await res.json();
   const results: GeoResult[] = data.results ?? [];
-  return results.filter((r) => ALLOWED_COUNTRIES.has(r.country_code?.toUpperCase() ?? ""));
+  const filtered = results.filter((r) => ALLOWED_COUNTRIES.has(r.country_code?.toUpperCase() ?? ""));
+  const deduped = dedupeGeo(filtered);
+  deduped.sort((a, b) => (b.population ?? 0) - (a.population ?? 0));
+  return deduped;
 }
 
 /**
