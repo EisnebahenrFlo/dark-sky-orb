@@ -129,39 +129,153 @@ function reconcileCode(modelCode: number, obs: StationObservation): number {
   return modelCode;
 }
 
+const THUNDER_CODE = (c: number) => c === 95 || c === 96 || c === 99;
+const PRECIP_CODE = (c: number) => (c >= 51 && c <= 67) || (c >= 71 && c <= 86);
+
+function upgradeForMm(mm: number): number {
+  if (mm >= 2.5) return 63;
+  if (mm >= 0.5) return 61;
+  return 51;
+}
+
 /**
- * Wendet Minutely-Nowcast-Evidenz auf den aktuellen Wettercode an.
- * Verhindert Inkonsistenzen wie „Sonnig" im Hero, während die Nowcast-Karte
- * darunter „Regen hält länger als 2h" zeigt. Gewittercodes bleiben unverändert.
+ * Wendet Minutely-Nowcast-Evidenz aus Open-Meteo auf den aktuellen Wettercode
+ * UND die ersten Stundenwerte an — zeitstempelbasiert, damit vergangene
+ * Slots nichts mehr verfälschen. Gewittercodes bleiben unverändert.
  */
 export function applyNowcastEvidence(data: WeatherData): WeatherData {
-  const current = data.current as CurrentWithSource;
   const m = data.minutely_15;
-  if (!m || !Array.isArray(m.precipitation) || m.precipitation.length === 0) return data;
+  if (!m || !Array.isArray(m.time) || !Array.isArray(m.precipitation) || m.time.length === 0) {
+    return data;
+  }
 
-  // Erste ~30 Minuten (2 × 15-Min-Schritte)
-  const nextPrecip = (m.precipitation[0] ?? 0) + (m.precipitation[1] ?? 0);
+  const nowMs = Date.now();
+  // Slots der nächsten 30 Minuten (2 × 15-Min) ab jetzt
+  let nextPrecip = 0;
+  let firstFutureCode: number | undefined;
+  let used = 0;
+  for (let i = 0; i < m.time.length && used < 2; i++) {
+    const ts = new Date(m.time[i]).getTime();
+    // Slot abgelaufen?
+    if (ts + 15 * 60 * 1000 < nowMs) continue;
+    if (ts > nowMs + 60 * 60 * 1000) break;
+    nextPrecip += Math.max(0, m.precipitation[i] ?? 0);
+    if (firstFutureCode == null) firstFutureCode = m.weather_code?.[i];
+    used++;
+  }
+
+  let next = data;
+  if (nextPrecip >= 0.2) {
+    next = applyEvidenceToCurrent(next, nextPrecip, firstFutureCode);
+    next = overlayPrecipOnHourly(next, nextPrecip, firstFutureCode);
+  }
+  return next;
+}
+
+/**
+ * Wendet Rainbow.ai-Radarnowcast-Evidenz an (mm/h × Dauer) — wird im
+ * WeatherProvider zusätzlich angewandt, sobald Daten verfügbar sind.
+ */
+export function applyRainbowEvidence(
+  data: WeatherData,
+  items: Array<{ precipRate: number; precipType: string; timestampBegin: number; timestampEnd: number }> | null | undefined,
+): WeatherData {
+  if (!Array.isArray(items) || items.length === 0) return data;
+  const nowSec = Date.now() / 1000;
+  const horizonSec = nowSec + 30 * 60;
+
+  let mmNext30 = 0;
+  let currentlyRaining = false;
+  for (const it of items) {
+    if (typeof it.timestampBegin !== "number" || typeof it.timestampEnd !== "number") continue;
+    if (it.timestampEnd <= nowSec) continue;
+    if (it.timestampBegin >= horizonSec) continue;
+    const rate = Number.isFinite(it.precipRate) ? Math.max(0, it.precipRate) : 0;
+    if (rate <= 0) continue;
+    if (it.precipType === "none" || it.precipType === "no_precipitation") continue;
+    const begin = Math.max(it.timestampBegin, nowSec);
+    const end = Math.min(it.timestampEnd, horizonSec);
+    const durH = Math.max(0, (end - begin) / 3600);
+    mmNext30 += rate * durH;
+    if (it.timestampBegin <= nowSec && it.timestampEnd > nowSec) currentlyRaining = true;
+  }
+
+  if (!currentlyRaining && mmNext30 < 0.2) return data;
+
+  let next = data;
+  next = applyEvidenceToCurrent(next, Math.max(mmNext30, currentlyRaining ? 0.3 : 0), undefined);
+  next = overlayPrecipOnHourly(next, mmNext30, undefined);
+  return next;
+}
+
+function applyEvidenceToCurrent(
+  data: WeatherData,
+  mm: number,
+  evidenceCode: number | undefined,
+): WeatherData {
+  const current = data.current as CurrentWithSource;
   const code = current.weather_code;
-  const isThunder = code === 95 || code === 96 || code === 99;
-  const isAlreadyPrecip = (code >= 51 && code <= 86) || isThunder;
-
-  if (isAlreadyPrecip) return data;
-  if (nextPrecip < 0.2) return data;
-
-  // Minutely hat eigenen weather_code — den nehmen, sonst generischer Regen.
-  const mCode = m.weather_code?.[0];
+  if (THUNDER_CODE(code)) return data;
+  if (PRECIP_CODE(code)) {
+    return {
+      ...data,
+      current: {
+        ...current,
+        precipitation: Math.max(current.precipitation ?? 0, mm),
+      },
+    };
+  }
   const upgraded =
-    mCode != null && ((mCode >= 51 && mCode <= 86) || mCode >= 95) ? mCode : 61;
-
+    evidenceCode != null && (PRECIP_CODE(evidenceCode) || THUNDER_CODE(evidenceCode))
+      ? evidenceCode
+      : upgradeForMm(mm);
   return {
     ...data,
     current: {
       ...current,
       weather_code: upgraded,
-      // Stunden-Niederschlag konservativ auf mindestens den Nowcast-Wert heben,
-      // damit `getEffectiveCode` nicht wieder downgradet.
-      precipitation: Math.max(current.precipitation ?? 0, nextPrecip),
+      precipitation: Math.max(current.precipitation ?? 0, mm),
     },
+  };
+}
+
+function overlayPrecipOnHourly(
+  data: WeatherData,
+  mmNext30: number,
+  evidenceCode: number | undefined,
+): WeatherData {
+  const h = data.hourly;
+  if (!h?.time?.length) return data;
+  const nowMs = Date.now();
+  // Index der aktuellen Stunde (oder nächste)
+  let idx = -1;
+  for (let i = 0; i < h.time.length; i++) {
+    const ts = new Date(h.time[i]).getTime();
+    if (ts + 60 * 60 * 1000 > nowMs) {
+      idx = i;
+      break;
+    }
+  }
+  if (idx < 0) return data;
+  const precip = [...(h.precipitation ?? [])];
+  const codes = [...h.weather_code];
+  // mmNext30 ist eine 30-Min-Summe → in die aktuelle Stunde projizieren
+  const projHourMm = Math.min(50, mmNext30 * 2);
+  if (precip[idx] != null) {
+    precip[idx] = Math.max(precip[idx] ?? 0, projHourMm);
+  }
+  const c = codes[idx];
+  if (!THUNDER_CODE(c) && projHourMm >= 0.1) {
+    if (!PRECIP_CODE(c)) {
+      codes[idx] =
+        evidenceCode != null && (PRECIP_CODE(evidenceCode) || THUNDER_CODE(evidenceCode))
+          ? evidenceCode
+          : upgradeForMm(projHourMm);
+    }
+  }
+  return {
+    ...data,
+    hourly: { ...h, precipitation: precip, weather_code: codes },
   };
 }
 
