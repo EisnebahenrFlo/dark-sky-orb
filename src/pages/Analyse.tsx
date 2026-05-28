@@ -419,28 +419,35 @@ function WetterNerdsCard({
           strokeWidth={1.75}
         />
       </button>
-      {open && (
-        <div className="space-y-2 border-t border-border px-5 pb-5 pt-4 text-sm leading-relaxed text-foreground/85 sm:px-6 sm:pb-6">
-          {detail.höhenstruktur && (
-            <p>
-              <span className="font-medium text-foreground">Höhenstruktur: </span>
-              {detail.höhenstruktur}
-            </p>
-          )}
-          {detail.bodendruck && (
-            <p>
-              <span className="font-medium text-foreground">Bodendruck: </span>
-              {detail.bodendruck}
-            </p>
-          )}
-          {detail.fronten && (
-            <p>
-              <span className="font-medium text-foreground">Fronten: </span>
-              {detail.fronten}
-            </p>
-          )}
+      <div
+        className={cn(
+          "grid overflow-hidden transition-[grid-template-rows] duration-300 ease-out",
+          open ? "grid-rows-[1fr]" : "grid-rows-[0fr]",
+        )}
+      >
+        <div className="min-h-0 overflow-hidden">
+          <div className="space-y-2 border-t border-border px-5 pb-5 pt-4 text-sm leading-relaxed text-foreground/85 sm:px-6 sm:pb-6">
+            {detail.höhenstruktur && (
+              <p>
+                <span className="font-medium text-foreground">Höhenstruktur: </span>
+                {detail.höhenstruktur}
+              </p>
+            )}
+            {detail.bodendruck && (
+              <p>
+                <span className="font-medium text-foreground">Bodendruck: </span>
+                {detail.bodendruck}
+              </p>
+            )}
+            {detail.fronten && (
+              <p>
+                <span className="font-medium text-foreground">Fronten: </span>
+                {detail.fronten}
+              </p>
+            )}
+          </div>
         </div>
-      )}
+      </div>
     </div>
   );
 }
