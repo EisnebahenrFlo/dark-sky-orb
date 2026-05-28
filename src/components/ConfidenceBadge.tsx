@@ -24,8 +24,6 @@ const MODEL_LABEL: Record<string, string> = {
   icon_ch2: "ICON-CH2",
   icon_eu: "ICON-EU",
   italia_meteo_arpae_icon_2i: "ARPAE-ICON-2i",
-  arpae_cosmo_2i: "COSMO-2i",
-  arpae_cosmo_5m: "COSMO-5m",
   ecmwf_ifs025: "ECMWF IFS",
   knmi_harmonie_arome_europe: "KNMI Harmonie",
   icon_seamless: "ICON Seamless",
