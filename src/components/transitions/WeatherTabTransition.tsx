@@ -4,10 +4,8 @@ import { useLocation } from "@tanstack/react-router";
 export function WeatherTabTransition({ children }: { children: ReactNode }) {
   const { pathname } = useLocation();
   return (
-    <div className="relative">
-      <div key={pathname} className="animate-tab-fade">
-        {children}
-      </div>
+    <div key={pathname} className="animate-tab-fade">
+      {children}
     </div>
   );
 }
