@@ -94,7 +94,7 @@ export function WeatherHero({ location, data, updatedAt, onRefresh, ensemble }: 
       }}
     >
       <WeatherHeroCanvas weatherCode={effectiveCode} isDay={(data.is_day ? 1 : 0) as 0 | 1} />
-      {onRefresh && <RefreshButton variant="hero" onRefresh={onRefresh} />}
+      {onRefresh && <RefreshButton variant="hero" onRefresh={onRefresh} heroTextColor={palette.text} />}
       <div style={{ position: "relative", zIndex: 10 }}>
         {/* Ort-Zeile: dezent, klein */}
         <div className="flex items-baseline gap-2">

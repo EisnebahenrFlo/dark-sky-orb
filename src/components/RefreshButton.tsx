@@ -8,6 +8,8 @@ interface RefreshButtonProps {
   /** Timestamp (ms) of last successful fetch, used by the statusbar variant. */
   lastUpdated?: number;
   className?: string;
+  /** Hero variant: text color from the active sky palette (light or dark). */
+  heroTextColor?: string;
 }
 
 function RefreshIcon({ spinning, size = 16 }: { spinning: boolean; size?: number }) {
@@ -43,7 +45,7 @@ function formatRelative(ms: number | undefined): string {
   return `Aktualisiert vor ${hrs} Std.`;
 }
 
-export function RefreshButton({ onRefresh, variant, lastUpdated, className = "" }: RefreshButtonProps) {
+export function RefreshButton({ onRefresh, variant, lastUpdated, className = "", heroTextColor }: RefreshButtonProps) {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [, setTick] = useState(0);
 
@@ -65,6 +67,9 @@ export function RefreshButton({ onRefresh, variant, lastUpdated, className = "" 
   }, [onRefresh, isRefreshing]);
 
   if (variant === "hero") {
+    // Derive contrast pieces from the active hero palette so the button stays
+    // visible against bright clear-day backgrounds AND dark night skies.
+    const textColor = heroTextColor ?? "rgba(255,255,255,0.9)";
     return (
       <button
         type="button"
@@ -75,13 +80,13 @@ export function RefreshButton({ onRefresh, variant, lastUpdated, className = "" 
           "absolute right-3 top-3 z-10 inline-flex h-11 w-11 items-center justify-center rounded-full disabled:opacity-70 " +
           className
         }
-        style={{ color: "rgba(0,0,0,0.65)" }}
+        style={{ color: textColor }}
       >
         <span
           className="inline-flex h-[34px] w-[34px] items-center justify-center rounded-full transition-colors"
           style={{
-            background: "rgba(0,0,0,0.18)",
-            border: "1px solid rgba(0,0,0,0.12)",
+            background: `color-mix(in oklab, ${textColor} 18%, transparent)`,
+            border: `1px solid color-mix(in oklab, ${textColor} 25%, transparent)`,
             backdropFilter: "blur(8px)",
             WebkitBackdropFilter: "blur(8px)",
           }}
