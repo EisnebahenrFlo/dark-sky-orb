@@ -1,0 +1,28 @@
+name: Trigger Vercel Deploy
+
+# Fallback, falls die Vercel-GitHub-App keine Builds mehr triggert.
+# Aktivieren:
+#   1. Vercel → Project → Settings → Git → Deploy Hooks
+#      → neuen Hook für Branch `main` anlegen, URL kopieren
+#   2. GitHub → Repo → Settings → Secrets and variables → Actions
+#      → New repository secret: Name `VERCEL_DEPLOY_HOOK`, Value = Hook-URL
+#   3. Push auf `main` triggert jetzt zusätzlich diesen Workflow,
+#      der den Deploy-Hook direkt aufruft (umgeht die Vercel-GitHub-App).
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  trigger:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call Vercel Deploy Hook
+        run: |
+          if [ -z "${{ secrets.VERCEL_DEPLOY_HOOK }}" ]; then
+            echo "VERCEL_DEPLOY_HOOK secret not set — skipping."
+            exit 0
+          fi
+          curl -fsS -X POST "${{ secrets.VERCEL_DEPLOY_HOOK }}"
+          echo "Deploy hook triggered."
