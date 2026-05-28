@@ -207,21 +207,38 @@ export async function searchCities(query: string): Promise<GeoResult[]> {
   return results.filter((r) => ALLOWED_COUNTRIES.has(r.country_code?.toUpperCase() ?? ""));
 }
 
-function getWeatherModel(countryCode?: string): string {
+/**
+ * Multi-model ensemble per region. Open-Meteo accepts comma-separated models
+ * in a single request; we then merge them in `buildEnsemble`.
+ */
+export function getWeatherModels(countryCode?: string): string[] {
   switch (countryCode?.toUpperCase()) {
-    case "DE": return "icon_d2";
-    case "IT": return "italia_meteo_arpae_icon_2i";
-    default:   return "best_match";
+    case "DE":
+      return ["icon_d2", "icon_eu", "ecmwf_ifs025", "knmi_harmonie_arome_europe"];
+    case "AT":
+      return ["icon_d2", "icon_eu", "arpae_cosmo_2i", "ecmwf_ifs025"];
+    case "CH":
+      return ["icon_ch2", "icon_d2", "ecmwf_ifs025", "knmi_harmonie_arome_europe"];
+    case "IT":
+      return ["italia_meteo_arpae_icon_2i", "arpae_cosmo_5m", "icon_eu", "ecmwf_ifs025"];
+    default:
+      return ["best_match"];
   }
 }
 
 export function getWeatherModelLabel(countryCode?: string): string {
+  const models = getWeatherModels(countryCode).join(", ");
   switch (countryCode?.toUpperCase()) {
-    case "DE": return "Kurzzeit: DWD ICON D2 · 2 km · Vorhersage: Open-Meteo Best Match";
-    case "AT": return "Kurzzeit: GeoSphere Austria · 2 km · Vorhersage: Open-Meteo Best Match";
-    case "CH": return "Kurzzeit: MeteoSwiss ICON CH2 · 1 km · Vorhersage: Open-Meteo Best Match";
-    case "IT": return "Kurzzeit: ItaliaMeteo ARPAE · 2 km · Vorhersage: Open-Meteo Best Match";
-    default:   return "Datenquelle: Open-Meteo Best Match";
+    case "DE":
+      return `Ensemble: DWD ICON-D2 · ICON-EU · ECMWF IFS · KNMI Harmonie (Konsens)`;
+    case "AT":
+      return `Ensemble: ICON-D2 · ICON-EU · ARPAE COSMO 2i · ECMWF IFS (Konsens)`;
+    case "CH":
+      return `Ensemble: MeteoSwiss ICON-CH2 · ICON-D2 · ECMWF IFS · KNMI Harmonie (Konsens)`;
+    case "IT":
+      return `Ensemble: ItaliaMeteo ARPAE · ARPAE COSMO 5m · ICON-EU · ECMWF IFS (Konsens)`;
+    default:
+      return `Datenquelle: ${models}`;
   }
 }
 
