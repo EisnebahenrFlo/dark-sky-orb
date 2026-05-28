@@ -129,6 +129,43 @@ function reconcileCode(modelCode: number, obs: StationObservation): number {
   return modelCode;
 }
 
+/**
+ * Wendet Minutely-Nowcast-Evidenz auf den aktuellen Wettercode an.
+ * Verhindert Inkonsistenzen wie „Sonnig" im Hero, während die Nowcast-Karte
+ * darunter „Regen hält länger als 2h" zeigt. Gewittercodes bleiben unverändert.
+ */
+export function applyNowcastEvidence(data: WeatherData): WeatherData {
+  const current = data.current as CurrentWithSource;
+  const m = data.minutely_15;
+  if (!m || !Array.isArray(m.precipitation) || m.precipitation.length === 0) return data;
+
+  // Erste ~30 Minuten (2 × 15-Min-Schritte)
+  const nextPrecip = (m.precipitation[0] ?? 0) + (m.precipitation[1] ?? 0);
+  const code = current.weather_code;
+  const isThunder = code === 95 || code === 96 || code === 99;
+  const isAlreadyPrecip = (code >= 51 && code <= 86) || isThunder;
+
+  if (isAlreadyPrecip) return data;
+  if (nextPrecip < 0.2) return data;
+
+  // Minutely hat eigenen weather_code — den nehmen, sonst generischer Regen.
+  const mCode = m.weather_code?.[0];
+  const upgraded =
+    mCode != null && ((mCode >= 51 && mCode <= 86) || mCode >= 95) ? mCode : 61;
+
+  return {
+    ...data,
+    current: {
+      ...current,
+      weather_code: upgraded,
+      // Stunden-Niederschlag konservativ auf mindestens den Nowcast-Wert heben,
+      // damit `getEffectiveCode` nicht wieder downgradet.
+      precipitation: Math.max(current.precipitation ?? 0, nextPrecip),
+    },
+  };
+}
+
+
 // Simple wind-chill / heat-index hybrid; falls back to temperature.
 function derivedFeelsLike(
   t: number | null,
