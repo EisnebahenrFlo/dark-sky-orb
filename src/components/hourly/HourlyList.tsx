@@ -60,9 +60,8 @@ export function HourlyList({
       code: hourly.weather_code[i],
       isDay: hourly.is_day[i],
       cloud: hourly.cloud_cover?.[i] ?? 0,
-      cloudLow: isCurrent
-        ? hourly.cloud_cover_low?.[0] ?? hourly.cloud_cover_low?.[i]
-        : hourly.cloud_cover_low?.[i],
+      cloudLow: hourly.cloud_cover_low?.[i],
+      cloudMid: hourly.cloud_cover_mid?.[i],
       humidity: isCurrent ? current?.relative_humidity_2m : undefined,
       overrideHour: isCurrent && current?.time ? new Date(current.time).getHours() : undefined,
       isCurrent,
