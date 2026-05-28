@@ -22,6 +22,9 @@ const NAME_LABEL: Record<RiskIconId, string> = {
   schneesturm: "Schneesturm",
   glatteis: "Glatteis",
   nebel: "Nebel",
+  frost: "Frost",
+  hitze: "Hitze",
+  uv: "UV",
 };
 
 /**
