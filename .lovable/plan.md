@@ -1,54 +1,54 @@
-# Vercel hängt in „Queued" — Plan
+# Wetterdaten DE zu pessimistisch, Konfidenz fälschlich 100 %
 
-Lovable kann Vercel-Deploys weder triggern noch abbrechen. Wenn ein Commit auf `main` landet, Vercel aber gar nicht baut, liegt es zu 95 % an **Webhook / Git-Integration / Account-Limit**, nicht am Code. Plan: erst extern verifizieren, dann (falls nötig) einen minimalen Repo-Trigger als Fallback.
+## Verdacht (3 zusammenwirkende Ursachen)
 
-## Schritt 1 — Außerhalb des Repos prüfen (du, ~3 min)
+1. **`weather_code`-Aggregation = `severity_mode`**
+   `src/lib/modelEnsemble.ts` aggregiert `weather_code` per `severity_mode`: bei Gleichstand gewinnt der **schwerere** Code. Mit 4 Modellen (ICON-D2, ICON-EU, ECMWF, KNMI) hat oft jedes Modell einen anderen Code → alle Gewichte gleich → Tie-Break wählt das **pessimistischste** Modell. Folge: blauer Himmel im Realität, App zeigt „wechselnd bewölkt".
 
-1. **GitHub → Repo → Settings → Webhooks**
-   Ist der Vercel-Webhook grün (letzte Delivery 200 OK)? Wenn rot/grau → Vercel-GitHub-App neu autorisieren (GitHub → Settings → Applications → Vercel → Configure → Repo-Zugriff erneuern).
-2. **Vercel → Project → Settings → Git**
-   - Richtiges Repo verbunden?
-   - Production Branch = `main` (nicht `master`)?
-   - „Ignored Build Step" leer oder `exit 1`?
-3. **Vercel → Dashboard (oberer Banner)**
-   Hobby-Plan: 100 Deploys/Tag, parallele Builds limitiert. Banner zeigt Throttling.
-4. **Vercel → Project → Deployments**
-   Steht der letzte Commit dort als „Queued", „Skipped", oder fehlt er ganz?
-   - **Fehlt komplett** → Webhook-Problem (Schritt 1).
-   - **„Skipped"** → Ignored Build Step / Branch-Filter.
-   - **„Queued" > 5 min** → Vercel-Plattform-Incident (status.vercel.com) oder Account-Limit.
+2. **`cloud_cover` 88 % trotz klarem Himmel**
+   `cloud_cover` wird per Median aggregiert — das ist eigentlich ok. Aber: ICON-EU und ECMWF haben für Mittel-/Hochwolken (Cirren) regelmäßig hohe Werte, während die Realität bodennah klar ist. Wenn der UI-Wert `cloud_cover` (total) statt `cloud_cover_low` zeigt, wirkt Cirrus-Bewölkung wie Vollbedeckung. Zu prüfen: was rendert die Hero-Karte / Wetter­beschreibung — total oder low?
 
-## Schritt 2 — Repo-seitiger Fallback (nur wenn Schritt 1 nichts findet)
+3. **Konfidenz 100 %**
+   In `buildEnsemble` wird `currentConfidence` aus dem **Spread der current-Temperaturen** berechnet. Wenn das Open-Meteo-`current`-Objekt nur für **ein** Modell befüllt ist (Open-Meteo liefert `current` nicht garantiert für alle Modelle), bleibt `currentTemps.length < 2` und der Code fällt auf `hourlyConfidence[0]` zurück. Bei Stunde 0 ist der Spread aber meist 0 K → 100 %. Das erklärt das „100 % sicher"-Badge bei tatsächlich uneindeutiger Lage.
 
-Falls Webhook ok ist aber Builds trotzdem nicht starten, kann ein leerer Commit / Re-Trigger helfen — das machst du lokal, nicht Lovable:
-```bash
-git commit --allow-empty -m "chore: retrigger vercel"
-git push origin main
-```
-Alternativ in Vercel: **Deployments → letzten Commit → … → Redeploy**.
+## Untersuchungs­schritte (Build-Modus, in dieser Reihenfolge)
 
-## Schritt 3 — Optional: GitHub Action als Deploy-Trigger
+1. **API-Roh­antwort inspizieren** (per `browser--list_network_requests` / `get_network_request_details` für `/api/weather?...&models=icon_d2,icon_eu,ecmwf_ifs025,knmi_harmonie_arome_europe`):
+   - Welche `current_*_<model>`-Keys sind tatsächlich befüllt? (Verdacht: ECMWF/KNMI haben kein `current`-Block.)
+   - Welche `weather_code_<model>` und `cloud_cover_<model>` melden die 4 Modelle jetzt für Nürnberg?
+2. **Render­pfad für Wetterbeschreibung & Bewölkung** in `src/components/WeatherHero.tsx` und `src/lib/weatherDescription.ts` lesen — wird `cloud_cover` oder `cloud_cover_low` gezeigt?
+3. **Konfidenz­badge sichtbar machen** (`KISicherheitBadge` / `ConfidenceBadge`): Kontrast & Position prüfen, der User sagt „kaum sichtbar".
 
-Wenn die GitHub↔Vercel-Integration dauerhaft unzuverlässig ist, ersetze sie durch einen direkten Deploy-Hook:
-1. Vercel → Project → Settings → Git → **Deploy Hooks** → neuen Hook für `main` erstellen, URL kopieren.
-2. Hook-URL als GitHub Secret `VERCEL_DEPLOY_HOOK` hinterlegen.
-3. `.github/workflows/vercel-deploy.yml` (kann ich im Build-Modus anlegen):
-   ```yaml
-   on: { push: { branches: [main] } }
-   jobs:
-     trigger:
-       runs-on: ubuntu-latest
-       steps:
-         - run: curl -X POST "${{ secrets.VERCEL_DEPLOY_HOOK }}"
-   ```
-   Das umgeht die Vercel-GitHub-App komplett.
+## Geplante Code-Änderungen
 
-## Was ich (Lovable) im Build-Modus tun kann
+### A. Ensemble-Aggregation realistischer machen — `src/lib/modelEnsemble.ts`
 
-- Workflow-Datei aus Schritt 3 anlegen.
-- `vercel.json` aufräumen falls du Functions reduzieren willst (z.B. `api/_lib/**` Include prüfen).
-- Sonst: nichts. Die Queue-Blockade selbst muss in Vercel/GitHub gelöst werden.
+- **`weather_code` von `severity_mode` → neue Regel `weighted_consensus`**:
+  Statt schwersten Code bei Tie zu wählen, den Code des Modells mit **höchstem Gewicht** wählen; bei echtem Gewichts-Tie den **häufigsten** Code (Modus), erst dann Severity als letzter Tie-Break. Hochauflösende Lokal­modelle (ICON-D2) bekommen so Vorrang vor globalen Modellen, die typischer­weise Cirren überschätzen.
+- **Severity-Tie-Break dämpfen**: Nur greifen, wenn Gewichts­differenz < 5 % UND beide Codes „relevant" sind. Verhindert, dass ein einsames ECMWF-„overcast" gegen drei klare lokale Vorhersagen gewinnt.
 
-## Empfehlung
+### B. Konfidenz robuster — `src/lib/modelEnsemble.ts`
 
-Erst **Schritt 1** durchgehen und mir zurückmelden, was du in **Vercel → Deployments** für den letzten Commit siehst (Queued? Skipped? Fehlt?). Davon hängt ab, ob wir Schritt 3 brauchen oder die Sache mit einem Webhook-Reauth erledigt ist.
+- `currentConfidence` nicht aus `hourlyConfidence[0]` fallen lassen, sondern aus dem **Mittel der ersten 3 Stunden** (`hourlyConfidence.slice(0,3)`) berechnen, wenn current-Spread mangels Daten 0 ist. Das verhindert das „100 % trotz Modell-Uneinigkeit".
+- Zusätzlich: wenn `activeModelCounts[0] < 2`, Konfidenz auf **max. 60 %** clampen — ein Wert allein ist keine hohe Sicherheit.
+
+### C. Bewölkungs­anzeige präziser — `src/lib/weatherDescription.ts` (oder Aufrufstelle in `WeatherHero`)
+
+- Für die Text­beschreibung (`heiter` / `wolkig` / `bedeckt`) primär `cloud_cover_low + 0.5·cloud_cover_mid` heranziehen, nicht `cloud_cover` (total). Cirren­hochwolken sollen nicht „bedeckt" auslösen.
+- Den 88-%-Wert in der UI klar als „Bewölkung gesamt (inkl. hoher Wolken)" labeln oder durch den korrigierten Wert ersetzen.
+
+### D. Badge sichtbarer — `src/components/KISicherheitBadge.tsx`
+
+- Kontrast erhöhen (von subtilem `text-muted-foreground` auf `text-foreground` mit Tone-Background); Mindest­größe `size="sm"` statt `xs`.
+- Sicher­stellen, dass Tooltip die Modellliste + Temp-Spread zeigt (gibt's in `ConfidenceBadge` schon, in `KISicherheitBadge` nachziehen).
+
+## Risiken / nicht ändern
+
+- ARPAE-Reparatur (vorheriger Turn) bleibt; keine Modell-Liste anfassen.
+- Die Aggregations­modi für Temperatur/Wind/PoP bleiben unverändert — die fühlen sich laut User korrekt an.
+
+## Validierung nach Implementierung
+
+1. Reload Home in Nürnberg-Umgebung → Wetter­beschreibung soll „heiter" oder „leicht bewölkt" zeigen.
+2. Konfidenz-Badge zeigt einen realistischen Wert (60–85 %), nicht 100 %.
+3. Per Browser-DevTools-Network die Roh-API verifizieren, dass die 4 Modelle tatsächlich unterschiedliche `weather_code` liefern, und im Code-Log ausgeben, welcher Code nach neuer Aggregation gewählt wurde.
