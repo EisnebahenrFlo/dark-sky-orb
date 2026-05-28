@@ -25,6 +25,14 @@ export interface CurrentWeather {
   is_day: number;
   uv_index?: number;
   time: string;
+  /** Where the displayed "current" values come from after station merge. */
+  _source?: "station" | "model";
+  _station?: {
+    name: string;
+    distanceKm: number;
+    ageMin: number;
+    source: "brightsky" | "metar";
+  };
 }
 
 export interface MinutelyData {
