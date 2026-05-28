@@ -113,11 +113,19 @@ export function WeatherHero({ location, data, updatedAt, onRefresh }: Props) {
         </div>
 
         <div
-          className="mt-6 flex items-center justify-between text-[10px] sm:text-xs"
+          className="mt-6 flex items-center justify-between gap-3 text-[10px] sm:text-xs"
           style={{ color: palette.subtext }}
         >
           <RelativeTime timestamp={updatedAt} />
-          <span className="opacity-60">Open-Meteo</span>
+          <span className="truncate text-right opacity-80" title={
+            data._station
+              ? `Messstation ${data._station.name} · ${data._station.distanceKm} km · vor ${data._station.ageMin} Min · Quelle: ${data._station.source === "brightsky" ? "DWD Bright Sky" : "METAR"}`
+              : "Modellwert (Open-Meteo)"
+          }>
+            {data._station
+              ? `📡 ${data._station.name} · ${data._station.distanceKm} km`
+              : "Open-Meteo (Modell)"}
+          </span>
         </div>
       </div>
     </div>
