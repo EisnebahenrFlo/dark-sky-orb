@@ -73,49 +73,65 @@ export function WeatherHero({ location, data, updatedAt, onRefresh, ensemble }: 
 
   return (
     <div
-      className="relative overflow-hidden rounded-3xl p-6 sm:p-12"
+      className="relative overflow-hidden rounded-3xl p-6 sm:p-10"
       style={{
         background: palette.background,
         color: palette.text,
         transition: "background 1s ease, color 0.6s ease",
-        minHeight: 260,
+        minHeight: 280,
       }}
     >
       <WeatherHeroCanvas weatherCode={data.weather_code} isDay={(data.is_day ? 1 : 0) as 0 | 1} />
       {onRefresh && <RefreshButton variant="hero" onRefresh={onRefresh} />}
       <div style={{ position: "relative", zIndex: 10 }}>
-        <div className="text-xs uppercase tracking-[0.2em] sm:text-sm" style={{ color: palette.subtext }}>
-          {[location.admin1, location.country].filter(Boolean).join(" · ")}
-        </div>
-        <h1 className="mt-1 font-display text-3xl font-semibold sm:text-5xl" style={{ color: palette.text }}>
-          {location.name}
-        </h1>
-
-        {/* Hero-Hauptzeile: großes Icon links, Temperatur + Beschreibung rechts */}
-        <div className="mt-6 flex items-center gap-4 sm:mt-8 sm:gap-8">
-          <div
-            className="shrink-0 drop-shadow-[0_4px_12px_rgba(0,0,0,0.18)]"
-            style={{ filter: "drop-shadow(0 6px 14px rgba(0,0,0,0.22))" }}
+        {/* Ort-Zeile: dezent, klein */}
+        <div className="flex items-baseline gap-2">
+          <h1
+            className="font-display text-lg font-medium leading-none sm:text-xl"
+            style={{ color: palette.text }}
           >
-            <RealisticWeatherIcon
-              code={data.weather_code}
-              isDay={(data.is_day ? 1 : 0) as 0 | 1}
-              size={120}
-            />
-          </div>
+            {location.name}
+          </h1>
+          <span
+            className="truncate text-[10px] uppercase tracking-[0.2em] sm:text-xs"
+            style={{ color: palette.subtext }}
+          >
+            {[location.admin1, location.country].filter(Boolean).join(" · ")}
+          </span>
+        </div>
+
+        {/* Hero-Hauptzeile: Temperatur dominiert, Icon dezent rechts */}
+        <div className="mt-4 flex items-start justify-between gap-4 sm:mt-6">
           <div className="min-w-0 flex-1">
             <div
-              className="font-display text-6xl font-light leading-none tabular-nums sm:text-8xl"
-              style={{ color: palette.text }}
+              className="font-display font-extralight leading-[0.85] tabular-nums"
+              style={{
+                color: palette.text,
+                fontSize: "clamp(5.5rem, 22vw, 10rem)",
+                letterSpacing: "-0.04em",
+              }}
             >
               {Math.round(data.temperature_2m)}°
             </div>
-            <div className="mt-2 text-base font-medium sm:text-lg" style={{ color: palette.text }}>
+            <div
+              className="mt-3 text-base font-medium sm:text-lg"
+              style={{ color: palette.text }}
+            >
               {effective.description}
             </div>
             <div className="text-xs sm:text-sm" style={{ color: palette.subtext }}>
               Gefühlt {Math.round(data.apparent_temperature)}°
             </div>
+          </div>
+          <div
+            className="shrink-0 self-start"
+            style={{ filter: "drop-shadow(0 6px 14px rgba(0,0,0,0.22))" }}
+          >
+            <RealisticWeatherIcon
+              code={data.weather_code}
+              isDay={(data.is_day ? 1 : 0) as 0 | 1}
+              size={88}
+            />
           </div>
         </div>
 
@@ -149,6 +165,7 @@ export function WeatherHero({ location, data, updatedAt, onRefresh, ensemble }: 
     </div>
   );
 }
+
 
 export function WeatherHeroStats({
   data,
