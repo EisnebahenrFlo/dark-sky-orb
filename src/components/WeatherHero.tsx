@@ -235,9 +235,17 @@ export function WeatherHeroStats({
     precipSub = "aktuelle Stunde";
   }
 
-  // Effektive Bewölkung ohne Cirren (gleiche Logik wie in WeatherHero)
+  // Effektive Bewölkung ohne Cirren — aber NUR bei trockenem Wetter.
+  // Bei aktivem Niederschlag oder Gewitter spiegelt der Gesamtwert die Realität,
+  // weil dann low/mid-Wolken die Szene dominieren (und Cirren-Anvil vom Modell
+  // teils als „high cloud" klassifiziert wird).
+  const isPrecipOrThunder =
+    (data.precipitation ?? 0) >= 0.1 ||
+    [51, 53, 55, 56, 57, 61, 63, 65, 66, 67, 80, 81, 82, 95, 96, 99].includes(
+      data.weather_code,
+    );
   const lowMidCloud =
-    data.cloud_cover_low != null
+    !isPrecipOrThunder && data.cloud_cover_low != null
       ? Math.min(100, Math.round(data.cloud_cover_low + 0.5 * (data.cloud_cover_mid ?? 0)))
       : data.cloud_cover;
 
