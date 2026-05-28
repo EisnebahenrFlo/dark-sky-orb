@@ -1,5 +1,7 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { useWeatherData, type UseWeatherDataResult } from "@/hooks/useWeatherData";
+import { useStationObservation } from "@/hooks/useStationObservation";
+import { mergeStationIntoWeather } from "@/lib/stationMerge";
 import type { GeoResult } from "@/lib/weather";
 
 const RECENT_KEY = "weather:recent";
@@ -57,9 +59,20 @@ export function WeatherProvider({ children }: { children: ReactNode }) {
   };
 
   const data = useWeatherData(location?.latitude ?? 0, location?.longitude ?? 0, !!location, location?.country_code);
+  const { observation } = useStationObservation(
+    location?.latitude ?? 0,
+    location?.longitude ?? 0,
+    location?.country_code,
+    !!location,
+  );
+
+  const merged = useMemo<UseWeatherDataResult>(() => {
+    if (!data.data) return data;
+    return { ...data, data: mergeStationIntoWeather(data.data, observation) };
+  }, [data, observation]);
 
   return (
-    <Ctx.Provider value={{ ...data, location: location ?? DEFAULT, recent, selectLocation, clearRecent }}>
+    <Ctx.Provider value={{ ...merged, location: location ?? DEFAULT, recent, selectLocation, clearRecent }}>
       {children}
     </Ctx.Provider>
   );

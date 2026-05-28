@@ -1,108 +1,76 @@
+# Datenqualität verbessern: Stationsdaten für DACH + Italien
+
 ## Ziel
+Der angezeigte „Jetzt"-Wert (Temperatur, Niederschlag, Wind, Wetterzustand) soll mit der Realität übereinstimmen. Heute kommt alles aus dem Modell **ICON-D2**, das nur alle ~3 h läuft und an einem ~2 km Gitterpunkt interpoliert – nicht am echten Standort gemessen. Lösung: nächstgelegene **Wetterstation** abrufen und ihren Wert als Wahrheit nehmen, Modell nur noch für Vorhersage & Trend.
 
-Die Blitzanzeige zeigt aktuell zu wenige Blitze. Wir kombinieren drei Quellen, damit für **DACH + Italien** zuverlässig alle relevanten Entladungen erscheinen – auch wenn eine Quelle schwächelt.
+## Datenquellen (alle kostenlos, kein Key)
 
-## Architekturüberblick
+| Region | Quelle | Update | Endpoint |
+|---|---|---|---|
+| DE | Bright Sky (DWD MOSMIX + SYNOP) | 10–60 min | `api.brightsky.dev/current_weather` |
+| AT | GeoSphere Austria | 10 min | `dataset.api.hub.geosphere.at` (TAWES) |
+| CH | MeteoSwiss SMN OGD | 10 min | `data.geo.admin.ch` (ogd-smn) |
+| IT | Aviation METAR (Flughäfen) | 30 min | `aviationweather.gov/api/data/metar` |
+
+Fallback überall, wenn keine Station < 25 km: aktuell verwendetes ICON-Modell.
+
+## Architektur
 
 ```text
-                ┌──────────────────────────────┐
-Browser  ◄────► │  /api/lightning-stream (SSE) │ ◄── Blitzortung WS (server-side)
-                └──────────────────────────────┘         (3 Endpunkte, Failover, Region-Filter)
-                ┌──────────────────────────────┐
-Browser  ◄────► │  /api/lightning-backfill     │ ◄── In-Memory Ringbuffer (60 min, server)
-                └──────────────────────────────┘
-                ┌──────────────────────────────┐
-Browser  ◄────► │  /api/rainbow-lightning-tile │ ◄── Rainviewer Lightning-Tiles
-                └──────────────────────────────┘
-                ┌──────────────────────────────┐
-Browser  ◄────► │  /api/lightning-potential    │ ◄── Open-Meteo (lightning_potential, CAPE)
-                └──────────────────────────────┘
+useWeatherData (Modell, hourly/daily)        ── unverändert ──┐
+                                                              │
+useStationObservation (NEU, current only) ───────────────────►│ merge in WeatherContext
+   └─ /api/station?lat&lon&country                            │
+        ├─ DE → Bright Sky                                    ▼
+        ├─ AT → GeoSphere                              data.current = {
+        ├─ CH → MeteoSwiss                               ...modelCurrent,
+        ├─ IT → METAR nearest airport                    ...stationOverride,
+        └─ else → null (Modell bleibt Quelle)             source: "station"|"model",
+                                                          stationName, stationDistKm
+                                                        }
 ```
 
-Der Browser kombiniert die Layer:
-- **Einzelblitze** (Punkte) aus Blitzortung-SSE + Backfill
-- **Globale Aktivität** (Tile-Layer) aus Rainviewer als Plausibilitäts-/Lücken-Füller
-- **Wahrscheinlichkeits-Heatmap** (Open-Meteo) zeigt, wo *demnächst* Blitze zu erwarten sind
+## Umsetzungsschritte
 
-## Warum das mehr Blitze liefert
+1. **`api/station.ts`** (neuer Vercel Serverless Endpoint)
+   - Input: `lat`, `lon`, `country`
+   - Routing nach `country` zur passenden Quelle, einheitliches Response-Schema:
+     `{ temperature, apparentTemperature, humidity, windSpeed, windGust, windDirection, pressure, precipitation10min, weatherCode, observedAt, stationName, stationDistanceKm }`
+   - 5-min In-Memory Cache (Reuse `api/_lib/cache.ts`)
+   - Bei METAR: nächsten ICAO via statischer Flughafen-Liste DACH+IT (ca. 80 Einträge, eingebettet)
 
-1. **Server-Proxy stabilisiert WS**: Aktuell verbindet jeder Client direkt zu Blitzortung. Server-Proxy hält 2–3 Endpunkte parallel, deduped Strikes per ID, hält 60 min Backfill → User sieht beim App-Öffnen sofort die letzten 60 min, nicht nur was *ab jetzt* reinkommt.
-2. **Mehrere WS-Endpoints gleichzeitig** (ws1/ws7/ws8): unterschiedliche Endpoints liefern teils unterschiedliche Strikes; Merge erhöht Trefferquote spürbar.
-3. **Rainviewer-Tiles als Fallback-Visualisierung**: zeigt Blitzaktivität auch wenn Blitzortung-Detektoren in einer Region gerade Lücken haben (typisch Italien Süd, Alpen).
-4. **Open-Meteo lightning_potential** zeigt vorhersagliche Gewitter-Hotspots – nicht nur was *war*, sondern was *kommt*.
+2. **`src/hooks/useStationObservation.ts`** (neu)
+   - React-Query, `staleTime` 5 min, `refetchInterval` 5 min
+   - Liefert `{ data, isStale, source, ageMinutes }`
 
-## Umsetzung – Schritte
+3. **`WeatherContext` erweitern**
+   - Station-Hook parallel zu `useWeatherData` aufrufen
+   - Wenn Station < 25 km **und** Observation < 30 min alt: `current.temperature/humidity/wind/precipitation/weather_code` überschreiben
+   - Felder, die nur das Modell hat (UV, CAPE, Geopotential …), bleiben aus dem Modell
+   - Neues Feld `data.current._source = "station" | "model"` + `_station = { name, distanceKm, ageMin }`
 
-### 1. Server-Proxy für Blitzortung
-**Datei:** `api/lightning-stream.ts` (Vercel-Edge oder Node, je nach aktueller `api/`-Struktur)
+4. **Plausibilitätsregeln in `getEffectiveCode`** (Erweiterung)
+   - Wenn Stations-Niederschlag = 0 mm/10 min UND Modell sagt Regen → Code → Wolke
+   - Wenn Stations-Sichtweite > 5 km UND Modell sagt Nebel (45/48) → Code → 3
+   - Stations-Temperatur weicht > 3 °C von Modell ab → Stationswert gewinnt, Modell-Hourly bleibt für Verlauf
 
-- Hält 2 WS-Verbindungen offen (ws1 + ws7) zu blitzortung.org
-- Filtert serverseitig auf BBox **DACH + Italien** (lat 35–56, lon 5–18) → drastisch weniger Traffic zum Client
-- Pusht Strikes via **Server-Sent Events** an verbundene Clients (einfacher & robuster als WS durch Proxies)
-- Hält Ringbuffer der letzten 60 min (max ~5000 Strikes, ~150 KB)
-- Dedup per `(time, lat, lon)`-Hash
+5. **UI-Mini-Anzeige im `WeatherHero`**
+   - Unter dem Temperaturwert: kleines Badge „Messstation Berlin-Tempelhof · vor 8 Min · 4,2 km" (klickbar → Tooltip mit Quelle)
+   - Bei Modell-Fallback: „Modellwert ICON-D2"
+   - Zeigt sofort, ob Wert „echt" oder „berechnet" ist → erklärt Diskrepanzen statt sie zu verstecken
 
-**Datei:** `api/lightning-backfill.ts`
-- Liefert den Ringbuffer als JSON auf Anfrage (`GET /api/lightning-backfill?since=…`)
+6. **Konfidenz im bestehenden `ConfidenceBadge`**
+   - Score +20 wenn Stationsbeleg vorhanden und < 15 min alt
+   - Score −15 wenn Modell und Station um > 3 °C / > 5 mm auseinander
 
-### 2. Client-Hook neu
-**Datei:** `src/hooks/useLightningStream.ts` (ersetzt `useBlitzortungWS`)
+## Was sich für den Nutzer ändert
+- „Jetzt"-Temperatur kommt aus echter Messung (typ. Abweichung 0,3 °C statt 1,5–2 °C)
+- Regen-Icon und Beschreibung stimmen mit dem überein, was draußen tatsächlich passiert
+- Vorhersage (stündlich/täglich) bleibt unverändert ICON-basiert
+- Sichtbares Vertrauenssignal: Messstation + Alter sichtbar
 
-- Beim Mount: erst Backfill holen → instant volle Karte
-- Dann SSE abonnieren → Live-Updates
-- Auto-Reconnect mit Exponential Backoff
-- API-kompatibel zum bisherigen Hook (`strikes`, `isConnected`, `strikesLast10Min`, `reconnect`)
-
-### 3. Rainviewer Lightning-Layer
-**Datei:** `api/rainbow-lightning-tile.ts` (analog zu `rainbow-tile.ts`)
-
-- Holt Rainviewer `weather-maps.json` → extrahiert Lightning-Frames
-- Proxy für Tiles `{z}/{x}/{y}`
-
-**Komponente:** `LightningMap.tsx` erweitert
-- Toggle „Globale Aktivität" → blendet Rainviewer-TileLayer ein (Opacity 0.6)
-
-### 4. Open-Meteo Wahrscheinlichkeits-Overlay
-**Datei:** `src/hooks/useLightningPotential.ts`
-- Holt `lightning_potential` + `cape` + `lifted_index` über Open-Meteo für die aktuelle Karten-BBox (Grid 0.25°)
-- Cached 15 min
-
-**Komponente:** Heatmap-Overlay (leaflet.heat) auf der Karte, Toggle „Vorhersage 6 h"
-
-### 5. UI-Verbesserungen Karte
-- **Layer-Switcher** oben rechts: ☑ Live-Blitze ☑ Globale Aktivität ☐ Vorhersage
-- **Statistik-Bar**: „142 Blitze · letzte 10 min · ⚡ Hotspot 47 km SW"
-- **Hotspot-Detection**: DBSCAN-Clustering der Strikes → Cluster-Marker mit Stärke + Distanz zum User
-- **Distanz-Label** an einzelnen Blitzen (>1 Blitz/min): „12 km · 3 s"
-- **Audio-Ping** (optional, toggle) bei Blitz im Umkreis 30 km
-
-### 6. Cleanup
-- `useBlitzortungWS.ts` und `blitzortungDecoder.ts` ziehen in Server-Function um (`api/_lib/blitzortungDecoder.ts`) – Client braucht keinen LZW-Decoder mehr
-- Alter Hook wird Deprecation-Wrapper auf neuen, bis alle Consumer migriert sind
-
-## Technische Details
-
-- **SSE statt WS Client→Server**: durchquert Cloudflare/Vercel-Proxies zuverlässiger, kein Sticky-Session-Problem
-- **Region-Filter serverseitig**: spart ~80 % Bandbreite (weltweit ~5 Strikes/s → DACH+IT ~1 Strike/s)
-- **In-Memory Ringbuffer**: ok für eine Worker-Instanz; bei mehreren Instanzen reicht das („eventually consistent", User sieht je nach Instanz minimal andere Backfills – akzeptabel)
-- **Rainviewer Lightning**: kostenlos, ~5-min-Frames, weltweit, gut als visueller Reality-Check
-- **Open-Meteo lightning_potential**: ICON-D2, perfekt für DACH; für Italien fällt es auf ICON-EU zurück (etwas gröber, aber verfügbar)
-
-## Out of scope (jetzt nicht)
-
-- CG/IC-Klassifikation (Blitzortung liefert das nicht zuverlässig)
-- Polarität/Stromstärke (nur in kommerziellen Netzen)
-- Push-Benachrichtigungen bei Blitz im Umkreis (machen wir später im Storm-Tracking-Schritt)
-- Storm-Cell-Tracking auf Basis der Cluster (kommt im nächsten Plan)
-
-## Reihenfolge der Implementierung
-
-1. Server-Proxy + Backfill (`api/lightning-stream.ts`, `api/lightning-backfill.ts`)
-2. Neuer Client-Hook `useLightningStream`
-3. `LightningMap.tsx` auf neuen Hook umstellen + Layer-Switcher
-4. Rainviewer-Lightning-Tile-Proxy + Toggle
-5. Open-Meteo-Potential-Hook + Heatmap-Overlay
-6. Hotspot-Cluster + Statistik-Bar
-7. Alten Hook entfernen
-
-Nach Schritt 1–3 ist die Hauptbeschwerde („zu wenige Blitze") bereits gelöst. Schritte 4–6 sind Bonus-Polish.
+## Nicht im Scope
+- Multi-Model-Ensemble (separates späteres Projekt)
+- Bias-Korrektur der stündlichen Vorhersage (komplex, separat)
+- Stationen außerhalb DACH+IT (Modell-Fallback)
+- Historische Stationsdaten / Verläufe
