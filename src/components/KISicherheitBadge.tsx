@@ -1,31 +1,30 @@
 import { Info } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { cn } from "@/lib/utils";
+import { StatusBadge } from "@/components/ui/status-badge";
 
 export function KISicherheitBadge({ confidence }: { confidence: number }) {
   const { label, tone } =
     confidence >= 71
-      ? { label: "Hoch", tone: "bg-green-500/15 text-green-600 dark:text-green-400" }
+      ? { label: "Hoch", tone: "success" as const }
       : confidence >= 41
-        ? { label: "Mittel", tone: "bg-yellow-500/15 text-yellow-600 dark:text-yellow-400" }
-        : { label: "Gering", tone: "bg-red-500/15 text-red-600 dark:text-red-400" };
+        ? { label: "Mittel", tone: "warn" as const }
+        : { label: "Gering", tone: "danger" as const };
 
   return (
     <div className="flex items-center gap-2">
       <span className="text-xs font-medium text-muted-foreground">KI-Sicherheit</span>
-      <span
-        className={cn(
-          "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold",
-          tone,
-        )}
-      >
+      <StatusBadge tone={tone} size="sm">
         {label} {confidence}%
-      </span>
+      </StatusBadge>
       <TooltipProvider>
         <Tooltip>
           <TooltipTrigger asChild>
-            <button type="button" aria-label="Was bedeutet KI-Sicherheit?">
-              <Info className="h-3.5 w-3.5 text-muted-foreground transition-colors hover:text-foreground" />
+            <button
+              type="button"
+              aria-label="Was bedeutet KI-Sicherheit?"
+              className="grid h-6 w-6 place-items-center rounded-full text-muted-foreground transition-colors hover:bg-foreground/10 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+            >
+              <Info className="h-3.5 w-3.5" />
             </button>
           </TooltipTrigger>
           <TooltipContent>
