@@ -99,40 +99,52 @@ export function useWeatherRisks(): UseWeatherRisksResult {
     // GEWITTER — zentraler Hook
     const gewitter = makeRisk("gewitter", thunderstormScore ?? 0, false);
 
-    // STARKREGEN (mm/h)
-    const rain = precipitation;
+    // STARKREGEN (mm/h) — Maximum aus aktueller + nächsten 2 Stunden,
+    // damit anrückende Zellen (Nowcast-Vorlauf) schon mitscoren.
+    const rainNow = precipitation;
+    const rainNext1 = hourly?.precipitation?.[i + 1] ?? 0;
+    const rainNext2 = hourly?.precipitation?.[i + 2] ?? 0;
+    const rain = Math.max(rainNow, rainNext1, rainNext2);
     const rainScore =
-      rain <= 0
+      rain < 0.5
         ? 0
-        : rain <= 5
-          ? (rain / 5) * 25
-          : rain <= 15
-            ? 25 + ((rain - 5) / 10) * 35
+        : rain <= 2
+          ? ((rain - 0.5) / 1.5) * 15
+          : rain <= 10
+            ? 15 + ((rain - 2) / 8) * 25
             : rain <= 25
-              ? 60 + ((rain - 15) / 10) * 25
-              : 85 + Math.min(15, ((rain - 25) / 10) * 15);
+              ? 40 + ((rain - 10) / 15) * 30
+              : rain <= 40
+                ? 70 + ((rain - 25) / 15) * 18
+                : 88 + Math.min(12, ((rain - 40) / 20) * 12);
     const starkregen = makeRisk("starkregen", rainScore, false);
 
-    // STURM (Böen km/h)
+    // STURM (Böen km/h) — Bft-orientiert, beginnt bei 40 km/h (Bft 6).
     const sturmScore =
-      gusts < 50
+      gusts < 40
         ? 0
-        : gusts < 65
-          ? ((gusts - 50) / 15) * 25
-          : gusts < 90
-            ? 25 + ((gusts - 65) / 25) * 35
-            : gusts < 120
-              ? 60 + ((gusts - 90) / 30) * 25
-              : 85 + Math.min(15, ((gusts - 120) / 20) * 15);
+        : gusts < 60
+          ? ((gusts - 40) / 20) * 25
+          : gusts < 80
+            ? 25 + ((gusts - 60) / 20) * 30
+            : gusts < 100
+              ? 55 + ((gusts - 80) / 20) * 25
+              : gusts < 120
+                ? 80 + ((gusts - 100) / 20) * 12
+                : 92 + Math.min(8, ((gusts - 120) / 20) * 8);
     const sturm = makeRisk("sturm", sturmScore, false);
 
-    // HAGEL
+    // HAGEL — nur bei konvektiver Lage (Gewitter-Score ≥ 30) oder explizitem
+    // Hagel-Code, sonst 0. Eliminiert sommerliches CAPE-Rauschen.
     const isHailCode = [96, 99].includes(wmoCode);
     const capeNorm = Math.min(100, Math.round((cape / 2500) * 100));
     const freezingBonus = freezing < 2000 ? 15 : 0;
+    const isConvective = (thunderstormScore ?? 0) >= 30;
     const hagelScore = isHailCode
-      ? Math.max(75, capeNorm)
-      : Math.max(0, capeNorm * 0.6 + freezingBonus);
+      ? Math.max(80, capeNorm)
+      : isConvective
+        ? Math.max(0, capeNorm * 0.6 + freezingBonus)
+        : 0;
     const hagel = makeRisk("hagel", hagelScore, !isHailCode);
 
     // SCHNEESTURM (cm/h)
