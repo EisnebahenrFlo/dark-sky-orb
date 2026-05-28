@@ -17,6 +17,7 @@ import { useOfficialWarningsCtx } from "@/contexts/OfficialWarningsContext";
 import { APP_VERSION } from "@/lib/constants";
 import { isDevEnvironment } from "@/lib/environment";
 import { haptic } from "@/lib/utils";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { WeatherTabTransition } from "@/components/transitions/WeatherTabTransition";
 
 interface TabDef {
@@ -255,10 +256,11 @@ export function AppShell() {
         <div className="flex items-center justify-center gap-2">
           MeteoFlo v{APP_VERSION}
           {isDevEnvironment() && (
-            <span className="rounded bg-amber-500/20 px-1.5 py-0.5 text-[10px] font-bold text-amber-700 dark:text-amber-300">
-              DEV
-            </span>
+            <StatusBadge tone="warn" size="xs" uppercase>
+              Dev
+            </StatusBadge>
           )}
+
         </div>
       </footer>
     </div>
