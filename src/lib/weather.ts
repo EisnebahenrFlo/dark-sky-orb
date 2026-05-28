@@ -33,6 +33,15 @@ export interface CurrentWeather {
     ageMin: number;
     source: "brightsky" | "metar";
   };
+  /** Confidence 0..100 from multi-model spread (100 when station-overridden). */
+  _confidence?: number;
+}
+
+export interface EnsembleMeta {
+  models: string[];
+  hourlyConfidence: number[];
+  currentConfidence: number;
+  spread: { temp: number[]; pop: number[] };
 }
 
 export interface MinutelyData {
