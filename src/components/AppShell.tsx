@@ -88,25 +88,32 @@ export function AppShell() {
   return (
     <div className="mx-auto min-h-screen w-full max-w-6xl px-4 pb-[calc(env(safe-area-inset-bottom)+9rem)] pt-6 transition-colors duration-200 sm:px-6 sm:pb-12 sm:pt-10">
       <header className="mb-6 flex items-center justify-between gap-4">
-        <Link to="/" className="flex items-center gap-2">
-          <div className="h-2 w-2 rounded-full bg-primary shadow-[0_0_12px_var(--primary)]" />
+        <Link to="/" aria-label="MeteoFlo Startseite" className="flex items-center gap-2">
+          <div className="h-2 w-2 rounded-full bg-primary shadow-[0_0_12px_var(--primary)]" aria-hidden />
           <span className="font-display text-sm uppercase tracking-[0.3em] text-muted-foreground">
             MeteoFlo
           </span>
         </Link>
         <div className="flex items-center gap-3">
-          {isFetching && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
+          {isFetching && (
+            <Loader2
+              className="h-4 w-4 animate-spin text-muted-foreground"
+              aria-label="Daten werden aktualisiert"
+              role="status"
+            />
+          )}
           <FavoritesButton />
           <ThemeToggle />
         </div>
       </header>
+
 
       <div className="mb-6">
         <SearchBar onSelect={selectLocation} recent={recent} onClearRecent={clearRecent} />
       </div>
 
       {/* Desktop tabs */}
-      <nav className="mb-8 hidden justify-center md:flex">
+      <nav aria-label="Hauptnavigation" className="mb-8 hidden justify-center md:flex">
         <div className="glass flex gap-1 rounded-full p-1">
           {tabs.map(({ to, icon: Icon, label }) => {
             const active = pathname === to;
@@ -156,6 +163,7 @@ export function AppShell() {
 
       {/* Mobile bottom nav */}
       <nav
+        aria-label="Hauptnavigation"
         className="fixed inset-x-0 bottom-0 z-30 md:hidden"
         style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
       >
