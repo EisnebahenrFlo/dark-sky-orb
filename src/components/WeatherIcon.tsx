@@ -12,6 +12,10 @@ function isPrecipCode(code: number): boolean {
   );
 }
 
+function isThunderstormCode(code: number): boolean {
+  return code === 95 || code === 96 || code === 99;
+}
+
 /** Override the WMO code when "rain" is reported but no precipitation falls,
  *  or when "cloudy" codes are driven by cirrus only (low+mid clouds absent). */
 export function getEffectiveCode(
@@ -24,6 +28,9 @@ export function getEffectiveCode(
   cloudCoverMid?: number,
 ): number {
   const effectiveCloud = cloudCoverLow !== undefined && cloudCoverLow !== null ? cloudCoverLow : cloudCover;
+  // Gewitter (WMO 95–99) NIEMALS auf "sonnig/klar" downgraden — auch wenn
+  // die aktuelle Stunde noch 0 mm meldet (Radar-Lag, Zelle in Anmarsch).
+  if (isThunderstormCode(code)) return code;
   // Bodennebel-Erkennung früh morgens
   if (code === 45 || code === 48) {
     const h = hour ?? -1;
