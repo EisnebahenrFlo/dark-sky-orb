@@ -25,6 +25,7 @@ export interface HourlyRowData {
   isDay: number;
   cloud: number;
   cloudLow?: number;
+  cloudMid?: number;
   humidity?: number;
   overrideHour?: number;
   isCurrent: boolean;
@@ -41,6 +42,7 @@ export function HourlyRow({ row, showPrecipColumn = true }: { row: HourlyRowData
     row.humidity,
     row.overrideHour ?? new Date(row.iso).getHours(),
     row.cloudLow,
+    row.cloudMid,
   );
   const thunder = row.thunder;
   const thunderColor = THUNDER_COLOR[thunder.level];
@@ -75,7 +77,7 @@ export function HourlyRow({ row, showPrecipColumn = true }: { row: HourlyRowData
       {/* Icon + description */}
       <div className="flex min-w-0 flex-1 items-center gap-2.5">
         <RealisticWeatherIcon
-          code={row.code}
+          code={eff.wmoCode}
           isDay={(row.isDay ? 1 : 0) as 0 | 1}
           size={32}
           className="shrink-0"

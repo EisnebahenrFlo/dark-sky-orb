@@ -76,7 +76,10 @@ export function WeatherHero({ location, data, updatedAt, onRefresh, ensemble }: 
     data.cloud_cover_low,
     data.cloud_cover_mid,
   );
-  const group = getWeatherGroup(data.weather_code, (data.is_day ? 1 : 0) as 0 | 1);
+  // Hero-Icon/Canvas/Palette folgen dem optisch bereinigten effektiven Code,
+  // damit Text, Icon und Hintergrund konsistent sind (Cirren ≠ „bedeckt").
+  const effectiveCode = effective.wmoCode;
+  const group = getWeatherGroup(effectiveCode, (data.is_day ? 1 : 0) as 0 | 1);
   const palette = getHeroPalette(group);
 
   return (
@@ -89,7 +92,7 @@ export function WeatherHero({ location, data, updatedAt, onRefresh, ensemble }: 
         minHeight: 280,
       }}
     >
-      <WeatherHeroCanvas weatherCode={data.weather_code} isDay={(data.is_day ? 1 : 0) as 0 | 1} />
+      <WeatherHeroCanvas weatherCode={effectiveCode} isDay={(data.is_day ? 1 : 0) as 0 | 1} />
       {onRefresh && <RefreshButton variant="hero" onRefresh={onRefresh} />}
       <div style={{ position: "relative", zIndex: 10 }}>
         {/* Ort-Zeile: dezent, klein */}
@@ -136,7 +139,7 @@ export function WeatherHero({ location, data, updatedAt, onRefresh, ensemble }: 
             style={{ filter: "drop-shadow(0 6px 14px rgba(0,0,0,0.22))" }}
           >
             <RealisticWeatherIcon
-              code={data.weather_code}
+              code={effectiveCode}
               isDay={(data.is_day ? 1 : 0) as 0 | 1}
               size={88}
             />

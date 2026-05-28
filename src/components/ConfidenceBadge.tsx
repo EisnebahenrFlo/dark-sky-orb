@@ -22,6 +22,8 @@ const COLOR: Record<"high" | "medium" | "low", { bg: string; fg: string; dot: st
 const MODEL_LABEL: Record<string, string> = {
   icon_d2: "ICON-D2",
   icon_ch2: "ICON-CH2",
+  meteoswiss_icon_ch2: "ICON-CH2",
+  meteoswiss_icon_ch1: "ICON-CH1",
   icon_eu: "ICON-EU",
   italia_meteo_arpae_icon_2i: "ARPAE-ICON-2i",
   ecmwf_ifs025: "ECMWF IFS",

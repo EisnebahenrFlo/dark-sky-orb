@@ -1,61 +1,29 @@
-## Problem
+Ich habe die Modellabfragen direkt gegen Open-Meteo verglichen.
 
-Foto: blauer Himmel mit minimalen Cirren über Weinzierlein. App zeigt aber:
-- Icon: Sonne + dicke Wolke (CloudSun für Code 2)
-- Text: „Wechselnd bewölkt"
-- Bewölkung 0 % (low/mid) — Zusatz „gesamt 88 % inkl. Cirren"
-- KI-Sicherheit: 100 %
+Befund:
+- Schweiz bricht, weil `icon_ch2` keine gültige Open-Meteo Modell-ID mehr ist. Gültig ist `meteoswiss_icon_ch2` bzw. `meteoswiss_icon_ch1`.
+- Für Nürnberg liefern die Modelle tatsächlich extrem hohe `cloud_cover` Werte, aber gleichzeitig `cloud_cover_low=0` und `cloud_cover_mid=0`. Das ist sehr wahrscheinlich hohe Cirrus-Bewölkung: meteorologisch in `total cloud cover`, optisch aber blauer Himmel.
+- Der Text wurde schon teilweise bereinigt, aber Hero-Icon, Hero-Hintergrund und einige Stunden-Icons verwenden weiterhin den rohen `weather_code`. Dadurch bleibt das sichtbare Mismatch bestehen.
 
-Die Zahlen (Bewölkung 0 %, Hinweis auf Cirren) sind korrekt. Falsch sind:
-1. **`weather_code` bleibt 2/3**, obwohl das Ensemble nur hohe Wolken (Cirren) sieht. WMO-Code 2 basiert auf *Gesamt*bewölkung. `getEffectiveCode` greift aber nur bei Niederschlags-Codes ein — bei „bewölkt"-Codes (2, 3) wird Low-Cloud ignoriert. Folge: Icon + Beschreibung widersprechen der angezeigten 0 %.
-2. **Konfidenz 100 %** trotz 4 Modellen, die offenbar unterschiedlich klassifizieren (sonst gäbe es keinen 88 %-Cirren-Widerspruch zwischen Modellen). Die Penalty für Code-Disagreement greift beim aktuellen Wert nicht stark genug, weil `currentConfidence` aus `confidenceFromSpread` der Temperaturen kommt und Code-Penalty nur stundenweise abgezogen wird.
+Plan:
+1. Schweizer Modell-ID korrigieren
+   - In `getWeatherModels("CH")` `icon_ch2` durch `meteoswiss_icon_ch2` ersetzen.
+   - Die Modellgewichte und Labels entsprechend auf `meteoswiss_icon_ch2` aktualisieren, damit Ensemble und Badge weiter korrekt funktionieren.
 
-## Lösung
+2. Eine zentrale effektive Code-Logik für die Anzeige nutzen
+   - Den bereits berechneten effektiven WMO-Code aus `getEffectiveWeather(...)` nicht nur für Text verwenden, sondern auch für:
+     - großes Hero-Icon
+     - Hero-Hintergrund/Canvas-Gruppe
+     - Palette im Hero
+   - Damit zeigen Text, Icon und Hintergrund dieselbe optisch bereinigte Wetterlage.
 
-### A) `src/components/WeatherIcon.tsx` — `getEffectiveCode` erweitern
+3. Stundenanzeige angleichen
+   - `HourlyRow`, `HourlyStrip` und die kleine `HourlyForecast`-Kachel sollen `cloud_cover_mid` mitgeben und den effektiven Code fürs Icon verwenden.
+   - Aktuell nutzt mindestens `HourlyRow` die bereinigte Beschreibung, aber das rohe Icon. Das wird vereinheitlicht.
 
-Cirrus-Downgrade für „bewölkt"-Codes hinzufügen, analog zur bestehenden Precip-Logik:
+4. Aktuelle Stunde sauberer ausrichten
+   - Für die aktuelle Stunde wird Low/Mid-Cloud nicht pauschal aus Index 0 genommen, sondern passend zur jeweiligen Zeitstunde. Das verhindert, dass falsche Wolkenwerte aus der ersten Forecast-Stunde auf „Jetzt“ durchrutschen.
 
-```text
-wenn code ∈ {2, 3} und cloudCoverLow definiert:
-    effectiveLowMid = cloudCoverLow + 0.5 * (cloudCoverMid ?? 0)
-    wenn effectiveLowMid < 12  → 0   (Sonnig/Klar)
-    wenn effectiveLowMid < 30  → 1   (Überwiegend sonnig)
-    wenn effectiveLowMid < 60  → 2   (Wechselnd bewölkt)
-    sonst                       → 3   (Bedeckt)
-```
-
-`cloudCoverMid` als optionaler Parameter ergänzen. Aufrufer (`WeatherHero.tsx`, `EffectiveWeatherIcon`, `getEffectiveWeather`) reichen `data.cloud_cover_mid` durch.
-
-Damit liefert das aktuelle Beispiel (low=0, mid=0, high≈88) → Code 0 → Icon „Sonne", Text „Sonnig", konsistent mit der 0 %-Anzeige. Der Sub-Label-Text „gesamt 88 % inkl. Cirren" bleibt als Aufklärung erhalten.
-
-### B) `src/lib/weatherDescription.ts` + `WeatherHero.tsx`
-
-Signatur von `getEffectiveWeather` um `cloudCoverMid` erweitern. `WeatherHero` ruft mit `data.cloud_cover_mid` auf.
-
-### C) `src/lib/modelEnsemble.ts` — Konfidenz schärfen
-
-`currentConfidence`-Fallback heute: wenn nur 1 Modell `current` liefert, mittelt es die ersten 3 Stunden. Das Beispiel zeigt aber 100 %, also stimmen die Temperaturen offenbar gut überein → die `codeDisagreement`-Penalty muss auch in den `current`-Pfad fließen.
-
-Änderung: `currentConfidence` zieht zusätzlich `codePenalty` aus der aktuellen Stunde ab (`mergedHourly.weather_code` aller aktiven Modelle zur Stunde 0 zählen). Bei 4 Modellen mit unterschiedlichen Codes (z. B. ICON-D2=0, ICON-EU=2, ECMWF=3, KNMI=2) → mind. 3 verschiedene Codes → −20 → realistisch 70–80 %.
-
-Zusätzlich: Wenn `effectiveCode` (nach Cirrus-Downgrade) vom rohen `weather_code` abweicht, weitere −10, da Modell und Realität sichtbar auseinanderlaufen.
-
-### D) Keine Änderung an Datenabruf
-
-Die Open-Meteo-Antwort enthält `cloud_cover_low/mid/high` bereits in `hourly` (siehe `weather.ts:330`). Nur die Weitergabe an die Icon/Beschreibungs-Logik fehlt.
-
-## Validierung
-
-Nach Reload Weinzierlein:
-- Icon: Sonne (statt CloudSun)
-- Text: „Sonnig" (statt „Wechselnd bewölkt")
-- Bewölkung 0 %, Sub: „gesamt 88 % inkl. Cirren" (unverändert)
-- KI-Sicherheit: 70–85 % (statt 100 %)
-
-## Geänderte Dateien
-
-- `src/components/WeatherIcon.tsx` — Cirrus-Downgrade in `getEffectiveCode`, neuer Param `cloudCoverMid`
-- `src/lib/weatherDescription.ts` — Param-Durchreichung
-- `src/components/WeatherHero.tsx` — `cloud_cover_mid` an Helfer übergeben
-- `src/lib/modelEnsemble.ts` — Code-Penalty + Effective-Code-Penalty in `currentConfidence`
+5. Kurz validieren
+   - Direkte Open-Meteo Testabfrage für Schweiz muss mit `meteoswiss_icon_ch2,...` 200 liefern.
+   - Raum Nürnberg mit `low=0/mid=0/high≈90–100` muss optisch als sonnig/überwiegend sonnig erscheinen, mit Hinweis auf Gesamtbewölkung inkl. Cirren statt als „bedeckt“.
