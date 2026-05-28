@@ -13,8 +13,14 @@ export interface CurrentWithSource extends CurrentWeather {
   _station?: StationMeta;
 }
 
-const MAX_DIST_KM = 35;
-const MAX_AGE_MIN = 90;
+// Source-specific thresholds. METAR sind Flughafen-Stationen und oft
+// 20–40 km vom eigentlichen Ort entfernt — bei dieser Distanz spiegelt der
+// Flughafenzustand das lokale Wetter nicht zuverlässig wider (z.B. trockener
+// Flughafen während im Umland eine Gewitterzelle steht). Bright Sky deckt
+// das DWD-Netz dicht ab und darf großzügiger gelten.
+const MAX_DIST_KM_BRIGHTSKY = 35;
+const MAX_DIST_KM_METAR = 15;
+const MAX_AGE_MIN = 60;
 
 /**
  * Merge a real-world station observation into the model "current" block.
@@ -39,7 +45,8 @@ export function mergeStationIntoWeather(
     Math.round((Date.now() - new Date(obs.observedAt).getTime()) / 60000),
   );
 
-  if (obs.stationDistanceKm > MAX_DIST_KM || ageMin > MAX_AGE_MIN) {
+  const maxDist = obs.source === "metar" ? MAX_DIST_KM_METAR : MAX_DIST_KM_BRIGHTSKY;
+  if (obs.stationDistanceKm > maxDist || ageMin > MAX_AGE_MIN) {
     return { ...data, current: { ...current, _source: "model" } };
   }
 
@@ -121,6 +128,43 @@ function reconcileCode(modelCode: number, obs: StationObservation): number {
 
   return modelCode;
 }
+
+/**
+ * Wendet Minutely-Nowcast-Evidenz auf den aktuellen Wettercode an.
+ * Verhindert Inkonsistenzen wie „Sonnig" im Hero, während die Nowcast-Karte
+ * darunter „Regen hält länger als 2h" zeigt. Gewittercodes bleiben unverändert.
+ */
+export function applyNowcastEvidence(data: WeatherData): WeatherData {
+  const current = data.current as CurrentWithSource;
+  const m = data.minutely_15;
+  if (!m || !Array.isArray(m.precipitation) || m.precipitation.length === 0) return data;
+
+  // Erste ~30 Minuten (2 × 15-Min-Schritte)
+  const nextPrecip = (m.precipitation[0] ?? 0) + (m.precipitation[1] ?? 0);
+  const code = current.weather_code;
+  const isThunder = code === 95 || code === 96 || code === 99;
+  const isAlreadyPrecip = (code >= 51 && code <= 86) || isThunder;
+
+  if (isAlreadyPrecip) return data;
+  if (nextPrecip < 0.2) return data;
+
+  // Minutely hat eigenen weather_code — den nehmen, sonst generischer Regen.
+  const mCode = m.weather_code?.[0];
+  const upgraded =
+    mCode != null && ((mCode >= 51 && mCode <= 86) || mCode >= 95) ? mCode : 61;
+
+  return {
+    ...data,
+    current: {
+      ...current,
+      weather_code: upgraded,
+      // Stunden-Niederschlag konservativ auf mindestens den Nowcast-Wert heben,
+      // damit `getEffectiveCode` nicht wieder downgradet.
+      precipitation: Math.max(current.precipitation ?? 0, nextPrecip),
+    },
+  };
+}
+
 
 // Simple wind-chill / heat-index hybrid; falls back to temperature.
 function derivedFeelsLike(
