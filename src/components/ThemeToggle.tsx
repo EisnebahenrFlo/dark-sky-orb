@@ -1,5 +1,11 @@
-import { Sun, Moon, Monitor } from "lucide-react";
+import { Sun, Moon, Monitor, Check } from "lucide-react";
 import { useTheme, type Theme } from "@/hooks/useTheme";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const OPTS: { value: Theme; icon: typeof Sun; label: string }[] = [
   { value: "light", icon: Sun, label: "Hell" },
@@ -9,26 +15,31 @@ const OPTS: { value: Theme; icon: typeof Sun; label: string }[] = [
 
 export function ThemeToggle() {
   const { theme, setTheme } = useTheme();
+  const ActiveIcon = OPTS.find((o) => o.value === theme)?.icon ?? Monitor;
   return (
-    <div className="glass flex items-center gap-0.5 rounded-full p-0.5">
-      {OPTS.map(({ value, icon: Icon, label }) => {
-        const active = theme === value;
-        return (
-          <button
-            key={value}
-            onClick={() => setTheme(value)}
-            aria-label={label}
-            title={label}
-            className={`grid h-7 w-7 place-items-center rounded-full transition-colors ${
-              active
-                ? "bg-primary text-primary-foreground"
-                : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            <Icon className="h-3.5 w-3.5" strokeWidth={1.75} />
-          </button>
-        );
-      })}
-    </div>
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        aria-label="Farbschema ändern"
+        className="glass grid h-9 w-9 place-items-center rounded-full text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+      >
+        <ActiveIcon className="h-4 w-4" strokeWidth={1.75} />
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="min-w-[10rem]">
+        {OPTS.map(({ value, icon: Icon, label }) => {
+          const active = theme === value;
+          return (
+            <DropdownMenuItem
+              key={value}
+              onSelect={() => setTheme(value)}
+              className="flex items-center gap-2"
+            >
+              <Icon className="h-4 w-4" strokeWidth={1.75} />
+              <span className="flex-1">{label}</span>
+              {active && <Check className="h-3.5 w-3.5 text-primary" />}
+            </DropdownMenuItem>
+          );
+        })}
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }

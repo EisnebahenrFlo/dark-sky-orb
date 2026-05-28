@@ -86,7 +86,10 @@ export function AppShell() {
   );
 
   return (
-    <div className="mx-auto min-h-screen w-full max-w-6xl px-4 pb-28 pt-6 transition-colors duration-200 sm:px-6 sm:pb-12 sm:pt-10">
+    <div
+      className="mx-auto min-h-screen w-full max-w-6xl px-4 pt-6 transition-colors duration-200 sm:px-6 sm:pb-12 sm:pt-10"
+      style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 9rem)" }}
+    >
       <header className="mb-6 flex items-center justify-between gap-4">
         <Link to="/" className="flex items-center gap-2">
           <div className="h-2 w-2 rounded-full bg-primary shadow-[0_0_12px_var(--primary)]" />
