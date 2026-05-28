@@ -1,38 +1,45 @@
-## 1. iOS-Zoom bei Suchzeile sperren
+# Fix: Vorhersage-Tab zeigt keinen Inhalt
 
-**Ursache:** Safari zoomt automatisch rein, sobald ein `<input>` fokussiert wird, das eine `font-size < 16px` hat. Unser Suchfeld nutzt `text-sm` (14px).
+## Diagnose
 
-**Fix (a11y-freundlich, kein Pinch-Zoom-Verbot):**
-- `src/components/SearchBar.tsx`: Input bekommt `text-base md:text-sm` — auf Mobile 16px (kein iOS-Zoom), ab `md` wieder 14px für das kompaktere Desktop-Look.
-- Sicherheitsnetz für andere Inputs/Selects in der App: globale Regel in `src/styles.css`:
-  ```css
-  @media (max-width: 767px) {
-    input, select, textarea { font-size: 16px; }
-  }
-  ```
-- `index.html` viewport-Meta bleibt unverändert (kein `maximum-scale=1`, damit Nutzer noch zoomen können — wichtig für Barrierefreiheit).
+Im Preview-Browser wechselt der Klick auf "Vorhersage" die URL korrekt auf `/vorhersage` und rendert die Seite (Segmented Control + Status). Auf dem iPhone berichtet der User: URL wechselt, aber **Inhalt fehlt**.
 
-## 2. Tab-Wechsel-Animation überarbeiten
+Wahrscheinlichste Ursache: `WeatherTabTransition` umschließt den `<Outlet />` mit `<div key={pathname} className="animate-tab-fade">`. Die zugehörige Keyframe startet bei `opacity: 0; translateY(6px)` und nutzt `animation-fill-mode: both`. Wenn die Animation auf iOS Safari nicht startet (Tab-Wechsel, Paint-Skip, Fokus-Restore, Reduced Motion + Cache-Edge-Case), bleibt der Inhalt auf `opacity: 0` hängen — die Seite ist da, aber unsichtbar.
 
-**Aktueller Stand:** Bei jedem Tab-Wechsel läuft 1,3 s lang ein wetterabhängiges Overlay (Wolken, Regen, Schneeflocken, Blitz, Sterne) über die Seite, plus eine Content-Slide-Animation. Das wirkt überladen, langsam und lenkt vom Inhalt ab.
+## Fix (klein, fokussiert)
 
-**Neue Richtung — schnell, ruhig, premium:**
-- Wetter-Overlays (Regen/Schnee/Blitz/Wolken/Sterne beim Tab-Wechsel) **komplett entfernen**. Diese Effekte gehören in den Hero/Hintergrund der Heute-Seite, nicht in einen Navigationswechsel.
-- Eine einzige, einheitliche Content-Transition für alle Tabs:
-  - **Fade + leichter Vertikal-Shift** (8 px → 0) mit `cubic-bezier(0.22, 0.61, 0.36, 1)` über **220 ms**.
-  - `prefers-reduced-motion`: nur Opacity-Fade über 120 ms, kein Translate.
-- Tab-Buttons (Bottom-Nav + Desktop-Pillen) bekommen eine subtile **Active-Pill-Transition**: die Pill „gleitet" beim Wechsel weich von der alten zur neuen Position. Umsetzung: `transition-all duration-300 ease-out` auf dem bestehenden Hintergrund-Span (ohne Layout-ID/Framer — bleibt im Tailwind-Envelope).
-- Subtiles **Haptic feedback** (bereits via `haptic("light")` vorhanden) bleibt erhalten.
+### 1. `WeatherTabTransition` robust machen
 
-**Konkrete Datei-Änderungen:**
-- `src/components/transitions/WeatherTabTransition.tsx`: stark vereinfachen — alle Overlay-Komponenten und der `showOverlay`-State entfallen. Übrig bleibt ein keyed `<div>` mit einer einzigen `animate-tab-fade`-Klasse.
-- `src/styles.css`: alte Keyframes (`content-slide-left`, `content-rise`, `content-fade`, `content-drop`, `content-hard`, `cloud-sweep-*`, `star-twinkle`, `shooting-star`, `rain-drop`, `snow-fall`, `thunder-flash`) entfernen; neue `tab-fade`-Keyframe hinzufügen.
-- `src/components/AppShell.tsx`: `transition-all duration-300 ease-out` auf den absoluten Hintergrund-Span der aktiven Tabs (Desktop + Mobile) ergänzen, damit der Pill-Wechsel weich aussieht.
+`src/components/transitions/WeatherTabTransition.tsx`:
+- `key={pathname}` entfernen — der Outlet rendert die richtige Route auch ohne Force-Remount, und der Remount ist genau das, was die fragile Animation triggert.
+- Den umschließenden `<div className="animate-tab-fade">` durch einen neutralen Wrapper ersetzen, der **immer sichtbar** ist (`opacity: 1`), und die Animation per CSS-Klasse `tab-fade-enter` nur als reine Einblend-Animation ohne `both`-Fill auf das Kind anwenden. Fallback: Wenn die Animation nicht läuft, ist Opacity trotzdem 1.
 
-**Was bleibt unverändert:**
-- Die wetterabhängigen Animationen im `WeatherHero` (Heute-Tab Hintergrund) — die sind nicht Teil des Tab-Wechsels.
-- Page-Übergänge bei Standortwechsel.
+Konkret: Komponente vereinfachen zu
 
-### Erwarteter Effekt
-- iPhone-Suchzeile zoomt nicht mehr beim Tippen rein.
-- Tab-Wechsel fühlt sich ~5× schneller an (220 ms statt 1300 ms), wirkt clean statt verspielt.
+```tsx
+export function WeatherTabTransition({ children }: { children: ReactNode }) {
+  const { pathname } = useLocation();
+  return (
+    <div key={pathname} className="tab-fade-in">
+      {children}
+    </div>
+  );
+}
+```
+
+### 2. `src/styles.css` – Animation safe machen
+
+- Keyframe `tab-fade` umbenennen/anpassen, sodass `from` und `to` beide eine **sichtbare** Opacity haben (z.B. `from: opacity .85, translateY(4px)` → `to: opacity 1, translateY(0)`). Damit ist der Worst-Case (Animation läuft nicht) trotzdem ein vollständig sichtbarer Inhalt.
+- Neue Utility-Klasse `.tab-fade-in { animation: tab-fade 220ms cubic-bezier(0.22, 0.61, 0.36, 1); }` — **ohne** `both` Fill-Mode. Default-Opacity bleibt 1.
+- `prefers-reduced-motion`-Block aktualisieren: nur `animation: none` — Inhalt bleibt sichtbar.
+- Alte `--animate-tab-fade` Token und `.animate-tab-fade`-Referenz entfernen (wurde nur dort genutzt).
+
+### 3. Verifikation
+
+- Im Preview-Browser auf `/`, `/vorhersage`, `/analyse`, `/map` navigieren und sicherstellen, dass jeder Tab-Inhalt sofort sichtbar ist.
+- Screenshot von `/vorhersage` nach dem Fix.
+
+## Out of Scope
+
+- Wetter-API-Fehler ("Konnte Daten nicht laden") — das ist ein separates Daten-/Network-Problem (betrifft alle Tabs), nicht der Tab-Bug.
+- Andere Animationen oder Layout-Änderungen.
