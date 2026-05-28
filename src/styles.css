@@ -84,22 +84,18 @@
   .animate-pulse-glow,
   .animate-sparkle,
   .animate-shimmer,
-  .animate-tab-enter,
-  .animate-content-slide-left,
-  .animate-content-rise,
-  .animate-content-fade,
-  .animate-content-drop,
-  .animate-content-hard,
-  .animate-cloud-sweep-1,
-  .animate-cloud-sweep-2,
-  .animate-rain-drop,
-  .animate-snow-fall,
-  .animate-thunder-flash,
-  .animate-star-twinkle,
-  .animate-shooting-star {
+  .animate-tab-fade {
     animation: none !important;
   }
 }
+
+/* iOS Safari: prevent zoom on focus by ensuring inputs are >= 16px on mobile */
+@media (max-width: 767px) {
+  input, select, textarea {
+    font-size: 16px;
+  }
+}
+
 
 /* Default = dark */
 :root {
