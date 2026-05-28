@@ -25,6 +25,7 @@ export function HourlyForecast({ hourly }: { hourly: HourlyData }) {
     isDay: hourly.is_day[i],
     cloud: hourly.cloud_cover?.[i] ?? 0,
     cloudLow: hourly.cloud_cover_low?.[i],
+    cloudMid: hourly.cloud_cover_mid?.[i],
   }));
 
   return (
@@ -39,7 +40,7 @@ export function HourlyForecast({ hourly }: { hourly: HourlyData }) {
                 className="flex w-16 shrink-0 flex-col items-center rounded-2xl border border-border/50 bg-white/[0.02] px-2 py-3"
               >
                 <div className="text-[11px] tabular-nums text-muted-foreground">{r.time}</div>
-                <EffectiveWeatherIcon code={r.code} precipitation={r.precip} cloudCover={r.cloud} cloudCoverLow={r.cloudLow} isDay={r.isDay} className="my-2 h-6 w-6 text-primary" />
+                <EffectiveWeatherIcon code={r.code} precipitation={r.precip} cloudCover={r.cloud} cloudCoverLow={r.cloudLow} cloudCoverMid={r.cloudMid} isDay={r.isDay} className="my-2 h-6 w-6 text-primary" />
                 <div className="font-display text-base tabular-nums">{r.temp}°</div>
                 <div className="mt-1 flex items-center gap-0.5 text-[10px] text-muted-foreground">
                   <Droplets className="h-2.5 w-2.5" strokeWidth={1.5} />

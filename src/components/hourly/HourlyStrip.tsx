@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { Droplets, Sunrise, Sunset, Wind, Zap } from "lucide-react";
 import type { CurrentWeather, DailyData, HourlyData } from "@/lib/weather";
 import { RealisticWeatherIcon } from "@/components/RealisticWeatherIcon";
+import { getEffectiveCode } from "@/components/WeatherIcon";
 import { computeThunderstormRiskSeries, type ThunderstormRisk } from "@/hooks/useThunderstormRisk";
 import { safeFixed } from "@/lib/safeFormat";
 
@@ -52,15 +53,27 @@ export function HourlyStrip({
   const cells: Cell[] = hourly.time.slice(0, HOURS).map((t, i) => {
     const ts = new Date(t).getTime();
     const isCurrent = ts <= now && now < ts + 60 * 60 * 1000;
+    const rawCode = hourly.weather_code[i];
+    const precip = hourly.precipitation?.[i] ?? 0;
+    const cloud = hourly.cloud_cover?.[i] ?? 0;
+    const code = getEffectiveCode(
+      rawCode,
+      precip,
+      cloud,
+      undefined,
+      new Date(t).getHours(),
+      hourly.cloud_cover_low?.[i],
+      hourly.cloud_cover_mid?.[i],
+    );
     return {
       iso: t,
       label: isCurrent ? "Jetzt" : fmtHour(t),
       temp: hourly.temperature_2m[i],
       pop: hourly.precipitation_probability?.[i] ?? 0,
-      precip: hourly.precipitation?.[i] ?? 0,
+      precip,
       wind: Math.round(hourly.wind_speed_10m?.[i] ?? 0),
       uv: hourly.uv_index?.[i] ?? 0,
-      code: hourly.weather_code[i],
+      code,
       isDay: hourly.is_day[i],
       isCurrent,
       thunder: risk.hourly[i] ?? { score: 0, level: "none", label: "Kein Risiko", source: "lpi" },
