@@ -3,6 +3,7 @@ import { useWeather } from "@/contexts/WeatherContext";
 import { useThunderstormRisk } from "@/hooks/useThunderstormRisk";
 import { useOfficialWarningsCtx } from "@/contexts/OfficialWarningsContext";
 import { useRainbowNowcast } from "@/hooks/useRainbowNowcast";
+import { buildRiskWarningsFallback } from "@/lib/meteoFallbacks";
 
 export type RiskColor = "green" | "yellow" | "orange" | "red" | "purple";
 export type RiskLevel = "kein" | "schwach" | "mäßig" | "hoch" | "sehr_hoch" | "extrem";
@@ -113,6 +114,8 @@ export function useRiskWarnings() {
         setLastUpdated(Date.now());
       } catch (e: any) {
         if (myId !== fetchIdRef.current) return;
+        setData(buildRiskWarningsFallback(weatherData, thunderstorm.current.score, officialWarnings.data?.warnings ?? []));
+        setLastUpdated(Date.now());
         setErrorCode((prev) => prev ?? "NETWORK");
         setError(e?.message || "Unbekannter Fehler");
       } finally {

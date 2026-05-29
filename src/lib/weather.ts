@@ -574,7 +574,7 @@ export async function fetchWeather(lat: number, lon: number, countryCode?: strin
     longJson.daily,
     finalHourly.time,
     finalHourly,
-    finalHourly.weather_code,
+    longJson.daily.weather_code,
   );
 
   const json: WeatherData = {
