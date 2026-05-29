@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { fetchStationObservationFallback } from "@/lib/meteoFallbacks";
 
 export interface StationObservation {
   temperature: number | null;
@@ -34,9 +35,14 @@ export function useStationObservation(
         lon: String(lon),
       });
       if (countryCode) params.set("country", countryCode);
-      const res = await fetch(`/api/station?${params}`);
-      if (!res.ok) return { observation: null };
-      return res.json();
+      try {
+        const res = await fetch(`/api/station?${params}`);
+        if (res.ok) return res.json();
+      } catch {
+        // Preview/API unavailable → direct public fallback below.
+      }
+      const observation = await fetchStationObservationFallback(lat, lon, countryCode);
+      return { observation };
     },
     staleTime: FIVE_MIN,
     refetchInterval: FIVE_MIN,
