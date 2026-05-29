@@ -78,15 +78,22 @@ export function WeatherProvider({ children }: { children: ReactNode }) {
     location?.longitude ?? null,
     !!location,
   );
+  const warnings = useOfficialWarningsFor(
+    location?.latitude ?? null,
+    location?.longitude ?? null,
+    location?.country_code,
+    !!location,
+  );
 
   const merged = useMemo<UseWeatherDataResult>(() => {
     if (!data.data) return data;
     const withStation = mergeStationIntoWeather(data.data, observation);
     const withNowcast = applyNowcastEvidence(withStation);
     const withRainbow = applyRainbowEvidence(withNowcast, rainbow.data?.forecast);
-    const reconciled = reconcileWeatherData(withRainbow);
+    const withWarning = applyOfficialWarningOverride(withRainbow, warnings.data?.warnings);
+    const reconciled = reconcileWeatherData(withWarning);
     return { ...data, data: reconciled };
-  }, [data, observation, rainbow.data]);
+  }, [data, observation, rainbow.data, warnings.data]);
 
   return (
     <Ctx.Provider value={{ ...merged, location: location ?? DEFAULT, recent, selectLocation, clearRecent }}>
