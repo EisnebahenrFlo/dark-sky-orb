@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useWeather } from "@/contexts/WeatherContext";
+import { buildOfficialWarningsFallback } from "@/lib/meteoFallbacks";
 
 export type OfficialWarningType =
   | "wind"
@@ -84,6 +85,8 @@ export function useOfficialWarnings() {
         setLastUpdated(Date.now());
       } catch (e: any) {
         if (e?.name === "AbortError") return;
+        setData(buildOfficialWarningsFallback(location.country_code));
+        setLastUpdated(Date.now());
         setError(e?.message || "Unbekannter Fehler");
       } finally {
         setLoading(false);
