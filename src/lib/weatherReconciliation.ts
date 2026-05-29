@@ -121,7 +121,8 @@ function reconcileCurrentWithHourly(
     return current;
   }
   if (DRY(current.weather_code) && hPop >= 70 && hPrecip >= 0.1) {
-    current.weather_code = upgradeForPrecip(hPrecip);
+    const desired = wmoCodeForPrecipRate(hPrecip);
+    if (desired !== -1) current.weather_code = desired;
     current.precipitation = Math.max(current.precipitation ?? 0, hPrecip);
   }
   return current;
