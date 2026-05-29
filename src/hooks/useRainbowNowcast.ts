@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useWeather } from "@/contexts/WeatherContext";
+import { fetchRainbowNowcastFallback } from "@/lib/meteoFallbacks";
 
 export type RainbowPrecipType = "rain" | "snow" | "ice" | "none" | "no_precipitation";
 
@@ -29,11 +30,15 @@ export function useRainbowNowcastFor(lat: number | null, lon: number | null, ena
   const query = useQuery<RainbowNowcastResponse>({
     queryKey: ["rainbow-nowcast", lat, lon],
     queryFn: async () => {
-      const res = await fetch(
-        `/api/rainbow-nowcast?lat=${encodeURIComponent(String(lat))}&lon=${encodeURIComponent(String(lon))}`,
-      );
-      if (!res.ok) throw new Error("Nowcast nicht verfügbar");
-      return (await res.json()) as RainbowNowcastResponse;
+      try {
+        const res = await fetch(
+          `/api/rainbow-nowcast?lat=${encodeURIComponent(String(lat))}&lon=${encodeURIComponent(String(lon))}`,
+        );
+        if (res.ok) return (await res.json()) as RainbowNowcastResponse;
+      } catch {
+        // Preview/API unavailable → Open-Meteo minutely fallback.
+      }
+      return (await fetchRainbowNowcastFallback(Number(lat), Number(lon))) as RainbowNowcastResponse;
     },
     staleTime: TEN_MIN,
     refetchInterval: TEN_MIN,
