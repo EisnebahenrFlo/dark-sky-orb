@@ -49,6 +49,7 @@ export interface CurrentWeather {
     stationApplied?: boolean;
     nowcastApplied?: boolean;
     rainbowApplied?: boolean;
+    warningEscalated?: boolean;
     effectiveCode?: number;
   };
   /** Confidence 0..100 from multi-model spread (100 when station-overridden). */
