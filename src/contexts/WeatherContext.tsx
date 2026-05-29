@@ -2,10 +2,12 @@ import { createContext, useContext, useEffect, useMemo, useState, type ReactNode
 import { useWeatherData, type UseWeatherDataResult } from "@/hooks/useWeatherData";
 import { useStationObservation } from "@/hooks/useStationObservation";
 import { useRainbowNowcastFor } from "@/hooks/useRainbowNowcast";
+import { useOfficialWarningsFor } from "@/hooks/useOfficialWarnings";
 import {
   mergeStationIntoWeather,
   applyNowcastEvidence,
   applyRainbowEvidence,
+  applyOfficialWarningOverride,
 } from "@/lib/stationMerge";
 import { reconcileWeatherData } from "@/lib/weatherReconciliation";
 import type { GeoResult } from "@/lib/weather";
