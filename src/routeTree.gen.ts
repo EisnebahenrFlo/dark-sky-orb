@@ -17,6 +17,7 @@ import { Route as HourlyRouteImport } from './routes/hourly'
 import { Route as DailyRouteImport } from './routes/daily'
 import { Route as AnalyseRouteImport } from './routes/analyse'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ApiWeatherRouteImport } from './routes/api/weather'
 
 const WarnungenRoute = WarnungenRouteImport.update({
   id: '/warnungen',
@@ -58,6 +59,11 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiWeatherRoute = ApiWeatherRouteImport.update({
+  id: '/api/weather',
+  path: '/api/weather',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -68,6 +74,7 @@ export interface FileRoutesByFullPath {
   '/nowcast': typeof NowcastRoute
   '/vorhersage': typeof VorhersageRoute
   '/warnungen': typeof WarnungenRoute
+  '/api/weather': typeof ApiWeatherRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -78,6 +85,7 @@ export interface FileRoutesByTo {
   '/nowcast': typeof NowcastRoute
   '/vorhersage': typeof VorhersageRoute
   '/warnungen': typeof WarnungenRoute
+  '/api/weather': typeof ApiWeatherRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -89,6 +97,7 @@ export interface FileRoutesById {
   '/nowcast': typeof NowcastRoute
   '/vorhersage': typeof VorhersageRoute
   '/warnungen': typeof WarnungenRoute
+  '/api/weather': typeof ApiWeatherRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -101,6 +110,7 @@ export interface FileRouteTypes {
     | '/nowcast'
     | '/vorhersage'
     | '/warnungen'
+    | '/api/weather'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -111,6 +121,7 @@ export interface FileRouteTypes {
     | '/nowcast'
     | '/vorhersage'
     | '/warnungen'
+    | '/api/weather'
   id:
     | '__root__'
     | '/'
@@ -121,6 +132,7 @@ export interface FileRouteTypes {
     | '/nowcast'
     | '/vorhersage'
     | '/warnungen'
+    | '/api/weather'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -132,6 +144,7 @@ export interface RootRouteChildren {
   NowcastRoute: typeof NowcastRoute
   VorhersageRoute: typeof VorhersageRoute
   WarnungenRoute: typeof WarnungenRoute
+  ApiWeatherRoute: typeof ApiWeatherRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -192,6 +205,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/weather': {
+      id: '/api/weather'
+      path: '/api/weather'
+      fullPath: '/api/weather'
+      preLoaderRoute: typeof ApiWeatherRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -204,6 +224,7 @@ const rootRouteChildren: RootRouteChildren = {
   NowcastRoute: NowcastRoute,
   VorhersageRoute: VorhersageRoute,
   WarnungenRoute: WarnungenRoute,
+  ApiWeatherRoute: ApiWeatherRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
