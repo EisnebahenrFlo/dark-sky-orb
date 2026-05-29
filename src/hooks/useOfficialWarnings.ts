@@ -87,7 +87,7 @@ export function useOfficialWarningsFor(
         setLastUpdated(Date.now());
       } catch (e: any) {
         if (e?.name === "AbortError") return;
-        setData(buildOfficialWarningsFallback(country));
+        setData(buildOfficialWarningsFallback(country ?? "DE"));
         setLastUpdated(Date.now());
         setError(e?.message || "Unbekannter Fehler");
       } finally {
