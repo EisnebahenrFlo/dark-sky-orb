@@ -516,17 +516,6 @@ export async function fetchWeather(lat: number, lon: number, countryCode?: strin
 
   const currentTime = String(mergedCurrent.time ?? new Date().toISOString());
   const currentUv = getCurrentUvFromLongTerm(currentTime, longJson.hourly);
-  const currentHour = new Date(currentTime).getHours();
-  const representativeDailyCodes = longJson.daily.time.map((dateStr: string, idx: number) =>
-    getDayRepresentativeCode(
-      longJson.hourly.time,
-      longJson.hourly.weather_code,
-      dateStr,
-      idx === 0,
-      currentHour,
-    ),
-  );
-
   // Map long-term hourly arrays (uv_index, precipitation_probability) onto the
   // short hourly time grid by matching ISO timestamps.
   const longIdxByTime = new Map<string, number>();
@@ -576,10 +565,10 @@ export async function fetchWeather(lat: number, lon: number, countryCode?: strin
   };
 
   const reconciledDaily = reconcileDailyFromHourly(
-    { ...longJson.daily, weather_code: representativeDailyCodes },
+    longJson.daily,
     finalHourly.time,
     finalHourly,
-    representativeDailyCodes,
+    finalHourly.weather_code,
   );
 
   const json: WeatherData = {
