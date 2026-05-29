@@ -47,7 +47,7 @@ export function HourlyStrip({
   daily: DailyData;
   current?: CurrentWeather;
 }) {
-  const now = current?.time ? new Date(current.time).getTime() : Date.now();
+  const now = Date.now();
   const risk = useMemo(() => computeThunderstormRiskSeries(hourly), [hourly]);
 
   // Startindex = aktuelle/naheliegendste Stunde (nicht Mitternacht).
