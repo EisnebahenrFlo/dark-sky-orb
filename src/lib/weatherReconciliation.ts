@@ -1,17 +1,9 @@
 import type { WeatherData, HourlyData, DailyData } from "@/lib/weather";
+import { wmoCodeForPrecipRate } from "@/lib/weather";
 
 /**
- * Zentrale Bereinigung des kompletten WeatherData-Objekts.
- * Wird einmalig nach Ensemble → Station → Nowcast angewandt, damit Hero,
- * Stündlich, Täglich, Nowcast und Analyse dieselbe Wahrheit zeigen.
- *
- * Prinzipien:
- *  - Niederschlags-/Gewittercodes werden NIE auf "klar/sonnig" downgraded.
- *  - Aktiver Niederschlag (mm > 0.1) oder sehr hohe Wahrscheinlichkeit (≥ 70 %)
- *    überschreibt klare/leichte Codes mit mindestens "Regen".
- *  - Hohe LPI/CAPE-Evidenz wird stündlich als Gewittergefahr markiert.
- *  - Aktueller Slot wird mit der korrespondierenden Stunde abgeglichen.
- *  - Tagescodes werden aus den bereinigten Stundencodes neu abgeleitet.
+ * Central reconciliation of the WeatherData object after
+ * ensemble → station → nowcast/rainbow → warnings.
  */
 export function reconcileWeatherData(data: WeatherData): WeatherData {
   if (!data?.hourly?.time?.length) return data;
@@ -25,27 +17,26 @@ const THUNDER = (c: number) => c === 95 || c === 96 || c === 99;
 const PRECIP = (c: number) => (c >= 51 && c <= 67) || (c >= 71 && c <= 86);
 const DRY = (c: number) => c >= 0 && c <= 3;
 
-function upgradeForPrecip(precipMm: number): number {
-  if (precipMm >= 2.5) return 63; // mäßiger Regen
-  if (precipMm >= 0.5) return 61; // leichter Regen
-  return 51; // Niesel/leicht
-}
-
-function thunderEvidence(
+/**
+ * Convective context per hour (cell-by-cell) — drives whether rain shows up
+ * as "Regen" or "Schauer" and whether to fuse a lightning code.
+ */
+function hourCtx(
   lpi: number | undefined,
   cape: number | undefined,
   li: number | undefined,
-  gust: number | undefined,
-): boolean {
+): { convective: boolean; lightning: boolean; severeLightning: boolean } {
   const lpiVal = typeof lpi === "number" ? lpi : 0;
   const capeVal = typeof cape === "number" ? cape : 0;
   const liVal = typeof li === "number" ? li : 99;
-  const gustVal = typeof gust === "number" ? gust : 0;
-  // Direktes Blitz-Signal vom Modell
-  if (lpiVal >= 3) return true;
-  // Hohe CAPE + instabile Schichtung + organisierte Böen
-  if (capeVal >= 1500 && liVal <= -2 && gustVal >= 40) return true;
-  return false;
+  const convective = lpiVal >= 1 || capeVal >= 500 || liVal <= -2;
+  // Calibrated for Central Europe (DWD practice):
+  //  LPI ≥ 2          → lightning possible
+  //  CAPE ≥ 800 + LI ≤ -2 → thunderstorm likely
+  //  LI ≤ -5          → severe instability alone is enough
+  const lightning = lpiVal >= 2 || (capeVal >= 800 && liVal <= -2) || liVal <= -5;
+  const severeLightning = lpiVal >= 5 || (capeVal >= 2000 && liVal <= -4);
+  return { convective, lightning, severeLightning };
 }
 
 function reconcileHourly(h: HourlyData): HourlyData {
@@ -55,7 +46,6 @@ function reconcileHourly(h: HourlyData): HourlyData {
   const lpi = h.lightning_potential;
   const cape = h.cape;
   const li = h.lifted_index;
-  const gusts = h.wind_gusts_10m;
 
   for (let i = 0; i < codes.length; i++) {
     const code = codes[i];
@@ -63,33 +53,34 @@ function reconcileHourly(h: HourlyData): HourlyData {
 
     const p = precip[i] ?? 0;
     const probability = pop[i] ?? 0;
+    const ctx = hourCtx(lpi?.[i], cape?.[i], li?.[i]);
 
-    // 1) Gewitterevidenz: Code auf 95 anheben, wenn aktuell trocken-codiert
-    //    und Modell-Signale stark sind.
-    if (thunderEvidence(lpi?.[i], cape?.[i], li?.[i], gusts?.[i])) {
-      // Niesel/Regen bleiben erhalten, falls bereits Niederschlag codiert
-      if (DRY(code) || code === 45 || code === 48) {
-        codes[i] = 95;
+    // 1) Lightning evidence: escalate to 95/96/99
+    if (ctx.lightning) {
+      if (DRY(code) || code === 45 || code === 48 || PRECIP(code)) {
+        const code95 = wmoCodeForPrecipRate(Math.max(p, 0.5), {
+          lightning: true,
+          severeLightning: ctx.severeLightning,
+        });
+        codes[i] = code95;
         continue;
       }
     }
 
-    // 2) Niederschlag-Evidenz: trockenen Code anheben
-    if (DRY(code)) {
-      if (p >= 0.1) {
-        codes[i] = upgradeForPrecip(p);
-      } else if (probability >= 70) {
-        codes[i] = 51; // hohe Wahrscheinlichkeit → mind. Nieselregen-Risiko
+    // 2) Precip rate → code (handles shower vs steady rain)
+    if (p >= 0.1) {
+      const desired = wmoCodeForPrecipRate(p, ctx);
+      if (desired !== -1 && (DRY(code) || desired > code)) {
+        codes[i] = desired;
       }
-    } else if (PRECIP(code) && p >= 0.1) {
-      // Stärke nachschärfen, wenn Modell Code untertreibt
-      const upgraded = upgradeForPrecip(p);
-      if (upgraded > code && code < 80) codes[i] = upgraded;
+    } else if (DRY(code) && probability >= 70) {
+      codes[i] = 51;
     }
   }
 
   return { ...h, weather_code: codes };
 }
+
 
 function reconcileCurrentWithHourly(
   data: WeatherData,
@@ -130,7 +121,8 @@ function reconcileCurrentWithHourly(
     return current;
   }
   if (DRY(current.weather_code) && hPop >= 70 && hPrecip >= 0.1) {
-    current.weather_code = upgradeForPrecip(hPrecip);
+    const desired = wmoCodeForPrecipRate(hPrecip);
+    if (desired !== -1) current.weather_code = desired;
     current.precipitation = Math.max(current.precipitation ?? 0, hPrecip);
   }
   return current;

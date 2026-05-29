@@ -45,8 +45,16 @@ export interface OfficialWarningsResponse {
 
 const REFRESH_MS = 15 * 60 * 1000;
 
-export function useOfficialWarnings() {
-  const { location } = useWeather();
+/**
+ * Standalone fetcher (no WeatherContext dependency) — usable from
+ * WeatherProvider itself to fuse warnings into the Hero code.
+ */
+export function useOfficialWarningsFor(
+  lat: number | null,
+  lon: number | null,
+  country: string | undefined,
+  enabled: boolean,
+) {
   const [data, setData] = useState<OfficialWarningsResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -56,7 +64,7 @@ export function useOfficialWarnings() {
 
   const fetchWarnings = useCallback(
     async (signal?: AbortSignal) => {
-      if (!location) return;
+      if (!enabled || lat == null || lon == null) return;
       setLoading(true);
       setError(null);
       try {
@@ -64,18 +72,12 @@ export function useOfficialWarnings() {
         const res = await fetch(`${baseUrl}/api/official-warnings`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            lat: location.latitude,
-            lon: location.longitude,
-            country: location.country_code,
-          }),
+          body: JSON.stringify({ lat, lon, country }),
           signal,
         });
         const json = await res.json();
         if (!res.ok) throw new Error(json?.error || "Amtliche Warnungen konnten nicht geladen werden");
         const payload = json as OfficialWarningsResponse;
-        // MeteoAlarm Level 1 (grün) = "keine Gefahr / Informational" – nicht als Warnung anzeigen.
-        // DWD-Level 1 sind echte Vorabinformationen und bleiben erhalten.
         const filtered = (payload.warnings ?? []).filter((w) => {
           const isMeteoAlarm = typeof w.source === "string" && w.source.startsWith("MeteoAlarm");
           if (isMeteoAlarm && (w.level ?? 1) < 2) return false;
@@ -85,30 +87,28 @@ export function useOfficialWarnings() {
         setLastUpdated(Date.now());
       } catch (e: any) {
         if (e?.name === "AbortError") return;
-        setData(buildOfficialWarningsFallback(location.country_code));
+        setData(buildOfficialWarningsFallback(country ?? "DE"));
         setLastUpdated(Date.now());
         setError(e?.message || "Unbekannter Fehler");
       } finally {
         setLoading(false);
       }
     },
-    [location],
+    [lat, lon, country, enabled],
   );
 
-  // Reset on location change
   useEffect(() => {
     ctrlRef.current?.abort();
     setData(null);
     setError(null);
     setLastUpdated(null);
-    setLoading(true);
+    if (enabled) setLoading(true);
     loadedKeyRef.current = null;
-  }, [location.latitude, location.longitude]);
+  }, [lat, lon, enabled]);
 
-  // Initial load per location
   useEffect(() => {
-    if (!location) return;
-    const key = `${location.latitude}_${location.longitude}`;
+    if (!enabled || lat == null || lon == null) return;
+    const key = `${lat}_${lon}`;
     if (loadedKeyRef.current === key) return;
     loadedKeyRef.current = key;
     ctrlRef.current?.abort();
@@ -116,10 +116,10 @@ export function useOfficialWarnings() {
     ctrlRef.current = ctrl;
     fetchWarnings(ctrl.signal);
     return () => ctrl.abort();
-  }, [location, location.latitude, location.longitude, fetchWarnings]);
+  }, [enabled, lat, lon, fetchWarnings]);
 
-  // Auto refresh
   useEffect(() => {
+    if (!enabled) return;
     let timer: ReturnType<typeof setInterval> | null = null;
     const start = () => {
       if (timer) return;
@@ -131,23 +131,12 @@ export function useOfficialWarnings() {
         }
       }, REFRESH_MS);
     };
-    const stop = () => {
-      if (timer) {
-        clearInterval(timer);
-        timer = null;
-      }
-    };
-    const onVis = () => {
-      if (document.visibilityState === "visible") start();
-      else stop();
-    };
+    const stop = () => { if (timer) { clearInterval(timer); timer = null; } };
+    const onVis = () => { if (document.visibilityState === "visible") start(); else stop(); };
     if (document.visibilityState === "visible") start();
     document.addEventListener("visibilitychange", onVis);
-    return () => {
-      document.removeEventListener("visibilitychange", onVis);
-      stop();
-    };
-  }, [fetchWarnings]);
+    return () => { document.removeEventListener("visibilitychange", onVis); stop(); };
+  }, [enabled, fetchWarnings]);
 
   const refresh = useCallback(() => {
     const ctrl = new AbortController();
@@ -156,4 +145,14 @@ export function useOfficialWarnings() {
   }, [fetchWarnings]);
 
   return { data, loading, error, refresh, lastUpdated };
+}
+
+export function useOfficialWarnings() {
+  const { location } = useWeather();
+  return useOfficialWarningsFor(
+    location.latitude,
+    location.longitude,
+    location.country_code,
+    !!location,
+  );
 }
