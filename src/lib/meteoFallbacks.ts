@@ -187,6 +187,25 @@ export function rainbowFromOpenMeteoMinutely(weather: WeatherData): { forecast: 
   return { forecast: out, summary: { intensity } };
 }
 
+export async function fetchRainbowNowcastFallback(lat: number, lon: number) {
+  const params = new URLSearchParams({
+    latitude: String(lat),
+    longitude: String(lon),
+    minutely_15: "precipitation,weather_code,temperature_2m,wind_speed_10m",
+    forecast_minutely_15: "24",
+    timezone: "auto",
+  });
+  const res = await fetch(`https://api.open-meteo.com/v1/forecast?${params}`);
+  if (!res.ok) throw new Error("Nowcast nicht verfügbar");
+  const json = await res.json();
+  return {
+    ...rainbowFromOpenMeteoMinutely({ minutely_15: json.minutely_15 } as WeatherData),
+    latitude: lat,
+    longitude: lon,
+    fallback: "open-meteo-minutely",
+  };
+}
+
 export function buildOfficialWarningsFallback(country: string): OfficialWarningsResponse {
   return {
     warnings: [],
