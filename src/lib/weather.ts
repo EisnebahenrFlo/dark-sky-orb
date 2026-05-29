@@ -603,6 +603,41 @@ export async function fetchWeather(lat: number, lon: number, countryCode?: strin
   return json;
 }
 
+/**
+ * Single source of truth for translating a precipitation **rate** (mm/h) and
+ * convective context into a WMO weather code. Used by station-merge,
+ * nowcast-evidence and weather-reconciliation so the Hero/Hourly/Daily
+ * tabs never disagree about intensity.
+ *
+ * Thresholds follow DWD operational practice:
+ *   • < 0.1   mm/h → unchanged (caller decides)
+ *   • 0.1-0.5 mm/h → 51  (Niesel)
+ *   • 0.5-2.5 mm/h → 61  (leichter Regen)        | 80 if convective
+ *   • 2.5-10  mm/h → 63  (mäßiger Regen)         | 81 if convective
+ *   • 10-25   mm/h → 65  (starker Regen)         | 82 if convective
+ *   • ≥ 25    mm/h → 65 / 82  (Starkregen-Stufe) | + lightning ⇒ 95/96/99
+ *
+ * `lightning` true ⇒ escalates to 95 (or 96 ≥ 10 mm/h, 99 ≥ 25 mm/h).
+ */
+export function wmoCodeForPrecipRate(
+  mmPerHour: number,
+  opts: { convective?: boolean; lightning?: boolean; severeLightning?: boolean } = {},
+): number {
+  const r = Number.isFinite(mmPerHour) ? Math.max(0, mmPerHour) : 0;
+  const { convective = false, lightning = false, severeLightning = false } = opts;
+  if (lightning) {
+    if (severeLightning || r >= 25) return 99;
+    if (r >= 10) return 96;
+    return 95;
+  }
+  if (r < 0.1) return -1; // sentinel: no upgrade
+  if (r < 0.5) return 51;
+  if (r < 2.5) return convective ? 80 : 61;
+  if (r < 10)  return convective ? 81 : 63;
+  if (r < 25)  return convective ? 82 : 65;
+  return convective ? 82 : 65;
+}
+
 export function wmoDescription(code: number): string {
   const map: Record<number, string> = {
     0: "Klar",
