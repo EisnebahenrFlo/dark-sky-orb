@@ -45,6 +45,12 @@ export interface CurrentWeather {
     ageMin: number;
     source: "brightsky" | "metar";
   };
+  _diagnostics?: {
+    stationApplied?: boolean;
+    nowcastApplied?: boolean;
+    rainbowApplied?: boolean;
+    effectiveCode?: number;
+  };
   /** Confidence 0..100 from multi-model spread (100 when station-overridden). */
   _confidence?: number;
 }
