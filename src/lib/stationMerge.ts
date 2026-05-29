@@ -18,7 +18,7 @@ export interface CurrentWithSource extends CurrentWeather {
 // Flughafenzustand das lokale Wetter nicht zuverlässig wider (z.B. trockener
 // Flughafen während im Umland eine Gewitterzelle steht). Bright Sky deckt
 // das DWD-Netz dicht ab und darf großzügiger gelten.
-const MAX_DIST_KM_BRIGHTSKY = 35;
+const MAX_DIST_KM_BRIGHTSKY = 15;
 const MAX_DIST_KM_METAR = 15;
 const MAX_AGE_MIN = 60;
 
@@ -80,6 +80,7 @@ export function mergeStationIntoWeather(
     },
     // Station = ground truth, override ensemble confidence
     _confidence: 100,
+    _diagnostics: { ...current._diagnostics, stationApplied: true },
   };
 
   return { ...data, current: merged };
@@ -222,6 +223,7 @@ function applyEvidenceToCurrent(
       current: {
         ...current,
         precipitation: Math.max(current.precipitation ?? 0, mm),
+        _diagnostics: { ...current._diagnostics, nowcastApplied: true },
       },
     };
   }
@@ -235,6 +237,7 @@ function applyEvidenceToCurrent(
       ...current,
       weather_code: upgraded,
       precipitation: Math.max(current.precipitation ?? 0, mm),
+      _diagnostics: { ...current._diagnostics, nowcastApplied: true },
     },
   };
 }

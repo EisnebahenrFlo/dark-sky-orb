@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useWeather } from "@/contexts/WeatherContext";
 import { useThunderstormRisk } from "@/hooks/useThunderstormRisk";
+import { buildSynoptikFallback } from "@/lib/meteoFallbacks";
 
 export interface SynoptikAnalysis {
   highlight: { text: string };
@@ -122,6 +123,8 @@ export function useSynoptikAnalysis() {
         setLastUpdated(Date.now());
       } catch (e: any) {
         if (e?.name === "AbortError") return;
+        setData(buildSynoptikFallback(weatherData, location.name, thunderstorm.current.score));
+        setLastUpdated(Date.now());
         setErrorCode((prev) => prev ?? "NETWORK");
         setError(e?.message || "Unbekannter Fehler");
       } finally {

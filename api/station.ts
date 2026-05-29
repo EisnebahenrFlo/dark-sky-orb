@@ -73,7 +73,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
 // -------- Bright Sky (DWD) --------
 async function fetchBrightSky(lat: number, lon: number): Promise<StationObservation | null> {
-  const url = `https://api.brightsky.dev/current_weather?lat=${lat}&lon=${lon}&units=dwd`;
+  const url = `https://api.brightsky.dev/current_weather?lat=${lat}&lon=${lon}&max_dist=15000&units=dwd`;
   const json = await fetchJson(url);
   if (!json) return null;
   const w = json.weather;
@@ -124,8 +124,8 @@ function brightskyToWmo(condition?: string, icon?: string): number | null {
 // -------- METAR (Aviation Weather) --------
 async function fetchMetar(lat: number, lon: number): Promise<StationObservation | null> {
   // bbox ±1.5° (~150 km) around target, return closest with valid temp
-  const d = 1.5;
-  const url = `https://aviationweather.gov/api/data/metar?bbox=${lat - d},${lon - d},${lat + d},${lon + d}&format=json&taf=false&hours=2`;
+  const d = 0.7;
+  const url = `https://aviationweather.gov/api/data/metar?bbox=${lon - d},${lat - d},${lon + d},${lat + d}&format=json&taf=false&hours=2`;
   const json = await fetchJson(url);
   if (!Array.isArray(json) || json.length === 0) return null;
 
@@ -155,7 +155,7 @@ async function fetchMetar(lat: number, lon: number): Promise<StationObservation 
     windDirection: typeof best.wdir === 'number' ? best.wdir : null,
     pressure: pressureHpa,
     precipitation10min: null, // METAR doesn't give 10-min amount
-    weatherCode: metarToWmo(best.wxString),
+    weatherCode: metarToWmo(best.wxString, cloudCover),
     cloudCover,
     visibility: best.visib != null ? Math.round(Number(best.visib) * 1609) : null,
     observedAt: best.reportTime || best.obsTime || new Date().toISOString(),
@@ -180,8 +180,14 @@ function metarCloudCover(clouds: any): number | null {
   return max < 0 ? null : max;
 }
 
-function metarToWmo(wx?: string): number | null {
-  if (!wx) return 0;
+function metarToWmo(wx?: string, cloudCover?: number | null): number | null {
+  if (!wx) {
+    if (cloudCover == null) return null;
+    if (cloudCover >= 85) return 3;
+    if (cloudCover >= 35) return 2;
+    if (cloudCover >= 12) return 1;
+    return 0;
+  }
   const s = wx.toUpperCase();
   if (s.includes('TS')) return s.includes('GR') || s.includes('GS') ? 96 : 95;
   if (s.includes('SN')) return s.startsWith('+') ? 75 : s.startsWith('-') ? 71 : 73;
@@ -191,6 +197,10 @@ function metarToWmo(wx?: string): number | null {
   if (s.includes('RA')) return s.startsWith('+') ? 65 : s.startsWith('-') ? 61 : 63;
   if (s.includes('FG')) return 45;
   if (s.includes('BR') || s.includes('HZ')) return 45;
+  if (cloudCover == null) return null;
+  if (cloudCover >= 85) return 3;
+  if (cloudCover >= 35) return 2;
+  if (cloudCover >= 12) return 1;
   return 0;
 }
 
