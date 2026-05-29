@@ -3,7 +3,6 @@ import type { StationObservation } from "@/hooks/useStationObservation";
 import type { OfficialWarning, OfficialWarningsResponse } from "@/hooks/useOfficialWarnings";
 import type { RiskWarnings, RiskWarning } from "@/hooks/useRiskWarnings";
 import type { SynoptikAnalysis } from "@/hooks/useSynoptikAnalysis";
-import { computeThunderstormRiskSeries, levelForScore } from "@/hooks/useThunderstormRisk";
 
 const EARTH_KM = 6371;
 
@@ -206,9 +205,40 @@ function riskColor(score: number): "green" | "yellow" | "orange" | "red" | "purp
   return "green";
 }
 
+function thunderScore(weatherData: WeatherData, hours: number): number {
+  const h = weatherData.hourly;
+  let best = 0;
+  const len = Math.min(hours, h.time?.length ?? 0);
+  for (let i = 0; i < len; i++) {
+    const cape = n(h.cape?.[i]) ?? 0;
+    const lpi = n(h.lightning_potential?.[i]) ?? 0;
+    const li = n(h.lifted_index?.[i]) ?? 99;
+    const gust = n(h.wind_gusts_10m?.[i]) ?? 0;
+    let score = 0;
+    if (cape >= 2500) score += 70;
+    else if (cape >= 1500) score += 55;
+    else if (cape >= 800) score += 35;
+    else if (cape >= 300) score += 18;
+    if (lpi >= 5) score += 30;
+    else if (lpi >= 1) score += 15;
+    if (li <= -6) score += 15;
+    else if (li <= -2) score += 8;
+    if (gust >= 55) score += 8;
+    best = Math.max(best, Math.min(100, Math.round(score)));
+  }
+  return best;
+}
+
+function thunderLevel(score: number): "kein" | "schwach" | "mäßig" | "hoch" | "extrem" {
+  if (score >= 86) return "extrem";
+  if (score >= 61) return "hoch";
+  if (score >= 31) return "mäßig";
+  if (score >= 11) return "schwach";
+  return "kein";
+}
+
 export function buildRiskWarningsFallback(weatherData: WeatherData, thunderstormScore?: number, officialWarnings?: OfficialWarning[]): RiskWarnings {
-  const series = computeThunderstormRiskSeries(weatherData.hourly, 48);
-  const score = Math.max(thunderstormScore ?? 0, series.current.score);
+  const score = Math.max(thunderstormScore ?? 0, thunderScore(weatherData, 48));
   const warnings: RiskWarning[] = [];
   const next12 = weatherData.hourly.time.slice(0, 12).map((_, i) => ({
     code: weatherData.hourly.weather_code[i] ?? 0,
@@ -226,10 +256,9 @@ export function buildRiskWarningsFallback(weatherData: WeatherData, thunderstorm
   for (const w of officialWarnings ?? []) {
     warnings.push({ id: `official-${w.id}`, typ: w.type, stufe: w.level >= 3 ? "unwetter" : "markant", titel: w.title, beschreibung: w.description, color: w.level >= 4 ? "purple" : w.level >= 3 ? "red" : "orange", icon: w.type === "thunderstorm" ? "Zap" : w.type === "rain" ? "CloudRain" : w.type === "snow" ? "Snowflake" : "AlertTriangle" });
   }
-  const level = levelForScore(score);
   return {
     gewitter_risiko_6h: {
-      level: level === "none" ? "kein" : level === "low" ? "schwach" : level === "moderate" ? "mäßig" : level === "high" ? "hoch" : "extrem",
+      level: thunderLevel(score),
       score,
       begründung: score >= 31 ? "CAPE/LPI/LI/Böen zeigen konvektives Potenzial." : "Keine markanten konvektiven Signale im Kurzfristfenster.",
       color: riskColor(score),
@@ -245,8 +274,7 @@ export function buildSynoptikFallback(weatherData: WeatherData, locationName = "
   const hourly = weatherData.hourly;
   const next24Precip = (hourly.precipitation ?? []).slice(0, 24).reduce((s, v) => s + Math.max(0, v ?? 0), 0);
   const maxGust = Math.max(0, ...(hourly.wind_gusts_10m ?? []).slice(0, 24).map((v) => v ?? 0));
-  const series = computeThunderstormRiskSeries(hourly, 24);
-  const score = Math.max(thunderstormScore ?? 0, series.current.score);
+  const score = Math.max(thunderstormScore ?? 0, thunderScore(weatherData, 24));
   return {
     highlight: { text: score >= 31 ? `Konvektive Lage bei ${locationName}: Gewitterpotenzial erhöht.` : `Ruhigere Kurzfristlage bei ${locationName}.` },
     großwetterlage: { klassifikation: maxGust >= 55 ? "Dynamisch" : next24Precip >= 5 ? "Feucht-labil" : "Schwachgradientig", beschreibung: "Fallback aus Ensemblefeldern: Temperatur, Niederschlag, Böen und Konvektionsparametern." },
