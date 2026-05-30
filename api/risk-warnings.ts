@@ -1,26 +1,32 @@
-// Vercel Serverless Function – KI-Warnungen
-// Gewitter-Score kommt FERTIG BERECHNET vom Frontend (useThunderstormRisk).
-// Claude formuliert nur — er rechnet nicht.
+// Vercel Serverless Function – KI-Wetterhinweise (vormals "KI-Warnungen").
+// Composite Gewitter-Score teilt sich Frontend + Server (api/_lib/thunderstormScore.ts).
+// Schwellen für Wind/Schnee/Glätte/Hagel sind an DWD-Stufen angelehnt.
 import { getCached, setCached, isFresh, ageMinutes } from "./_lib/cache.js";
+import {
+  approxShear,
+  computeHourScore,
+  THUNDERSTORM_SCORE_VERSION,
+} from "./_lib/thunderstormScore.js";
 
-// Stufen-System (Score-basiert, NICHT abhängig von amtlichen Warnungen):
-//   20–34  → warnung  (yellow)
-//   35–54  → markant  (orange)
-//   55–74  → unwetter (red)
-//   75–100 → extrem   (purple)
+// Stufen (Score-basiert, an DWD Stufen 1–4 angelehnt):
+//   1–34   → warnung  (gelb)   = DWD Stufe 1
+//   35–54  → markant  (orange) = DWD Stufe 2
+//   55–74  → unwetter (rot)    = DWD Stufe 3
+//   75–100 → extrem   (lila)   = DWD Stufe 4
 type Stufe = "warnung" | "markant" | "unwetter" | "extrem";
 
+const STUFE_RANK: Record<Stufe, number> = { warnung: 1, markant: 2, unwetter: 3, extrem: 4 };
+const RANK_STUFE: Record<number, Stufe> = { 1: "warnung", 2: "markant", 3: "unwetter", 4: "extrem" };
+
+function maxStufe(a: Stufe, b: Stufe): Stufe {
+  return STUFE_RANK[a] >= STUFE_RANK[b] ? a : b;
+}
+
 function stufeColor(stufe: Stufe): "yellow" | "orange" | "red" | "purple" {
-  switch (stufe) {
-    case "warnung":
-      return "yellow";
-    case "markant":
-      return "orange";
-    case "unwetter":
-      return "red";
-    case "extrem":
-      return "purple";
-  }
+  if (stufe === "extrem") return "purple";
+  if (stufe === "unwetter") return "red";
+  if (stufe === "markant") return "orange";
+  return "yellow";
 }
 
 type ErrorCode =
@@ -38,7 +44,6 @@ const REQUEST_TIMEOUT_MS = 30_000;
 function errorResponse(res: any, status: number, code: ErrorCode, error: string, details?: string) {
   return res.status(status).json({ error, code, ...(details ? { details } : {}) });
 }
-
 function sleep(ms: number) {
   return new Promise((r) => setTimeout(r, ms));
 }
@@ -47,39 +52,12 @@ function getIndices(hourly: any, hours: number): number[] {
   const now = Date.now();
   return hourly.time
     .map((t: string, i: number) => ({ t: new Date(t).getTime(), i }))
-    .filter(
-      (item: { t: number; i: number }) => item.t >= now && item.t <= now + hours * 3600 * 1000,
-    )
-    .map((item: { t: number; i: number }) => item.i);
+    .filter((x: any) => x.t >= now && x.t <= now + hours * 3600 * 1000)
+    .map((x: any) => x.i);
 }
 
-// ---- Server-seitige Score-Berechnung (kopiert aus src/hooks/useThunderstormRisk.ts) ----
-function scoreFromCAPE(cape: number | null | undefined): number {
-  if (cape == null || Number.isNaN(cape) || cape <= 0) return 0;
-  if (cape >= 2500) return 80;
-  if (cape >= 1500) return 65;
-  if (cape >= 1000) return 50;
-  if (cape >= 500) return 35;
-  if (cape >= 300) return 20;
-  return 0;
-}
+// -------------------- Gewitter-Score (Server-Fallback, Composite) --------------------
 
-function computeHourScore(
-  capeVal: number | null | undefined,
-  lpiVal: number | null | undefined,
-  gustVal: number | null | undefined,
-): number {
-  const basis = scoreFromCAPE(capeVal);
-  let bonus = 0;
-  const lpi = typeof lpiVal === "number" && !Number.isNaN(lpiVal) ? lpiVal : 0;
-  if (lpi > 5) bonus += 15;
-  else if (lpi > 0) bonus += 10;
-  const gust = typeof gustVal === "number" && !Number.isNaN(gustVal) ? gustVal : 0;
-  if (gust > 50) bonus += 5;
-  return Math.min(100, basis + bonus);
-}
-
-// Peak-Score über die nächsten N Stunden ab jetzt
 function computeServerStormScore(weatherData: any, hours = 6): number {
   const h = weatherData?.hourly;
   if (!h?.time) return 0;
@@ -89,8 +67,17 @@ function computeServerStormScore(weatherData: any, hours = 6): number {
   for (let i = 0; i < h.time.length && counted < hours; i++) {
     const t = new Date(h.time[i]).getTime();
     if (t < nowMs) continue;
-    const s = computeHourScore(h.cape?.[i], h.lightning_potential?.[i], h.wind_gusts_10m?.[i]);
-    if (s > peak) peak = s;
+    const { score } = computeHourScore({
+      isoTime: h.time[i],
+      cape: h.cape?.[i],
+      lpi: h.lightning_potential?.[i],
+      li: h.lifted_index?.[i],
+      cin: h.convective_inhibition?.[i],
+      gustKmh: h.wind_gusts_10m?.[i],
+      shearKmh: approxShear(h.wind_speed_10m?.[i], h.wind_speed_500hPa?.[i]),
+      precipMmH: h.precipitation?.[i],
+    });
+    if (score > peak) peak = score;
     counted++;
   }
   return peak;
@@ -101,136 +88,6 @@ function stufeFromScore(score: number): Stufe {
   if (score >= 55) return "unwetter";
   if (score >= 35) return "markant";
   return "warnung";
-}
-
-function detectWarnings(
-  weatherData: any,
-  windowHours: number,
-  officialWarnings: any[] = [],
-  stormScore = 0,
-) {
-  const warnings: any[] = [];
-  const hourly = weatherData.hourly;
-  if (!hourly?.time) return warnings;
-  const idx = getIndices(hourly, windowHours);
-  if (idx.length === 0) return warnings;
-
-  const getMax = (arr: number[] | undefined, key: "max" | "min" = "max") =>
-    idx.reduce(
-      (acc: number, i: number) => {
-        const v = arr?.[i] ?? (key === "max" ? -Infinity : Infinity);
-        return key === "max" ? Math.max(acc, v) : Math.min(acc, v);
-      },
-      key === "max" ? -Infinity : Infinity,
-    );
-
-  // Wind: Böen >=60 warnung, >=75 markant, >=90 unwetter, >=118 extrem
-  const maxGust = getMax(hourly.wind_gusts_10m);
-  if (maxGust >= 60) {
-    const stufe: Stufe =
-      maxGust >= 118
-        ? "extrem"
-        : maxGust >= 90
-          ? "unwetter"
-          : maxGust >= 75
-            ? "markant"
-            : "warnung";
-    warnings.push({ typ: "wind", stufe, max_value: Math.round(maxGust), unit: "km/h" });
-  }
-
-  // Starkregen: >=10mm/h oder >=15mm/12h warnung, >=25mm/h markant, >=40mm/h unwetter
-  const max1h = getMax(hourly.precipitation);
-  const sum12 = idx.reduce((s: number, i: number) => s + (hourly.precipitation?.[i] ?? 0), 0);
-  if (max1h >= 10 || sum12 >= 15) {
-    const stufe: Stufe = max1h >= 40 ? "unwetter" : max1h >= 25 ? "markant" : "warnung";
-    warnings.push({
-      typ: "regen",
-      stufe,
-      max_1h: Math.round(max1h * 10) / 10,
-      sum: Math.round(sum12 * 10) / 10,
-      unit: "mm",
-    });
-  }
-
-  // Schnee: >=5cm/12h warnung, >=10 markant, >=20 unwetter
-  const snow = idx.reduce((s: number, i: number) => s + (hourly.snowfall?.[i] ?? 0), 0);
-  if (snow >= 5) {
-    const stufe: Stufe = snow >= 20 ? "unwetter" : snow >= 10 ? "markant" : "warnung";
-    warnings.push({ typ: "schnee", stufe, sum: Math.round(snow * 10) / 10, unit: "cm" });
-  }
-
-  // Gewitter: stufe leitet sich aus dem serverseitig berechneten Score ab (>=20).
-  // Ausgelöst, wenn Score-Schwelle erreicht ODER amtliche Gewitterwarnung aktiv.
-  const maxCape = idx.reduce((m: number, i: number) => Math.max(m, hourly.cape?.[i] ?? 0), 0);
-  const hasOfficialThunderstorm = officialWarnings?.some(
-    (w: any) => typeof w?.type === "string" && w.type.toLowerCase().includes("thunderstorm"),
-  );
-  if (stormScore >= 20 || hasOfficialThunderstorm) {
-    const stufe: Stufe = stufeFromScore(stormScore);
-    warnings.push({
-      typ: "gewitter",
-      stufe,
-      score: stormScore,
-      cape_max: Math.round(maxCape),
-      official: !!hasOfficialThunderstorm,
-      unit: "J/kg",
-    });
-  }
-
-  // Hitze: >=30°C warnung, >=35 markant, >=38 unwetter
-  const maxTemp = getMax(hourly.temperature_2m);
-  if (maxTemp >= 30) {
-    const stufe: Stufe = maxTemp >= 38 ? "unwetter" : maxTemp >= 35 ? "markant" : "warnung";
-    warnings.push({ typ: "hitze", stufe, max_value: Math.round(maxTemp), unit: "°C" });
-  }
-
-  // Frost: <=-5°C warnung, <=-10°C markant
-  const minTemp = getMax(hourly.temperature_2m, "min");
-  if (minTemp <= -5) {
-    const stufe: Stufe = minTemp <= -10 ? "markant" : "warnung";
-    warnings.push({ typ: "frost", stufe, min_value: Math.round(minTemp), unit: "°C" });
-  }
-
-  // Glätte: <=0°C mit Niederschlag → warnung
-  const glazeRisk = idx.some(
-    (i: number) =>
-      (hourly.temperature_2m?.[i] ?? 999) <= 0 && (hourly.precipitation?.[i] ?? 0) > 0.1,
-  );
-  if (glazeRisk) warnings.push({ typ: "glätte", stufe: "warnung" as Stufe });
-
-  // Color je Warnung anhängen
-  return warnings.map((w) => ({ ...w, color: stufeColor(w.stufe) }));
-}
-
-// Kontext-Metriken für Claude (nur zur Formulierung, nicht zur Score-Berechnung)
-function buildConvectiveContext(weatherData: any, windowHours: number) {
-  const hourly = weatherData.hourly;
-  if (!hourly?.time) return {};
-  const idx = getIndices(hourly, windowHours);
-  if (idx.length === 0) return {};
-
-  let maxCape = 0,
-    minLI = 999,
-    minCIN = 0,
-    maxLPI = 0,
-    maxShear = 0;
-  for (const i of idx) {
-    maxCape = Math.max(maxCape, hourly.cape?.[i] ?? 0);
-    minLI = Math.min(minLI, hourly.lifted_index?.[i] ?? 999);
-    minCIN = Math.min(minCIN, hourly.convective_inhibition?.[i] ?? 0);
-    maxLPI = Math.max(maxLPI, hourly.lightning_potential?.[i] ?? 0);
-    const w10 = hourly.wind_speed_10m?.[i] ?? 0;
-    const w500 = hourly.wind_speed_500hPa?.[i] ?? w10;
-    maxShear = Math.max(maxShear, Math.abs(w500 - w10));
-  }
-
-  return {
-    cape_max_jkg: Math.round(maxCape),
-    lifted_index_min: Math.round(minLI * 10) / 10,
-    cin_min_jkg: Math.round(minCIN),
-    lpi_max_jkg: Math.round(maxLPI * 10) / 10,
-    wind_shear_max: Math.round(maxShear),
-  };
 }
 
 function scoreLevelLabel(score: number): string {
@@ -250,99 +107,310 @@ function scoreToColor(score: number): string {
   return "green";
 }
 
+// -------------------- Hinweis-Detection --------------------
+
+function detectWarnings(
+  weatherData: any,
+  windowHours: number,
+  nowcast: any | null,
+  stormScore = 0,
+) {
+  const warnings: any[] = [];
+  const hourly = weatherData.hourly;
+  if (!hourly?.time) return warnings;
+  const idx = getIndices(hourly, windowHours);
+  if (idx.length === 0) return warnings;
+
+  const get = (arr: number[] | undefined, i: number, fallback = 0) =>
+    typeof arr?.[i] === "number" ? (arr as number[])[i] : fallback;
+
+  // ---- WIND (DWD Bft-Schwellen: 50/70/90/118) ----
+  let maxGust = 0;
+  for (const i of idx) maxGust = Math.max(maxGust, get(hourly.wind_gusts_10m, i, 0));
+  if (maxGust >= 50) {
+    const stufe: Stufe =
+      maxGust >= 118 ? "extrem" : maxGust >= 90 ? "unwetter" : maxGust >= 70 ? "markant" : "warnung";
+    warnings.push({ typ: "wind", stufe, max_value: Math.round(maxGust), unit: "km/h" });
+  }
+
+  // ---- STARKREGEN (hourly + Nowcast) ----
+  // Nowcast: peak precipRate (mm/h) in den nächsten 60 Min.
+  let nowcastPeakMmH = 0;
+  const nowcastForecast: any[] = Array.isArray(nowcast?.forecast) ? nowcast.forecast : [];
+  for (const slot of nowcastForecast.slice(0, 12)) {
+    const rate = Number(slot?.precipRate ?? 0);
+    if (Number.isFinite(rate)) nowcastPeakMmH = Math.max(nowcastPeakMmH, rate);
+  }
+  let max1h = nowcastPeakMmH;
+  for (const i of idx) max1h = Math.max(max1h, get(hourly.precipitation, i, 0));
+  // Rolling 12h-Summe (oder windowHours, je kleiner)
+  const sumWindow = idx.reduce((s, i) => s + get(hourly.precipitation, i, 0), 0);
+  if (max1h >= 5 || sumWindow >= 15) {
+    const stufe: Stufe =
+      max1h >= 40 ? "extrem" : max1h >= 25 ? "unwetter" : max1h >= 15 ? "markant" : "warnung";
+    warnings.push({
+      typ: "regen",
+      stufe,
+      max_1h: Math.round(max1h * 10) / 10,
+      sum: Math.round(sumWindow * 10) / 10,
+      nowcast_peak: Math.round(nowcastPeakMmH * 10) / 10,
+      unit: "mm",
+    });
+  }
+
+  // ---- SCHNEE — rolling 12h-Summe (DWD-Schema 10/20/40 cm/12h, vereinfacht 5/10/20) ----
+  let maxSnow12 = 0;
+  for (let k = 0; k < idx.length; k++) {
+    let s = 0;
+    for (let j = k; j < Math.min(idx.length, k + 12); j++) {
+      s += get(hourly.snowfall, idx[j], 0);
+    }
+    if (s > maxSnow12) maxSnow12 = s;
+  }
+  if (maxSnow12 >= 5) {
+    const stufe: Stufe =
+      maxSnow12 >= 40 ? "extrem" : maxSnow12 >= 20 ? "unwetter" : maxSnow12 >= 10 ? "markant" : "warnung";
+    warnings.push({ typ: "schnee", stufe, sum: Math.round(maxSnow12 * 10) / 10, unit: "cm/12h" });
+  }
+
+  // ---- GEWITTER (Composite-Score) ----
+  let maxCape = 0;
+  for (const i of idx) maxCape = Math.max(maxCape, get(hourly.cape, i, 0));
+  if (stormScore >= 20) {
+    warnings.push({
+      typ: "gewitter",
+      stufe: stufeFromScore(stormScore),
+      score: stormScore,
+      cape_max: Math.round(maxCape),
+      unit: "score",
+    });
+  }
+
+  // ---- HAGEL (WMO 96/99 ODER konvektive Hagel-Signatur) ----
+  const codes = idx.map((i) => Math.round(get(hourly.weather_code, i, 0)));
+  const hailCode = codes.some((c) => c === 96 || c === 99);
+  let maxFreezingLow = Infinity;
+  let maxConvCape = 0;
+  for (const i of idx) {
+    const fl = get(hourly.freezing_level_height, i, 9999);
+    if (fl < maxFreezingLow) maxFreezingLow = fl;
+    maxConvCape = Math.max(maxConvCape, get(hourly.cape, i, 0));
+  }
+  const convHail =
+    stormScore >= 55 && maxConvCape >= 1500 && maxFreezingLow < 3500;
+  if (hailCode || convHail) {
+    const stufe: Stufe = stormScore >= 75 || hailCode ? "unwetter" : "markant";
+    warnings.push({
+      typ: "hagel",
+      stufe,
+      cape_max: Math.round(maxConvCape),
+      freezing_level_min: Math.round(maxFreezingLow),
+      unit: "m",
+    });
+  }
+
+  // ---- HITZE (gefühlte Temp wäre besser, hier 2m-Temp) ----
+  let maxTemp = -Infinity;
+  for (const i of idx) maxTemp = Math.max(maxTemp, get(hourly.temperature_2m, i, -Infinity));
+  if (Number.isFinite(maxTemp) && maxTemp >= 30) {
+    const stufe: Stufe = maxTemp >= 38 ? "unwetter" : maxTemp >= 35 ? "markant" : "warnung";
+    warnings.push({ typ: "hitze", stufe, max_value: Math.round(maxTemp), unit: "°C" });
+  }
+
+  // ---- FROST ----
+  let minTemp = Infinity;
+  for (const i of idx) minTemp = Math.min(minTemp, get(hourly.temperature_2m, i, Infinity));
+  if (Number.isFinite(minTemp) && minTemp <= -5) {
+    const stufe: Stufe = minTemp <= -15 ? "unwetter" : minTemp <= -10 ? "markant" : "warnung";
+    warnings.push({ typ: "frost", stufe, min_value: Math.round(minTemp), unit: "°C" });
+  }
+
+  // ---- GLÄTTE (Code 56/57/66/67 ODER Wet-Bulb-basiert) ----
+  const freezeCode = codes.some((c) => c === 56 || c === 57 || c === 66 || c === 67);
+  let wetBulbGlaze = false;
+  for (const i of idx) {
+    const wb = hourly.wet_bulb_temperature_2m?.[i] ?? hourly.temperature_2m?.[i] - 2 ?? null;
+    const p = get(hourly.precipitation, i, 0);
+    if (typeof wb === "number" && wb <= 0 && p > 0.1) wetBulbGlaze = true;
+  }
+  if (freezeCode || wetBulbGlaze) {
+    const stufe: Stufe = freezeCode ? "markant" : "warnung";
+    warnings.push({ typ: "glätte", stufe });
+  }
+
+  return warnings.map((w) => ({ ...w, color: stufeColor(w.stufe) }));
+}
+
+// -------------------- Amtliche Warnungen einmischen --------------------
+
+function officialTypeKey(rawType: unknown): string | null {
+  if (typeof rawType !== "string") return null;
+  const t = rawType.toLowerCase();
+  if (t.includes("thunder") || t.includes("gewitter")) return "gewitter";
+  if (t.includes("wind") || t.includes("sturm") || t.includes("gale") || t.includes("orkan")) return "wind";
+  if (t.includes("rain") || t.includes("regen") || t.includes("flood") || t.includes("hochwasser")) return "regen";
+  if (t.includes("snow") || t.includes("schnee")) return "schnee";
+  if (t.includes("hail") || t.includes("hagel")) return "hagel";
+  if (t.includes("ice") || t.includes("glät") || t.includes("frost glaze")) return "glätte";
+  if (t.includes("heat") || t.includes("hitze")) return "hitze";
+  if (t.includes("frost") || t.includes("cold")) return "frost";
+  return null;
+}
+
+function officialLevelToStufe(level: unknown): Stufe {
+  const n = typeof level === "number" ? level : Number(level);
+  if (!Number.isFinite(n) || n <= 1) return "warnung";
+  if (n >= 4) return "extrem";
+  return RANK_STUFE[n] ?? "warnung";
+}
+
+function mergeOfficialIntoWarnings(warnings: any[], official: any[]): any[] {
+  if (!Array.isArray(official) || official.length === 0) return warnings;
+  const byType = new Map<string, any>();
+  for (const w of warnings) byType.set(w.typ, w);
+
+  for (const ow of official) {
+    const key = officialTypeKey(ow?.type);
+    if (!key) continue;
+    const stufe = officialLevelToStufe(ow?.level);
+    const existing = byType.get(key);
+    if (existing) {
+      existing.stufe = maxStufe(existing.stufe as Stufe, stufe);
+      existing.color = stufeColor(existing.stufe);
+      existing.official = true;
+    } else {
+      const fresh = {
+        typ: key,
+        stufe,
+        official: true,
+        color: stufeColor(stufe),
+      } as any;
+      warnings.push(fresh);
+      byType.set(key, fresh);
+    }
+  }
+  return warnings;
+}
+
+// -------------------- Kontext + Templates --------------------
+
+function buildConvectiveContext(weatherData: any, windowHours: number) {
+  const hourly = weatherData.hourly;
+  if (!hourly?.time) return {};
+  const idx = getIndices(hourly, windowHours);
+  if (idx.length === 0) return {};
+  let maxCape = 0, minLI = 999, minCIN = 0, maxLPI = 0, maxShear = 0;
+  for (const i of idx) {
+    maxCape = Math.max(maxCape, hourly.cape?.[i] ?? 0);
+    minLI = Math.min(minLI, hourly.lifted_index?.[i] ?? 999);
+    minCIN = Math.min(minCIN, hourly.convective_inhibition?.[i] ?? 0);
+    maxLPI = Math.max(maxLPI, hourly.lightning_potential?.[i] ?? 0);
+    const shear = approxShear(hourly.wind_speed_10m?.[i], hourly.wind_speed_500hPa?.[i]);
+    if (typeof shear === "number") maxShear = Math.max(maxShear, shear);
+  }
+  return {
+    cape_max_jkg: Math.round(maxCape),
+    lifted_index_min: Math.round(minLI * 10) / 10,
+    cin_min_jkg: Math.round(minCIN),
+    lpi_max_jkg: Math.round(maxLPI * 10) / 10,
+    wind_shear_max_kmh: Math.round(maxShear),
+  };
+}
+
 const STATIC_PROMPT = `Du bist erfahrener Meteorologe und Wetter-Sicherheits-Kommunikator für DACH und Italien.
 
-REGEL 0 (ABSOLUT): NIEMALS "LI=999", "LI nicht verfügbar", "LI-Daten fehlen", "Lifted Index unbekannt" oder ähnliches erwähnen. Wenn LI fehlt oder 999 ist, ignoriere es vollständig — kein Hinweis, keine Erwähnung, keine Entschuldigung.
-
+REGEL 0 (ABSOLUT): NIEMALS "LI=999", "LI nicht verfügbar", "Daten fehlen" o.ä. erwähnen. Wenn ein Wert fehlt, ignoriere ihn vollständig.
 
 Du bekommst:
-1. ROHE Stundenwerte der nächsten 48h (Temperatur, Niederschlag, Wind, CAPE, LI, LPI, Wettercode) — nur als Kontext für Begründung & Gewitter-Einschätzung
-2. Einen FERTIG BERECHNETEN Gewitter-Score (0–100) — du übernimmst diesen exakt
-3. Eine FERTIG BERECHNETE Liste von Warnungen aus harten Schwellenwerten — das ist die einzige Quelle für warnungen_12h
-4. Konvektive Kontext-Metriken
-5. Amtliche Warnungen und Rainbow Nowcast
+1. Rohe Stundenwerte der nächsten 12-48h (Temperatur, Niederschlag, Wind, CAPE, LI, LPI, Shear, Wettercode).
+2. Einen FERTIG BERECHNETEN Gewitter-Score (Composite aus CAPE/LPI/LI/CIN/Shear/Tageszeit) — übernimm exakt.
+3. Eine FERTIG BERECHNETE Liste von Hinweisen aus harten Schwellenwerten — das ist die einzige Quelle für warnungen_12h.
+4. Konvektive Kontext-Metriken (CAPE, LI, CIN, LPI, Shear).
+5. Amtliche Warnungen (DWD/MeteoAlarm) und Rainbow-Nowcast (Niederschlag nächste 2h).
 
 DEINE AUFGABE FÜR warnungen_12h:
-- Du bekommst eine Liste berechneter Warnungen. Deine einzige Aufgabe: Formuliere für jede Warnung einen Titel und eine Beschreibung.
-- Erfinde KEINE zusätzlichen Warnungen. Füge nichts hinzu, was nicht in der berechneten Liste steht.
-- Wenn warnungen: [] übergeben wird, gibst du warnungen_12h: [] zurück — ohne Ausnahme.
-- typ, stufe, color und Messwerte übernimmst du EXAKT aus der berechneten Warnung.
+- Für jeden berechneten Hinweis formulierst du Titel und Beschreibung.
+- Erfinde KEINE zusätzlichen Hinweise.
+- typ, stufe, color und Messwerte übernimmst du EXAKT.
+- Wenn warnungen leer → warnungen_12h: [].
 
-TITEL-VORLAGEN (exakt verwenden):
+TITEL-VORLAGEN:
 - gewitter/warnung:  "Gewitter möglich"
 - gewitter/markant:  "Starkes Gewitter möglich"
-- gewitter/unwetter: "Unwetterwarnung Gewitter"
-- gewitter/extrem:   "Extremes Unwetter"
+- gewitter/unwetter: "Unwetterhinweis Gewitter"
+- gewitter/extrem:   "Extremes Gewitter"
+- hagel/warnung:     "Hagel möglich"
+- hagel/markant:     "Markanter Hagelschlag"
+- hagel/unwetter:    "Unwetterhinweis Hagel"
 - wind/warnung:      "Windböen erwartet"
-- wind/markant:      "Markante Windböen"
-- wind/unwetter:     "Sturmwarnung"
-- wind/extrem:       "Orkanwarnung"
+- wind/markant:      "Markante Sturmböen"
+- wind/unwetter:     "Sturm"
+- wind/extrem:       "Orkan"
 - regen/warnung:     "Regen möglich"
 - regen/markant:     "Starkregen"
-- regen/unwetter:    "Unwetterwarnung Starkregen"
+- regen/unwetter:    "Unwetterhinweis Starkregen"
+- regen/extrem:      "Extremer Starkregen"
 - schnee/warnung:    "Schneefall möglich"
 - schnee/markant:    "Markanter Schneefall"
-- schnee/unwetter:   "Unwetterwarnung Schnee"
+- schnee/unwetter:   "Unwetterhinweis Schnee"
+- schnee/extrem:     "Extremer Schneefall"
 - frost/warnung:     "Frost möglich"
 - frost/markant:     "Strenger Frost"
+- frost/unwetter:    "Sehr strenger Frost"
 - glätte/warnung:    "Glättegefahr"
+- glätte/markant:    "Gefrierender Niederschlag"
 - hitze/warnung:     "Hitze erwartet"
 - hitze/markant:     "Markante Hitze"
 - hitze/unwetter:    "Extreme Hitze"
 
 BESCHREIBUNG (max. 2 Sätze):
-- Zeitfenster (wann, z.B. "ab 16 Uhr", "nachts")
-- Konkrete Werte aus der berechneten Warnung (z.B. "Böen bis 81 km/h", "bis 28 mm in 12 h")
-- 1 kurze Handlungsempfehlung (Wind: lose Gegenstände sichern; Hitze: Risikogruppen schützen; Glätte: Brücken und exponierte Stellen)
+- Zeitfenster
+- Konkrete Werte aus dem Input
+- 1 kurze Handlungsempfehlung
 
-DEINE AUFGABE FÜR Gewitter-Block:
-- Übernimm score, level und color des Gewitter-Risikos EXAKT aus dem Input
-- Begründe mit den gegebenen Metriken und Rohdaten
-- Schätze Konvektionstyp (Einzelzellen / Multizellen / Superzellen / MCS / Frontgewitter)
+GEWITTER-BLOCK:
+- Übernimm score, level, color EXAKT.
+- Begründung in 1-2 Sätzen mit den Metriken (CAPE/LI/LPI/Shear).
+- Schätze Konvektionstyp (Einzelzellen / Multizellen / Superzellen / MCS / Frontgewitter).
 
 REGELN:
-- Amtliche Warnungen und Rainbow Nowcast nur als Realitäts-Check für summary und Gewitter-Begründung — NICHT für warnungen_12h.
+- Amtliche Warnungen sind höchste Priorität — wenn aktiv, hebe Stufe in der Begründung hervor.
 - Erfinde keine Werte, die nicht aus den Daten ableitbar sind.
-- Wenn lifted_index_min null, 999 oder fehlt: KEINE Erwähnung von LI in der Begründung — argumentiere dann nur mit CAPE, LPI, Shear und Rohdaten.
 
-OUTPUT (NUR JSON, nichts davor/danach):
+OUTPUT (NUR JSON):
 {
   "gewitter_risiko_6h": {
-    "level": "<aus Input übernehmen>",
-    "score": <aus Input übernehmen — EXAKT>,
-    "begründung": "1-2 Sätze mit konkreten Messwerten",
-    "zeitfenster": "z.B. '14–19 Uhr' oder 'ganztägig'",
-    "konvektionstyp": "z.B. 'organisierte Multizellen mit Hagel-Potenzial'",
-    "color": "<aus Input übernehmen>"
+    "level": "<aus Input>",
+    "score": <aus Input EXAKT>,
+    "begründung": "1-2 Sätze",
+    "zeitfenster": "z.B. '14-19 Uhr'",
+    "konvektionstyp": "z.B. 'organisierte Multizellen'",
+    "color": "<aus Input>"
   },
   "warnungen_12h": [
     {
       "id": "typ_stufe",
-      "typ": "wind|regen|gewitter|schnee|hitze|glätte|frost",
+      "typ": "wind|regen|gewitter|hagel|schnee|hitze|glätte|frost",
       "stufe": "warnung|markant|unwetter|extrem",
-      "titel": "aus Titel-Vorlagen",
-      "beschreibung": "1-2 Sätze mit Zahlen und Empfehlung",
+      "titel": "aus Vorlagen",
+      "beschreibung": "1-2 Sätze mit Zahlen + Empfehlung",
       "color": "yellow|orange|red|purple",
-      "icon": "Wind|CloudRain|Zap|Snowflake|Thermometer|AlertTriangle"
+      "icon": "Wind|CloudRain|Zap|CloudHail|Snowflake|Thermometer|AlertTriangle"
     }
   ],
-  "summary": "1-2 Sätze Gesamtbewertung",
-  "disclaimer": "Experimentelle KI-Auswertung. Keine amtliche Warnung. Bei akuter Gefahr DWD/ZAMG/MeteoSwiss/Protezione Civile konsultieren."
+  "summary": "1-2 Sätze",
+  "disclaimer": "Experimenteller KI-Wetterhinweis. Keine amtliche Warnung. Bei akuter Gefahr DWD/ZAMG/MeteoSwiss/Protezione Civile konsultieren."
 }
 
-Farbcodes Warnungen (aus Input übernehmen): warnung=yellow, markant=orange, unwetter=red, extrem=purple
+Farbcodes: warnung=yellow, markant=orange, unwetter=red, extrem=purple
 
-# DATEN FOLGEN IM NÄCHSTEN BLOCK`;
+# DATEN FOLGEN`;
 
 async function callAnthropicWithRetry(
   body: unknown,
-): Promise<
-  { ok: true; data: any } | { ok: false; code: ErrorCode; status: number; details: string }
-> {
+): Promise<{ ok: true; data: any } | { ok: false; code: ErrorCode; status: number; details: string }> {
   let lastErr: { code: ErrorCode; status: number; details: string } = {
-    code: "API_ERROR",
-    status: 500,
-    details: "unknown",
+    code: "API_ERROR", status: 500, details: "unknown",
   };
   for (let attempt = 1; attempt <= 3; attempt++) {
     const controller = new AbortController();
@@ -359,17 +427,12 @@ async function callAnthropicWithRetry(
         signal: controller.signal,
       });
       clearTimeout(timeoutId);
-      if (resp.ok) {
-        const data = await resp.json();
-        return { ok: true, data };
-      }
+      if (resp.ok) return { ok: true, data: await resp.json() };
       const text = await resp.text();
       const status = resp.status;
-      const retryable = status === 429 || status >= 500;
       const code: ErrorCode = status === 429 ? "RATE_LIMIT" : "API_ERROR";
       lastErr = { code, status, details: text.slice(0, 500) };
-      if (!retryable) return { ok: false, ...lastErr };
-      console.warn("[risk-warnings] anthropic retry", attempt, status);
+      if (!(status === 429 || status >= 500)) return { ok: false, ...lastErr };
     } catch (e: any) {
       clearTimeout(timeoutId);
       const isTimeout = e?.name === "AbortError";
@@ -378,7 +441,6 @@ async function callAnthropicWithRetry(
         status: isTimeout ? 504 : 500,
         details: String(e?.message ?? e),
       };
-      console.warn("[risk-warnings] anthropic retry", attempt, isTimeout ? "TIMEOUT" : "NETWORK");
     }
     if (attempt < 3) await sleep(RETRY_DELAYS_MS[attempt - 1]);
   }
@@ -412,21 +474,28 @@ function warningTitle(w: any): string {
   const titles: Record<string, string> = {
     "gewitter/warnung": "Gewitter möglich",
     "gewitter/markant": "Starkes Gewitter möglich",
-    "gewitter/unwetter": "Unwetterwarnung Gewitter",
-    "gewitter/extrem": "Extremes Unwetter",
+    "gewitter/unwetter": "Unwetterhinweis Gewitter",
+    "gewitter/extrem": "Extremes Gewitter",
+    "hagel/warnung": "Hagel möglich",
+    "hagel/markant": "Markanter Hagelschlag",
+    "hagel/unwetter": "Unwetterhinweis Hagel",
     "wind/warnung": "Windböen erwartet",
-    "wind/markant": "Markante Windböen",
-    "wind/unwetter": "Sturmwarnung",
-    "wind/extrem": "Orkanwarnung",
+    "wind/markant": "Markante Sturmböen",
+    "wind/unwetter": "Sturm",
+    "wind/extrem": "Orkan",
     "regen/warnung": "Regen möglich",
     "regen/markant": "Starkregen",
-    "regen/unwetter": "Unwetterwarnung Starkregen",
+    "regen/unwetter": "Unwetterhinweis Starkregen",
+    "regen/extrem": "Extremer Starkregen",
     "schnee/warnung": "Schneefall möglich",
     "schnee/markant": "Markanter Schneefall",
-    "schnee/unwetter": "Unwetterwarnung Schnee",
+    "schnee/unwetter": "Unwetterhinweis Schnee",
+    "schnee/extrem": "Extremer Schneefall",
     "frost/warnung": "Frost möglich",
     "frost/markant": "Strenger Frost",
+    "frost/unwetter": "Sehr strenger Frost",
     "glätte/warnung": "Glättegefahr",
+    "glätte/markant": "Gefrierender Niederschlag",
     "hitze/warnung": "Hitze erwartet",
     "hitze/markant": "Markante Hitze",
     "hitze/unwetter": "Extreme Hitze",
@@ -438,28 +507,32 @@ function warningIcon(typ: string): string {
   if (typ === "wind") return "Wind";
   if (typ === "regen") return "CloudRain";
   if (typ === "gewitter") return "Zap";
+  if (typ === "hagel") return "CloudHail";
   if (typ === "schnee") return "Snowflake";
   if (typ === "hitze" || typ === "frost") return "Thermometer";
   return "AlertTriangle";
 }
 
 function warningDescription(w: any): string {
-  if (w.typ === "gewitter") {
-    return `Gewitter-Score ${w.score ?? 0}/100, CAPE bis ${w.cape_max ?? 0} J/kg. Achte auf Blitzschlag, Starkregen und kurzfristige Böen.`;
-  }
+  if (w.typ === "gewitter")
+    return `Gewitter-Score ${w.score ?? 0}/100, CAPE bis ${w.cape_max ?? 0} J/kg. Achte auf Blitzschlag, Starkregen und Böen.`;
+  if (w.typ === "hagel")
+    return `Konvektive Lage mit Hagel-Signatur (CAPE ${w.cape_max ?? 0} J/kg, Nullgradgrenze ~${w.freezing_level_min ?? 0} m). Fahrzeuge schützen.`;
   if (w.typ === "wind")
-    return `Böen bis ${w.max_value ?? 0} km/h möglich. Lose Gegenstände sichern.`;
-  if (w.typ === "regen")
-    return `Bis ${w.max_1h ?? 0} mm in einer Stunde oder ${w.sum ?? 0} mm im Zeitraum möglich. Unterführungen und überflutete Bereiche meiden.`;
+    return `Böen bis ${w.max_value ?? 0} km/h. Lose Gegenstände sichern.`;
+  if (w.typ === "regen") {
+    const nc = w.nowcast_peak && w.nowcast_peak > 0 ? ` (Nowcast-Peak ${w.nowcast_peak} mm/h)` : "";
+    return `Bis ${w.max_1h ?? 0} mm/h${nc}, Summe ${w.sum ?? 0} mm. Überflutete Bereiche meiden.`;
+  }
   if (w.typ === "schnee")
-    return `Bis ${w.sum ?? 0} cm Schnee möglich. Plane längere Wegezeiten ein.`;
+    return `Bis ${w.sum ?? 0} cm in 12 h möglich. Längere Wegezeiten einplanen.`;
   if (w.typ === "hitze")
-    return `Temperaturen bis ${w.max_value ?? 0} °C möglich. Risikogruppen schützen und genug trinken.`;
+    return `Temperaturen bis ${w.max_value ?? 0} °C. Risikogruppen schützen, genug trinken.`;
   if (w.typ === "frost")
-    return `Temperaturen bis ${w.min_value ?? 0} °C möglich. Frostempfindliche Bereiche schützen.`;
+    return `Tiefstwerte bis ${w.min_value ?? 0} °C. Frostempfindliche Bereiche schützen.`;
   if (w.typ === "glätte")
-    return "Glätte durch Niederschlag bei niedrigen Temperaturen möglich. Besonders auf Brücken vorsichtig fahren.";
-  return "Wetterrisiko im Vorhersagezeitraum möglich. Beobachte die Entwicklung aufmerksam.";
+    return "Glätte durch gefrierenden Niederschlag oder Nässe bei Frost möglich. Auf Brücken vorsichtig fahren.";
+  return "Wetterrisiko möglich. Entwicklung beobachten.";
 }
 
 function materializeWarnings(warnings: any[], aiWarnings: any[] = []) {
@@ -475,6 +548,7 @@ function materializeWarnings(warnings: any[], aiWarnings: any[] = []) {
       beschreibung: ai?.beschreibung || warningDescription(w),
       color: w.color,
       icon: ai?.icon || warningIcon(w.typ),
+      official: w.official === true ? true : undefined,
     };
   });
 }
@@ -489,10 +563,11 @@ function fallbackResponse(
 ) {
   const cape = convectiveContext?.cape_max_jkg ?? 0;
   const lpi = convectiveContext?.lpi_max_jkg ?? 0;
+  const shear = convectiveContext?.wind_shear_max_kmh ?? 0;
   const begründung =
     serverScore > 0
-      ? `Der lokale Gewitter-Score liegt bei ${serverScore}/100. CAPE bis ${cape} J/kg${lpi > 0 ? ` und LPI bis ${lpi}` : ""} stützen die Einschätzung.`
-      : "Die lokalen Gewitterparameter liegen aktuell unter der Warnschwelle.";
+      ? `Composite-Score ${serverScore}/100. CAPE bis ${cape} J/kg${lpi > 0 ? `, LPI ${lpi}` : ""}${shear > 0 ? `, Shear ${shear} km/h` : ""}.`
+      : "Konvektive Parameter unter Hinweis-Schwelle.";
   return {
     gewitter_risiko_6h: {
       level,
@@ -500,20 +575,23 @@ function fallbackResponse(
       begründung,
       zeitfenster: `nächste ${windowHours} h`,
       konvektionstyp:
-        serverScore >= 35
-          ? "Multizellen möglich"
-          : serverScore >= 20
-            ? "Einzelzellen möglich"
-            : "keine relevante Konvektion",
+        serverScore >= 55
+          ? "Organisierte Konvektion möglich"
+          : serverScore >= 35
+            ? "Multizellen möglich"
+            : serverScore >= 20
+              ? "Einzelzellen möglich"
+              : "keine relevante Konvektion",
       color,
     },
     warnungen_12h: materializeWarnings(warnings),
     summary:
       warnings.length > 0
-        ? "Es liegen lokal berechnete Wetterhinweise vor. Die KI-Formulierung war vorübergehend nicht verfügbar."
-        : "Aktuell liegen keine lokal berechneten kritischen Risiken vor.",
+        ? "Lokale Wetterhinweise berechnet. KI-Formulierung vorübergehend nicht verfügbar."
+        : "Aktuell keine kritischen Risiken aus lokalen Berechnungen.",
     disclaimer:
-      "Experimentelle KI-Auswertung. Keine amtliche Warnung. Bei akuter Gefahr DWD/ZAMG/MeteoSwiss/Protezione Civile konsultieren.",
+      "Experimenteller KI-Wetterhinweis. Keine amtliche Warnung. Bei akuter Gefahr DWD/ZAMG/MeteoSwiss/Protezione Civile konsultieren.",
+    _score_version: THUNDERSTORM_SCORE_VERSION,
   };
 }
 
@@ -524,7 +602,7 @@ export default async function handler(req: any, res: any) {
   if (req.method === "OPTIONS") return res.status(200).end();
   if (req.method !== "POST") return errorResponse(res, 405, "BAD_REQUEST", "Method not allowed");
 
-  const { weatherData, location, windowHours = 48, thunderstormScore } = req.body ?? {};
+  const { weatherData, location, windowHours = 12, thunderstormScore } = req.body ?? {};
   const officialWarnings: any[] = req.body?.officialWarnings ?? [];
   const nowcast: any = req.body?.nowcast ?? null;
   if (!weatherData || !location)
@@ -534,24 +612,21 @@ export default async function handler(req: any, res: any) {
   const locLon = typeof location.longitude === "number" ? location.longitude : location.lon;
   const dataLat = weatherData?.latitude;
   const dataLon = weatherData?.longitude;
-
-  if (typeof locLat !== "number" || typeof locLon !== "number") {
+  if (typeof locLat !== "number" || typeof locLon !== "number")
     return errorResponse(res, 400, "BAD_REQUEST", "location missing latitude/longitude");
-  }
-  if (typeof dataLat === "number" && typeof dataLon === "number") {
-    if (Math.abs(dataLat - locLat) > 1.0 || Math.abs(dataLon - locLon) > 1.0) {
-      return errorResponse(
-        res,
-        400,
-        "BAD_REQUEST",
-        "location and weatherData mismatch",
-        `location ${locLat},${locLon} vs data ${dataLat},${dataLon}`,
-      );
-    }
+  if (
+    typeof dataLat === "number" &&
+    typeof dataLon === "number" &&
+    (Math.abs(dataLat - locLat) > 1.0 || Math.abs(dataLon - locLon) > 1.0)
+  ) {
+    return errorResponse(
+      res, 400, "BAD_REQUEST",
+      "location and weatherData mismatch",
+      `location ${locLat},${locLon} vs data ${dataLat},${dataLon}`,
+    );
   }
 
-  // Single Source of Truth: lokaler useThunderstormRisk-Score vom Client.
-  // Fallback auf serverseitige Berechnung, falls kein Wert übergeben wurde.
+  // Client-Score (composite) bevorzugt; Server-Fallback ebenfalls composite.
   const clientScore =
     typeof thunderstormScore === "number" && Number.isFinite(thunderstormScore)
       ? Math.max(0, Math.min(100, Math.round(thunderstormScore)))
@@ -563,13 +638,11 @@ export default async function handler(req: any, res: any) {
   const dLat = typeof dataLat === "number" ? Math.round(dataLat * 10) : "x";
   const dLon = typeof dataLon === "number" ? Math.round(dataLon * 10) : "x";
   const bucket = Math.floor(Date.now() / FRESH_MS);
-  const cacheKey = `warnings_v4:${Math.round(locLat * 10)}_${Math.round(locLon * 10)}_${dLat}_${dLon}_s${serverScore}_${bucket}`;
+  const cacheKey = `warnings_v5:${Math.round(locLat * 10)}_${Math.round(locLon * 10)}_${dLat}_${dLon}_s${serverScore}_${bucket}`;
   const locLabel = `${location?.name ?? "?"} (${locLat},${locLon})`;
 
-  // Cache lookup
   const cached = await getCached<any>(cacheKey);
   if (cached && isFresh(cached.timestamp, FRESH_MS)) {
-    console.log("[risk-warnings] cache HIT (fresh)", { location: locLabel });
     return res.status(200).json({
       ...cached.data,
       cached: true,
@@ -578,25 +651,19 @@ export default async function handler(req: any, res: any) {
       cacheAge: ageMinutes(cached.timestamp),
     });
   }
-  console.log("[risk-warnings] cache MISS", { location: locLabel, hasStale: !!cached });
 
-  // Warnungen berechnen
-  const warnings = detectWarnings(weatherData, windowHours, officialWarnings, serverScore);
+  let warnings = detectWarnings(weatherData, windowHours, nowcast, serverScore);
+  warnings = mergeOfficialIntoWarnings(warnings, officialWarnings);
   const convectiveContext = buildConvectiveContext(weatherData, windowHours);
 
-  console.log(
-    "[risk-warnings] INPUT",
-    JSON.stringify({
-      location: location?.name,
-      cape_max: Math.max(...(weatherData.hourly.cape?.slice(0, 12) ?? [0])),
-      gust_max: Math.max(...(weatherData.hourly.wind_gusts_10m?.slice(0, 12) ?? [0])),
-      storm_score: serverScore,
-      storm_level: level,
-      warnings_detected: warnings.map((w: any) => `${w.typ}_${w.stufe}_${w.max_value}${w.unit}`),
-    }),
-  );
+  console.log("[risk-warnings]", JSON.stringify({
+    location: location?.name,
+    score: serverScore,
+    level,
+    types: warnings.map((w: any) => `${w.typ}/${w.stufe}${w.official ? "*" : ""}`),
+    version: THUNDERSTORM_SCORE_VERSION,
+  }));
 
-  // Rohe Stundenwerte für die nächsten windowHours an Claude weiterreichen
   const rawHourly = (() => {
     const h = weatherData.hourly;
     if (!h?.time) return null;
@@ -608,7 +675,6 @@ export default async function handler(req: any, res: any) {
       temperature_2m: pick(h.temperature_2m),
       precipitation: pick(h.precipitation),
       wind_gusts_10m: pick(h.wind_gusts_10m),
-      wind_speed_10m: pick(h.wind_speed_10m),
       cape: pick(h.cape),
       lifted_index: pick(h.lifted_index),
       lightning_potential: pick(h.lightning_potential),
@@ -616,16 +682,15 @@ export default async function handler(req: any, res: any) {
     };
   })();
 
-  // Claude formuliert
   const dynamicPart =
     `# DATEN\n` +
     `Standort: ${JSON.stringify(location)}\n` +
-    `Berechneter Gewitter-Score (serverseitig, exakt übernehmen): score=${serverScore}, level="${level}", color="${color}"\n` +
-    `Konvektive Metriken (${windowHours}h-Fenster): ${JSON.stringify(convectiveContext, null, 2)}\n` +
-    `Hinweis-Warnungen aus Schwellenwerten (nur Anhaltspunkt): ${JSON.stringify(warnings, null, 2)}\n` +
-    `Rohe Stundenwerte nächste ${windowHours}h: ${JSON.stringify(rawHourly)}\n` +
-    `Amtliche Warnungen (DWD/MeteoAlarm — höchste Priorität): ${JSON.stringify(officialWarnings, null, 2)}\n` +
-    `Rainbow Nowcast (Niederschlag nächste 2h): ${JSON.stringify(nowcast, null, 2)}`;
+    `Composite Gewitter-Score (übernehmen): score=${serverScore}, level="${level}", color="${color}"\n` +
+    `Konvektive Metriken (${windowHours}h): ${JSON.stringify(convectiveContext)}\n` +
+    `Berechnete Hinweise: ${JSON.stringify(warnings)}\n` +
+    `Rohdaten ${windowHours}h: ${JSON.stringify(rawHourly)}\n` +
+    `Amtliche Warnungen: ${JSON.stringify(officialWarnings)}\n` +
+    `Rainbow Nowcast: ${JSON.stringify(nowcast)}`;
 
   const apiResult = await callAnthropicWithRetry({
     model: "claude-haiku-4-5-20251001",
@@ -642,65 +707,29 @@ export default async function handler(req: any, res: any) {
   });
 
   if (!apiResult.ok) {
-    console.error("[risk-warnings] anthropic failed", {
-      location: locLabel,
-      code: apiResult.code,
-      status: apiResult.status,
-    });
-    const fallback = fallbackResponse(
-      warnings,
-      serverScore,
-      level,
-      color,
-      convectiveContext,
-      windowHours,
-    );
-    return res
-      .status(200)
-      .json({ ...fallback, cached: false, fromCache: false, stale: false, fallback: true });
+    const fallback = fallbackResponse(warnings, serverScore, level, color, convectiveContext, windowHours);
+    return res.status(200).json({ ...fallback, cached: false, fromCache: false, stale: false, fallback: true });
   }
 
   const textContent: string = apiResult.data?.content?.[0]?.text ?? "";
   let parsed: any;
   try {
     parsed = extractJson(textContent);
-  } catch (parseError) {
-    console.error("[risk-warnings] parse error", { location: locLabel, err: String(parseError) });
-    const fallback = fallbackResponse(
-      warnings,
-      serverScore,
-      level,
-      color,
-      convectiveContext,
-      windowHours,
-    );
-    return res
-      .status(200)
-      .json({ ...fallback, cached: false, fromCache: false, stale: false, fallback: true });
+  } catch {
+    const fallback = fallbackResponse(warnings, serverScore, level, color, convectiveContext, windowHours);
+    return res.status(200).json({ ...fallback, cached: false, fromCache: false, stale: false, fallback: true });
+  }
+  if (validateSchema(parsed)) {
+    const fallback = fallbackResponse(warnings, serverScore, level, color, convectiveContext, windowHours);
+    return res.status(200).json({ ...fallback, cached: false, fromCache: false, stale: false, fallback: true });
   }
 
-  const schemaErr = validateSchema(parsed);
-  if (schemaErr) {
-    const fallback = fallbackResponse(
-      warnings,
-      serverScore,
-      level,
-      color,
-      convectiveContext,
-      windowHours,
-    );
-    return res
-      .status(200)
-      .json({ ...fallback, cached: false, fromCache: false, stale: false, fallback: true });
-  }
-
-  // Server-Score erzwingen (Claude darf ihn nicht verändern)
   parsed.gewitter_risiko_6h.score = serverScore;
   parsed.gewitter_risiko_6h.level = level;
   parsed.gewitter_risiko_6h.color = color;
   parsed.warnungen_12h = materializeWarnings(warnings, parsed.warnungen_12h);
+  parsed._score_version = THUNDERSTORM_SCORE_VERSION;
 
   await setCached(cacheKey, parsed, 24 * 60 * 60);
-  console.log("[risk-warnings] cache SET", { location: locLabel });
   return res.status(200).json({ ...parsed, cached: false, fromCache: false, stale: false });
 }
