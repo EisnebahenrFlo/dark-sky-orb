@@ -70,7 +70,7 @@ export function OfficialWarningsSection() {
         <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-border bg-muted/40 p-4 text-sm">
           <AlertTriangle className="h-4 w-4 text-amber-500" />
           <span className="text-muted-foreground">
-            Amtliche Quellen gerade nicht erreichbar – KI-Auswertung unten.
+            Amtliche Quellen gerade nicht erreichbar – KI-Wetterhinweise unten.
           </span>
         </div>
       )}

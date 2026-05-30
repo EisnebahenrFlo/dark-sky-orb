@@ -120,7 +120,7 @@ function WarnungenTab() {
         <div className="flex items-baseline justify-between gap-3 px-1">
           <div>
             <h2 className="font-display text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-              KI-Auswertung · 12 H
+              KI-Wetterhinweise · 24 H
             </h2>
             <p className="mt-0.5 text-[11px] text-muted-foreground/80">
               Synoptische KI-Risikoeinschätzung – nicht amtlich
@@ -129,7 +129,7 @@ function WarnungenTab() {
           {riskData && riskData.warnungen_12h.length > 0 && (
             <span className="text-xs text-muted-foreground">
               {riskData.warnungen_12h.length}{" "}
-              {riskData.warnungen_12h.length === 1 ? "Warnung" : "Warnungen"}
+              {riskData.warnungen_12h.length === 1 ? "Hinweis" : "Hinweise"}
             </span>
           )}
         </div>
@@ -142,7 +142,7 @@ function WarnungenTab() {
               <AlertCircle className="h-5 w-5 text-foreground/70" strokeWidth={1.75} />
             </div>
             <p className="text-sm text-muted-foreground">
-              KI-Auswertung konnte nicht geladen werden.
+              KI-Wetterhinweise konnten nicht geladen werden.
             </p>
             <button
               onClick={riskRetry.trigger}
@@ -168,7 +168,7 @@ function WarnungenTab() {
               <div className="flex items-center gap-3 rounded-2xl border border-border bg-card p-4">
                 <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-500" strokeWidth={2} />
                 <p className="text-sm text-muted-foreground">
-                  Die KI-Auswertung sieht aktuell keine kritischen Risiken.
+                  Die KI sieht aktuell keine kritischen Risiken.
                 </p>
               </div>
             )}

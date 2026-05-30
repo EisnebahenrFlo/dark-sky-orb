@@ -1,5 +1,6 @@
 import {
   AlertTriangle,
+  CloudHail,
   CloudRain,
   Snowflake,
   Sparkles,
@@ -14,6 +15,7 @@ const ICONS: Record<string, LucideIcon> = {
   Wind,
   CloudRain,
   Zap,
+  CloudHail,
   Snowflake,
   Thermometer,
   AlertTriangle,
@@ -81,7 +83,7 @@ export function WarningCard({ warning }: { warning: RiskWarning }) {
           <div className="inline-flex items-center gap-1.5">
             <Sparkles className={`h-3 w-3 ${tone.accent}`} strokeWidth={2} />
             <span className={`text-[10px] font-bold uppercase tracking-widest ${tone.accent}`}>
-              KI-Analyse · Experimentell
+              KI-Wetterhinweis · Experimentell
             </span>
           </div>
           <span
