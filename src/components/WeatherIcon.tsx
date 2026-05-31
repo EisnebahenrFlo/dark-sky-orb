@@ -28,9 +28,18 @@ export function getEffectiveCode(
   cloudCoverMid?: number,
 ): number {
   const effectiveCloud = cloudCoverLow !== undefined && cloudCoverLow !== null ? cloudCoverLow : cloudCover;
-  // Gewitter (WMO 95–99) NIEMALS auf "sonnig/klar" downgraden — auch wenn
-  // die aktuelle Stunde noch 0 mm meldet (Radar-Lag, Zelle in Anmarsch).
-  if (isThunderstormCode(code)) return code;
+  // Gewitter (WMO 95–99): nur schützen, wenn aktuelle Evidenz vorliegt.
+  // Ohne Niederschlag UND ohne tiefe/mittlere Bewölkung wäre „Gewitter" eine
+  // falsche Hero-Anzeige (Modell-Lag, Zelle wirklich nicht hier) → Downgrade.
+  if (isThunderstormCode(code)) {
+    if ((precipitation ?? 0) < 0.05 && effectiveCloud < 40) {
+      if (effectiveCloud >= 88) return 3;
+      if (effectiveCloud >= 50) return 2;
+      if (effectiveCloud >= 20) return 1;
+      return 0;
+    }
+    return code;
+  }
   // Bodennebel-Erkennung früh morgens
   if (code === 45 || code === 48) {
     const h = hour ?? -1;

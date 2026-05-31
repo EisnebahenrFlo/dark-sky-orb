@@ -86,7 +86,10 @@ function reconcileCurrentWithHourly(
   data: WeatherData,
   hourly: HourlyData,
 ): WeatherData["current"] {
-  const current = { ...data.current };
+  const current = { ...data.current } as WeatherData["current"] & {
+    _source?: "station" | "model";
+    precipitation_10min?: number;
+  };
   if (THUNDER(current.weather_code)) return current;
 
   const nowMs = new Date(current.time).getTime();
@@ -107,15 +110,22 @@ function reconcileCurrentWithHourly(
   const hPrecip = hourly.precipitation?.[idx] ?? 0;
   const hPop = hourly.precipitation_probability?.[idx] ?? 0;
 
-  // Wenn die bereinigte Stunde Regen/Gewitter sagt, der current-Code aber
-  // klar/leicht ist → übernehmen (Modell-Stunde hat 15-Min-Auflösung berücksichtigt
-  // und ist im Ensemble-Konsens).
-  if (THUNDER(hCode)) {
+  // Wenn die Bodenmessstation aktuell trocken meldet, darf eine Modellstunde
+  // den Hero NICHT auf Regen/Gewitter hochstufen. Station = beste Ist-Evidenz.
+  const stationDryNow =
+    current._source === "station" &&
+    (current.precipitation_10min == null || current.precipitation_10min < 0.05) &&
+    (current.precipitation ?? 0) < 0.05;
+  if (stationDryNow) return current;
+
+  // Gewitter aus Stunde nur übernehmen, wenn auch tatsächlich Niederschlag
+  // gemeldet wird — sonst ist es nur ein zukünftiges/benachbartes Signal.
+  if (THUNDER(hCode) && hPrecip >= 0.1) {
     current.weather_code = hCode;
     current.precipitation = Math.max(current.precipitation ?? 0, hPrecip);
     return current;
   }
-  if (PRECIP(hCode) && DRY(current.weather_code)) {
+  if (PRECIP(hCode) && DRY(current.weather_code) && hPrecip >= 0.1) {
     current.weather_code = hCode;
     current.precipitation = Math.max(current.precipitation ?? 0, hPrecip);
     return current;
