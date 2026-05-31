@@ -169,23 +169,43 @@ export function applyNowcastEvidence(data: WeatherData): WeatherData {
   let firstFutureCode: number | undefined;
   let used = 0;
   let minutesCovered = 0;
+  // „jetzt": erster Slot, der den aktuellen Zeitpunkt enthält (≤ 15 min alt
+  // oder beginnt in den nächsten 15 min). Nur dann darf Hero-Code wechseln.
+  let nowPrecip = 0;
   for (let i = 0; i < m.time.length && used < 4; i++) {
     const ts = new Date(m.time[i]).getTime();
     if (ts + 15 * 60 * 1000 < nowMs) continue;
     if (ts > nowMs + 60 * 60 * 1000) break;
-    nextPrecip += Math.max(0, m.precipitation[i] ?? 0);
-    if (firstFutureCode == null) firstFutureCode = m.weather_code?.[i];
+    const p = Math.max(0, m.precipitation[i] ?? 0);
+    nextPrecip += p;
+    if (used === 0) {
+      nowPrecip = p;
+      firstFutureCode = m.weather_code?.[i];
+    }
     used++;
     minutesCovered += 15;
   }
 
   const ctx = readConvectiveContext(data);
-  // mm/h rate over the covered window
+  // mm/h rate über das beobachtete Fenster — für Hourly-Overlay.
   const ratePerHour = minutesCovered > 0 ? (nextPrecip / minutesCovered) * 60 : 0;
+  // mm/h des AKTUELLEN Slots — entscheidet, ob der Hero auf Regen schalten darf.
+  const nowRatePerHour = nowPrecip * 4;
+
+  // Station sagt trocken (Bodenmessung) → kein Hero-Override durch Modell-Nowcast.
+  const cur = data.current as CurrentWithSource;
+  const stationDryNow =
+    cur._source === "station" &&
+    (cur.precipitation_10min == null || cur.precipitation_10min < 0.05);
 
   let next = data;
+  // Hero nur ändern, wenn JETZT Regen fällt oder direkt Gewitter aktiv ist
+  // (und Station nicht explizit trocken meldet).
+  if (!stationDryNow && (nowPrecip >= 0.15 || ctx.lightning)) {
+    next = applyEvidenceToCurrent(next, nowRatePerHour, ctx, firstFutureCode);
+  }
+  // Hourly-Overlay darf weiterhin künftige Spitze verwenden.
   if (nextPrecip >= 0.2 || ctx.lightning) {
-    next = applyEvidenceToCurrent(next, ratePerHour, ctx, firstFutureCode);
     next = overlayPrecipOnHourly(next, ratePerHour, ctx, firstFutureCode);
   }
   return next;
@@ -229,22 +249,31 @@ export function applyRainbowEvidence(
   if (!currentlyRaining && mmNext60 < 0.2 && peakRate < 1) return data;
 
   const ctx = readConvectiveContext(data);
-  // Effective rate for the Hero: prefer what's falling right now,
-  // else the upcoming peak in the next hour.
-  const effRate = currentlyRaining ? Math.max(currentRate, peakRate * 0.7) : peakRate;
+  const cur = data.current as CurrentWithSource;
+  // Station-Bodenmessung trocken → Hero NICHT auf Regen schalten,
+  // selbst wenn Radar in den nächsten 60 min eine Zelle zeigt.
+  const stationDryNow =
+    cur._source === "station" &&
+    (cur.precipitation_10min == null || cur.precipitation_10min < 0.05);
 
   let next = data;
-  next = applyEvidenceToCurrent(next, effRate, ctx, undefined);
+  // Hero-Code nur überschreiben, wenn JETZT Niederschlag fällt
+  // (Radarzelle aktiv über dem Standort) und Station das nicht widerlegt.
+  if (currentlyRaining && !stationDryNow) {
+    const effRate = Math.max(currentRate, peakRate * 0.7);
+    next = applyEvidenceToCurrent(next, effRate, ctx, undefined);
+  }
+  // Hourly-Overlay (kommt-bald-Anzeige) darf weiterhin die Spitze nutzen.
   next = overlayPrecipOnHourly(next, peakRate, ctx, undefined);
-  // also bump precipitation field with the 60-min sum so the
-  // Niederschlag-Kachel reflects actual radar accumulation
-  const cur = next.current as CurrentWithSource;
+  // Niederschlagskachel bekommt die 60-min-Summe — auch ohne Hero-Wechsel,
+  // damit „kommende 2h" stimmen, ohne den Ist-Zustand falsch zu malen.
+  const cur2 = next.current as CurrentWithSource;
   next = {
     ...next,
     current: {
-      ...cur,
-      precipitation: Math.max(cur.precipitation ?? 0, mmNext60),
-      _diagnostics: { ...cur._diagnostics, rainbowApplied: true },
+      ...cur2,
+      precipitation: Math.max(cur2.precipitation ?? 0, mmNext60),
+      _diagnostics: { ...cur2._diagnostics, rainbowApplied: true },
     },
   };
   return next;

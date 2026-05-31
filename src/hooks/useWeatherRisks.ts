@@ -106,7 +106,9 @@ function makeRisk(id: RiskId, rawScore: number, isEstimate: boolean): RiskItem {
 
 export function useWeatherRisks(): UseWeatherRisksResult {
   const { data, isLoading, error } = useWeather();
-  const thunderstorm = useThunderstormRisk(48);
+  // Aktuelles Risiko = kurzfristiges Fenster (≈ 3h), damit „Aktuell" nicht
+  // Gewitter zeigt, das erst in 30h aufzieht.
+  const thunderstorm = useThunderstormRisk(3);
   const thunderstormScore = thunderstorm.current.score;
 
   const risks = useMemo<RiskItem[]>(() => {
@@ -130,15 +132,14 @@ export function useWeatherRisks(): UseWeatherRisksResult {
     const visibility = hourly?.visibility?.[i] ?? 10000;
     const wmoCode = hourly?.weather_code?.[i] ?? 0;
 
-    // GEWITTER — zentraler Hook
+    // GEWITTER — zentraler Hook (kurzfristiges Fenster, s. oben)
     const gewitter = makeRisk("gewitter", thunderstormScore ?? 0, false);
 
-    // STARKREGEN (mm/h) — Maximum aus aktueller + nächsten 2 Stunden,
-    // damit anrückende Zellen (Nowcast-Vorlauf) schon mitscoren.
+    // STARKREGEN (mm/h) — Maximum aus aktueller + nächster Stunde, damit
+    // anrückende Zellen (1h-Vorlauf) noch mitscoren, aber spätere Tage nicht.
     const rainNow = precipitation;
     const rainNext1 = hourly?.precipitation?.[i + 1] ?? 0;
-    const rainNext2 = hourly?.precipitation?.[i + 2] ?? 0;
-    const rain = Math.max(rainNow, rainNext1, rainNext2);
+    const rain = Math.max(rainNow, rainNext1);
     const rainScore =
       rain < 0.5
         ? 0
