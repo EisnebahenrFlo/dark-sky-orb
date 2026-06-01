@@ -51,9 +51,19 @@ export interface CurrentWeather {
     rainbowApplied?: boolean;
     warningEscalated?: boolean;
     effectiveCode?: number;
+    biasApplied?: boolean;
   };
   /** Confidence 0..100 from multi-model spread (100 when station-overridden). */
   _confidence?: number;
+  /** Meteorological context for getEffectiveCode (cape, lpi, li, vis, station obs). */
+  _codeContext?: {
+    cape?: number;
+    liftedIndex?: number;
+    lightningPotential?: number;
+    visibility?: number;
+    stationCode?: number;
+    stationPrecip10?: number;
+  };
 }
 
 export interface EnsembleMeta {
