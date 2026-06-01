@@ -41,9 +41,26 @@ const MODEL_WEIGHT: Record<string, number> = {
 
 const DEFAULT_WEIGHT = 0.5;
 
+/**
+ * Region-adaptive multipliers on top of MODEL_WEIGHT.
+ * Rationale: a model's *home* region has the densest training/verification
+ * data so it should dominate. Globals (ECMWF) stay as a stability anchor.
+ */
+const REGION_BOOST: Record<string, Record<string, number>> = {
+  DE: { icon_d2: 1.5, icon_eu: 1.2 },
+  AT: { icon_d2: 1.3, icon_eu: 1.2, knmi_harmonie_arome_europe: 1.1 },
+  CH: { meteoswiss_icon_ch2: 1.6, icon_d2: 1.2 },
+  IT: { italia_meteo_arpae_icon_2i: 1.5, knmi_harmonie_arome_europe: 1.1 },
+};
+
+let activeRegion: string | undefined;
+
 function weightOf(modelId: string): number {
-  return MODEL_WEIGHT[modelId] ?? DEFAULT_WEIGHT;
+  const base = MODEL_WEIGHT[modelId] ?? DEFAULT_WEIGHT;
+  const boost = activeRegion ? REGION_BOOST[activeRegion]?.[modelId] ?? 1 : 1;
+  return base * boost;
 }
+
 
 /** WMO severity ordering for tie-breaking. Higher = more severe. */
 function codeSeverity(code: number): number {
@@ -340,6 +357,20 @@ export interface EnsembleResult {
 }
 
 export function buildEnsemble(
+  rawHourly: Record<string, unknown> | undefined,
+  rawCurrent: Record<string, unknown> | undefined,
+  modelIds: string[],
+  countryCode?: string,
+): EnsembleResult {
+  activeRegion = countryCode?.toUpperCase();
+  try {
+    return buildEnsembleInner(rawHourly, rawCurrent, modelIds);
+  } finally {
+    activeRegion = undefined;
+  }
+}
+
+function buildEnsembleInner(
   rawHourly: Record<string, unknown> | undefined,
   rawCurrent: Record<string, unknown> | undefined,
   modelIds: string[],

@@ -51,9 +51,19 @@ export interface CurrentWeather {
     rainbowApplied?: boolean;
     warningEscalated?: boolean;
     effectiveCode?: number;
+    biasApplied?: boolean;
   };
   /** Confidence 0..100 from multi-model spread (100 when station-overridden). */
   _confidence?: number;
+  /** Meteorological context for getEffectiveCode (cape, lpi, li, vis, station obs). */
+  _codeContext?: {
+    cape?: number;
+    liftedIndex?: number;
+    lightningPotential?: number;
+    visibility?: number;
+    stationCode?: number;
+    stationPrecip10?: number;
+  };
 }
 
 export interface EnsembleMeta {
@@ -142,6 +152,8 @@ export interface DailyData {
 export interface WeatherData {
   latitude: number;
   longitude: number;
+  /** Station/terrain elevation of the requested point in metres. */
+  elevation?: number;
   current: CurrentWeather;
   minutely_15: MinutelyData;
   hourly: HourlyData;
@@ -489,6 +501,7 @@ export async function fetchWeather(lat: number, lon: number, countryCode?: strin
       shortRaw.hourly as Record<string, unknown>,
       shortRaw.current as Record<string, unknown>,
       models,
+      countryCode,
     );
     mergedHourly = ens.hourly;
     mergedCurrent = ens.current;
@@ -555,6 +568,9 @@ export async function fetchWeather(lat: number, lon: number, countryCode?: strin
   const lowAt = (mergedHourly.cloud_cover_low as number[] | undefined)?.[curTimeIdx];
   const midAt = (mergedHourly.cloud_cover_mid as number[] | undefined)?.[curTimeIdx];
   const visAt = (mergedHourly.visibility as number[] | undefined)?.[curTimeIdx];
+  const capeAt = (mergedHourly.cape as number[] | undefined)?.[curTimeIdx];
+  const liAt = (mergedHourly.lifted_index as number[] | undefined)?.[curTimeIdx];
+  const lpiAt = (mergedHourly.lightning_potential as number[] | undefined)?.[curTimeIdx];
 
   const finalCurrent = {
     ...(mergedCurrent as unknown as CurrentWeather),
@@ -563,6 +579,12 @@ export async function fetchWeather(lat: number, lon: number, countryCode?: strin
     cloud_cover_mid: typeof midAt === "number" ? midAt : undefined,
     visibility: typeof visAt === "number" ? visAt : undefined,
     _confidence: ensembleMeta?.currentConfidence,
+    _codeContext: {
+      cape: typeof capeAt === "number" ? capeAt : undefined,
+      liftedIndex: typeof liAt === "number" ? liAt : undefined,
+      lightningPotential: typeof lpiAt === "number" ? lpiAt : undefined,
+      visibility: typeof visAt === "number" ? visAt : undefined,
+    },
   };
 
   const finalHourly: HourlyData = {
@@ -581,6 +603,7 @@ export async function fetchWeather(lat: number, lon: number, countryCode?: strin
   const json: WeatherData = {
     latitude: Number((shortRaw as { latitude?: number }).latitude ?? lat),
     longitude: Number((shortRaw as { longitude?: number }).longitude ?? lon),
+    elevation: Number((shortRaw as { elevation?: number }).elevation ?? NaN) || undefined,
     timezone: String((shortRaw as { timezone?: string }).timezone ?? "auto"),
     current: finalCurrent,
     minutely_15: mergedMinutely as unknown as MinutelyData,

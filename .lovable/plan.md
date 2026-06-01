@@ -1,76 +1,82 @@
 ## Ziel
-Die „Aktuell“-Ansicht soll den realen Ist-Zustand sauber anzeigen: schönes/trockenes Wetter darf nicht als Regen oder Gewitter erscheinen, während echte aktuelle Niederschläge weiterhin korrekt priorisiert werden.
 
-## Festgestellte Hauptprobleme
-1. **Gewitter-Code wird nie zurückgestuft**
-   - `getEffectiveCode()` schützt WMO 95/96/99 pauschal vor Downgrade.
-   - Dadurch kann ein Gewitter-Code aus Stundenmodell/Nowcast/Warnlogik im Hero stehen bleiben, obwohl Station und aktueller Niederschlag trocken sind.
+Mehr Genauigkeit aus den **bestehenden** Datenquellen (Open-Meteo Multi-Model, Bright Sky Stationen, Rainbow Nowcast, Blitzortung) — **ohne** neue Backend-Services oder Pipelines. Hauptfokus: das richtige Symbol/Wetter zur richtigen Zeit anzeigen.
 
-2. **`reconcileCurrentWithHourly()` übernimmt Stunden-Gewitter zu direkt**
-   - Wenn die nächste/aktuelle Modellstunde Gewitter sagt, wird `current.weather_code` sofort auf Gewitter gesetzt.
-   - Es fehlt eine Plausibilitätsprüfung: aktueller Niederschlag, Station, LPI/Score, Nowcast-Zelle wirklich aktuell oder nur später?
+---
 
-3. **Nowcast/Rainbow überschreibt den Hero auch bei zukünftigem Regen**
-   - `applyRainbowEvidence()` nutzt die Spitze der nächsten 60 Minuten für den aktuellen Hero-Code.
-   - Das ist gut für Warnhinweise, aber schlecht für „Aktuell“: wenn die Zelle erst später kommt, darf der Hero nicht so aussehen, als regne/gewittere es jetzt.
+## Kernproblem (deine Hauptbeschwerde)
 
-4. **Risiko-Ringe in „Aktuell“ zeigen Vorhersagerisiken wie Ist-Zustand**
-   - `useWeatherRisks()` nutzt beim Gewitter 48h und bei Starkregen aktuelle + nächste 2 Stunden.
-   - In der „Aktuell“-Ansicht wirkt das wie „es ist jetzt Gewitter/Regen“, obwohl es nur ein Vorhersage-/Risikofenster ist.
+„Sonnig bei Gewitter und andersherum" — das passiert, weil unsere aktuelle `WeatherIcon`-Ableitung den **Modell-Wettercode ignoriert**, sobald `cloud_cover_low < 40 %` ist. Bei Gewitterzellen ist die *tiefe* Bewölkung punktuell, das Modell setzt aber korrekt Code 95. Wir überschreiben ihn dann zu „heiter".
 
-5. **Stationsdaten werden nicht stark genug als Trockenheits-Evidenz genutzt**
-   - Bright Sky liefert oft `precipitation_10min = 0` und aktuellen Stations-WMO-Code trocken.
-   - Diese Evidenz sollte Hero-Gewitter/Regen stärker verhindern, außer Radar/Nowcast zeigt aktuell eindeutigen Niederschlag.
+**Andersherum**: Bei Nebel/Hochnebel ist die Bewölkung hoch, aber kein Niederschlag — wir zeigen „bewölkt" obwohl der Code 45 (Nebel) korrekt wäre.
 
-## Umsetzung
-1. **Aktuellen Ist-Zustand von Kurzfrist-Risiko trennen**
-   - Hero-Code nur durch aktuelle Evidenz ändern:
-     - Stations-WMO/Niederschlag jetzt
-     - `current.precipitation`
-     - aktuell laufender Rainbow-Slot
-     - aktueller minutely_15-Slot
-   - Zukünftige Niederschläge bleiben in Niederschlagskachel/Nowcast, aber überschreiben nicht automatisch Hero-Icon und Hero-Text.
+---
 
-2. **Plausibilitäts-Gate für Gewitter im Hero einbauen**
-   - Gewitter im Hero nur anzeigen, wenn mindestens eine dieser Bedingungen erfüllt ist:
-     - aktueller WMO-Code 95/96/99 von Station oder Current-Modell plus Niederschlag/Nowcast
-     - Rainbow/Nowcast aktuell mit starkem konvektivem Niederschlag
-     - sehr starker Gewitter-Score/LPI in der aktuellen Stunde, nicht nur später im Zeitraum
-     - amtliche aktive Gewitterwarnung plus passende Niederschlag-/Konvektionssignale
-   - Sonst wird auf Regen/Schauer/Bewölkung/Sonne zurückgestuft.
+## Was wir ändern (3 Hebel, alle ohne neue Pipelines)
 
-3. **`applyRainbowEvidence()` entschärfen**
-   - Aktuell laufende Radar-Zelle darf den Hero-Code setzen.
-   - Zukünftige Radar-Zelle darf nur:
-     - `current.precipitation`/Diagnose für die Niederschlagskachel beeinflussen,
-     - die erste Stundenprognose verbessern,
-     - aber nicht den aktuellen Hero auf Regen/Gewitter setzen.
+### 1. Wettercode-Ableitung repariert (`WeatherIcon.tsx` + neuer Helper)
 
-4. **`reconcileCurrentWithHourly()` konservativer machen**
-   - Stunden-Code nur dann auf `current` übernehmen, wenn er zeitlich wirklich zur aktuellen Stunde passt und Niederschlags-/Konvektions-Evidenz vorhanden ist.
-   - Bei trockener Station (`precipitation_10min = 0`, trockener Stationscode, gute Sicht) kein automatisches Hochstufen auf Regen/Gewitter.
+Statt einer einzigen Heuristik, eine **Prioritäten-Hierarchie**:
 
-5. **`getEffectiveCode()` meteorologisch robuster machen**
-   - Gewitter-Code nicht mehr absolut schützen.
-   - Gewitter bleibt nur erhalten, wenn aktuelle Evidenz passt; sonst Downgrade analog Regen-Code.
+```text
+Priorität 1: Beobachtete Phänomene (Station/Radar)
+  - Bright Sky condition: thunderstorm/hail/snow/fog → übernehmen
+  - Rainbow precipType (rain/snow/sleet) bei aktivem Niederschlag → übernehmen
+  - Blitzortung-Cluster im 15-km-Radius < 10 min → Code 95 erzwingen
 
-6. **Risiko-Ringe in „Aktuell“ klarer kalibrieren**
-   - Gewitter/Starkregen in „Aktuell“ nicht aus 48h bzw. +2h als aktive Ist-Gefahr anzeigen.
-   - Entweder aktuelles/kurzes 0–3h-Fenster verwenden oder Label/Score-Filter so anpassen, dass spätere Risiken nicht wie aktuelles Wetter wirken.
+Priorität 2: Modell-Code wenn meteorologisch plausibel
+  - Code 95-99 (Gewitter): nur verwerfen wenn ALLE zutreffen:
+    CAPE < 100, LI > 0, lightning_potential = 0, Station + Radar trocken
+  - Code 45/48 (Nebel): nur verwerfen wenn Sichtweite > 5 km
+  - Code 51-67 (Regen/Schnee): nur verwerfen wenn Station + Radar trocken
 
-7. **Regressionsfälle prüfen**
-   - Schönes Wetter mit trockenem Stationswert darf nicht „Gewitter“/„Regen“ zeigen.
-   - Zelle in 30–60 Minuten: Hero bleibt aktuell trocken, Niederschlagskachel zeigt kommenden Regen.
-   - Aktiver Starkregen jetzt: Hero zeigt Regen/Starkregen.
-   - Aktuelles Gewitter mit WMO 95/96/99 oder starkem Nowcast: Hero zeigt Gewitter.
+Priorität 3: Fallback auf Cloud-Cover-Heuristik (heutiges Verhalten)
+```
+
+Das löst beide Richtungen: Gewitter werden nicht mehr „weggebügelt", und Nebel/Niederschlag wird nicht mehr fälschlich auf „heiter" gesetzt.
+
+### 2. Modell-Ensemble smarter gewichten (`modelEnsemble.ts`)
+
+Heute: einfacher Mittelwert über `icon_d2, icon_eu, ecmwf_ifs025, knmi_harmonie_arome_europe`.
+
+Neu:
+- **Region-adaptive Gewichte**: ICON-D2 bekommt in DE 2× Gewicht (Heimmodell, 2-km-Auflösung), AROME 2× im Alpenraum/Italien, ECMWF konstant als Stabilitätsanker.
+- **Median statt Mittelwert** für Temperatur/Wind (robuster gegen Einzelausreißer).
+- **Maximum-Wahrscheinlichkeit** für `weather_code` (wenn 2/4 Modelle Gewitter sagen, nicht wegmitteln).
+- **Modell-Spread als Konfidenz** in die UI (Badge „hohe/mittlere/niedrige Übereinstimmung").
+
+### 3. Stations-Bias-Korrektur (`stationMerge.ts`)
+
+Pro Stunde Delta zwischen Bright-Sky-Station und Modell für T/RH/Wind berechnen, **gleitender 6-h-Bias** auf die Vorhersage der nächsten 6–12 h anwenden. Reine Mathematik im Frontend, keine Persistierung nötig (LocalStorage reicht für Bias-Verlauf).
+
+### 4. Höhenkorrektur (`stationMerge.ts`)
+
+Wenn Stationshöhe ≠ Standorthöhe (z. B. Berggipfel vs. Talstation), Temperatur mit Standard-Lapse-Rate 0,65 °C/100 m korrigieren. Open-Meteo liefert `elevation` schon mit.
+
+---
+
+## Was wir NICHT bauen
+
+- Keine neuen API-Endpoints (die `/api/*` 404er in den Logs sind bekannt und bleiben optional).
+- Kein Edge Function Backend.
+- Keine Persistenz/DB.
+
+---
 
 ## Betroffene Dateien
-- `src/lib/weatherDescription.ts`
-- `src/components/WeatherIcon.tsx`
-- `src/lib/stationMerge.ts`
-- `src/lib/weatherReconciliation.ts`
-- `src/components/WeatherHero.tsx`
-- `src/hooks/useWeatherRisks.ts`
 
-## Ergebnis
-Nach der Änderung zeigt „Aktuell“ wieder den Ist-Zustand, während Nowcast, Warnungen und Risikoanzeigen weiterhin kommende Gefahren abbilden, aber nicht mehr fälschlich das aktuelle schöne Wetter übermalen.
+- `src/components/WeatherIcon.tsx` — neue Prioritäten-Hierarchie für Code-Ableitung.
+- `src/lib/weatherDescription.ts` — Plausibilitäts-Helper (`isCodePlausible(code, ctx)`).
+- `src/lib/stationMerge.ts` — Bias-Korrektur, Höhenkorrektur, Station/Radar-Phänomen-Übernahme.
+- `src/lib/modelEnsemble.ts` — region-adaptive Gewichte, Median, Max-Vote für Codes.
+- `src/hooks/useWeatherData.ts` — Konfidenz aus Modell-Spread durchreichen.
+- `src/components/WeatherHero.tsx` — kleine Konfidenz-Anzeige (optional, dezent).
+
+---
+
+## Erfolgs-Check
+
+Nach dem Build prüfen mit Beispielstandorten:
+1. **Berlin bei klarer Wetterlage** → Hero zeigt „heiter/sonnig", kein Phantom-Regen.
+2. **Standort mit aktivem Gewitter** (Blitzortung-Treffer) → Hero zeigt Gewitter-Icon, auch wenn `cloud_cover_low` lokal niedrig ist.
+3. **Berg-Standort** (z. B. Zugspitze) → Temperatur passt zur tatsächlichen Gipfelhöhe, nicht zur Talstation.

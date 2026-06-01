@@ -1,5 +1,5 @@
 import type { LucideIcon } from "lucide-react";
-import { getEffectiveCode, getWeatherIcon } from "@/components/WeatherIcon";
+import { getEffectiveCode, getWeatherIcon, type CodeContext } from "@/components/WeatherIcon";
 import { getContextualDescription } from "@/lib/weather";
 
 export interface WeatherInfo {
@@ -10,9 +10,9 @@ export interface WeatherInfo {
 
 /**
  * Single source of truth for weather icon + description.
- * If the WMO code implies precipitation but actual precipitation is ~0,
- * both icon and description fall back to a cloud-cover-based label so they
- * never contradict the displayed mm value.
+ * Uses the meteorological priority hierarchy in `getEffectiveCode` so
+ * thunderstorm/fog/precipitation codes are not falsely downgraded when
+ * other signals (CAPE, LPI, station obs, visibility) support them.
  */
 export function getEffectiveWeather(
   weatherCode: number,
@@ -23,10 +23,10 @@ export function getEffectiveWeather(
   hour?: number,
   cloudCoverLow?: number,
   cloudCoverMid?: number,
+  ctx?: CodeContext,
 ): WeatherInfo {
   const dayNum = typeof isDay === "boolean" ? (isDay ? 1 : 0) : isDay;
-  const effective = getEffectiveCode(weatherCode, precipitation, cloudCover, humidity, hour, cloudCoverLow, cloudCoverMid);
-  // Bei Nacht dürfen "Sonnig"/"Heiter" nicht erscheinen — feste Nachtlabels für klare/bewölkte Codes.
+  const effective = getEffectiveCode(weatherCode, precipitation, cloudCover, humidity, hour, cloudCoverLow, cloudCoverMid, ctx);
   const nightLabels: Record<number, string> = {
     0: "Klar",
     1: "Überwiegend klar",
@@ -45,3 +45,4 @@ export function getEffectiveWeather(
 }
 
 export { getEffectiveCode };
+export type { CodeContext };
