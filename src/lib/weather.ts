@@ -501,6 +501,7 @@ export async function fetchWeather(lat: number, lon: number, countryCode?: strin
       shortRaw.hourly as Record<string, unknown>,
       shortRaw.current as Record<string, unknown>,
       models,
+      countryCode,
     );
     mergedHourly = ens.hourly;
     mergedCurrent = ens.current;
