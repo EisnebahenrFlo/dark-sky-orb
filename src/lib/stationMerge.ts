@@ -39,6 +39,10 @@ export function mergeStationIntoWeather(
     return { ...data, current: { ...current, _source: "model" } };
   }
 
+  const stationPrecip10 =
+    obs.precipitation10min != null && Number.isFinite(obs.precipitation10min)
+      ? Math.max(0, obs.precipitation10min)
+      : undefined;
   const merged: CurrentWithSource = {
     ...current,
     temperature_2m: obs.temperature ?? current.temperature_2m,
@@ -52,10 +56,7 @@ export function mergeStationIntoWeather(
     wind_direction_10m: obs.windDirection ?? current.wind_direction_10m,
     pressure_msl: obs.pressure ?? current.pressure_msl,
     precipitation: current.precipitation,
-    precipitation_10min:
-      obs.precipitation10min != null && Number.isFinite(obs.precipitation10min)
-        ? Math.max(0, obs.precipitation10min)
-        : undefined,
+    precipitation_10min: stationPrecip10,
     cloud_cover: obs.cloudCover != null ? obs.cloudCover : current.cloud_cover,
     weather_code: reconcileCode(current.weather_code, obs),
     _source: "station",
@@ -66,8 +67,14 @@ export function mergeStationIntoWeather(
       source: obs.source,
     },
     _confidence: 100,
+    _codeContext: {
+      ...(current._codeContext ?? {}),
+      stationCode: obs.weatherCode ?? undefined,
+      stationPrecip10,
+    },
     _diagnostics: { ...current._diagnostics, stationApplied: true },
   };
+
 
   return { ...data, current: merged };
 }
