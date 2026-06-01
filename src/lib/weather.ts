@@ -152,6 +152,8 @@ export interface DailyData {
 export interface WeatherData {
   latitude: number;
   longitude: number;
+  /** Station/terrain elevation of the requested point in metres. */
+  elevation?: number;
   current: CurrentWeather;
   minutely_15: MinutelyData;
   hourly: HourlyData;
