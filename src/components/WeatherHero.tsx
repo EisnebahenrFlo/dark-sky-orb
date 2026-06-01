@@ -76,6 +76,7 @@ export function WeatherHero({ location, data, updatedAt, onRefresh, ensemble }: 
     new Date(data.time).getHours(),
     data.cloud_cover_low,
     data.cloud_cover_mid,
+    data._codeContext,
   );
   // Hero-Icon/Canvas/Palette folgen dem optisch bereinigten effektiven Code,
   // damit Text, Icon und Hintergrund konsistent sind (Cirren ≠ „bedeckt").
