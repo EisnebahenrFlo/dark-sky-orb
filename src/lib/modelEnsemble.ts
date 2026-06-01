@@ -360,6 +360,20 @@ export function buildEnsemble(
   rawHourly: Record<string, unknown> | undefined,
   rawCurrent: Record<string, unknown> | undefined,
   modelIds: string[],
+  countryCode?: string,
+): EnsembleResult {
+  activeRegion = countryCode?.toUpperCase();
+  try {
+    return buildEnsembleInner(rawHourly, rawCurrent, modelIds);
+  } finally {
+    activeRegion = undefined;
+  }
+}
+
+function buildEnsembleInner(
+  rawHourly: Record<string, unknown> | undefined,
+  rawCurrent: Record<string, unknown> | undefined,
+  modelIds: string[],
 ): EnsembleResult {
   const hourlyOut: Record<string, unknown> = { time: rawHourly?.time ?? [] };
   const currentOut: Record<string, unknown> = { time: rawCurrent?.time };
